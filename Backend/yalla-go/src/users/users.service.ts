@@ -8,27 +8,17 @@ import { getUserDefaults } from './dto/user-defaults.dto';
 export class UsersService {
     constructor(private readonly firebase: FirebaseService) {}
 
-    async createUser(createUserDto: CreateUserDto) {
+    // create the user in firestore
+    async createUser(createUserDto: CreateUserDto | CreateDriverDto, firebaseUid: string) {
         const userRef = this.firebase.firestore.collection('users').doc();
         const userData = {
-            userId: userRef.id,
+            userId: firebaseUid, // set userid
+            // spread out fields of the new user
             ...createUserDto,
             ...getUserDefaults(createUserDto.role)
         };
 
-        await userRef.set(userData);
-        return { message: "User created successfully", userId: userRef.id}
-    };
-
-    async createDriver(CreateDriverDto: CreateDriverDto) {
-        const userRef = this.firebase.firestore.collection('users').doc();
-        const userData = {
-            userId: userRef.id,
-            ...CreateDriverDto,
-            ...getUserDefaults(CreateDriverDto.role)
-        };
-
-        await userRef.set(userData);
-        return { message: "User created successfully", userId: userRef.id}
+        await userRef.set(userData); // set data to the user
+        return { message: "User created successfully", userId: firebaseUid}
     };
 }
