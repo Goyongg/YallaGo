@@ -17,7 +17,7 @@ export class FirebaseAuthGuard implements CanActivate {
             return true;
         }
 
-        const authHeader = request.headers.authorization();
+        const authHeader = request.headers.authorization;
 
         // send exception if HTTP header is wrong (unauthorized)
         if (!authHeader?.startsWith('Bearer')) {
