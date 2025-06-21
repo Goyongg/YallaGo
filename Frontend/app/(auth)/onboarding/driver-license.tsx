@@ -1,0 +1,54 @@
+import React, { useState } from 'react';
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
+
+const DriverLicense = () => {
+  const router = useRouter();
+  const [licenseNumber, setLicenseNumber] = useState('');
+
+  const isValid = licenseNumber.trim().length > 0;
+
+  const handleSubmit = () => {
+    router.push('/(tabs)/home');
+  };
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      className="flex-1 bg-white justify-around p-8"
+    >
+      {/* Top Section */}
+      <View>
+        <Text className="text-5xl font-bold leading-[60px] tracking-wide mb-4">
+          Driver
+          <Text className="text-brand italic"> verification</Text>
+        </Text>
+
+        <Text className="text-base text-gray-600 mb-6">
+          Please enter your valid UAE driver’s license number. Further ID verification may be required later.
+        </Text>
+
+        <TextInput
+          className="border border-gray-300 rounded-lg px-4 py-3 text-base"
+          placeholder="License Number"
+          value={licenseNumber}
+          onChangeText={setLicenseNumber}
+          autoCapitalize="characters"
+        />
+      </View>
+
+      {/* Submit Button */}
+      <Pressable
+        className={`py-5 rounded-xl w-full flex items-center ${
+          isValid ? 'bg-brand' : 'bg-gray-300'
+        }`}
+        disabled={!isValid}
+        onPress={handleSubmit}
+      >
+        <Text className="text-white font-semibold text-2xl">Submit</Text>
+      </Pressable>
+    </KeyboardAvoidingView>
+  );
+};
+
+export default DriverLicense;
