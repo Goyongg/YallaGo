@@ -1,15 +1,33 @@
-import { Body, Controller, Post, Req, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, Res, UseGuards, ValidationPipe } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserRole, CreateUserDto } from './dto/create-user.dto';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { plainToInstance } from 'class-transformer';
 import { validateOrReject } from 'class-validator';
+import { Response } from 'express';
 
 @Controller('users')
 export class UsersController {
     constructor(private readonly userService: UsersService) {}
 
+    // GET /users/home
+    @UseGuards(FirebaseAuthGuard)
+    @Get('home')
+    async getHomePageInfo(@Req() req, @Res() res: Response) {
+        const firebaseUid = req.user.uid;
+        console.log(firebaseUid);
+
+        try { // return relevant user data
+            const data = await this.userService.getHomePageInfo(firebaseUid);
+            return res.status(200).json(data);
+        }
+        catch (err) {
+            return res.status(404).json({ message: err.message || "User not found" });
+        }
+    }
+
+    // POST /users/register
     @UseGuards(FirebaseAuthGuard)
     @Post('register')
     async registerUser(@Body(ValidationPipe) body: any, @Req() req) {

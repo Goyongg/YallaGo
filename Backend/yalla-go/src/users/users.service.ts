@@ -26,9 +26,32 @@ function cleanUserData(data: Record<string, any>) {
 export class UsersService {
     constructor(private readonly firebase: FirebaseService) {}
 
+    // fetch homepage user data based on role
+    async getHomePageInfo(firebaseUid: string) {
+        const userDoc = await this.firebase.firestore.collection('users').doc(firebaseUid).get();
+        if (!userDoc.exists) {
+            throw new Error('User not found');
+        };
+
+        const userData = userDoc.data();
+        if (!userData) {
+            throw new Error('User data is undefined');
+        }
+
+        const response: any = {
+            uid: userData.userId,
+            name: userData.name,
+            role: userData.role,
+            averageRating: userData.averageRating,
+            ecoPoints: userData.ecoPoints
+        };
+
+        return response;
+    }
+
     // create the user in firestore
     async createUser(createUserDto: CreateUserDto | CreateDriverDto, firebaseUid: string) {
-        const userRef = this.firebase.firestore.collection('users').doc();
+        const userRef = this.firebase.firestore.collection('users').doc(firebaseUid);
         const rawUserData = {
             userId: firebaseUid, // set userid
             // spread out fields of the new user
@@ -39,6 +62,6 @@ export class UsersService {
         const userData = cleanUserData(rawUserData);
 
         await userRef.set(userData); // set data to the user
-        return { message: "User created successfully", userId: firebaseUid}
+        return { message: "User created successfully", userId: firebaseUid }
     };
 }
