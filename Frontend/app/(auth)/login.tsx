@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+// import { loginUser } from "@/services/login";
+// import { Alert } from "react-native";
 
 const Login = () => {
   const router = useRouter();
@@ -9,9 +11,19 @@ const Login = () => {
 
   const isValid = email.trim().length > 0 && password.trim().length > 0;
 
-  const handleLogin = () => {
-    // Later: Firebase authentication
-    router.replace('/(tabs)/home');
+  const handleLogin = async () => {
+    // try {
+    //   const { token, user } = await loginUser(email, password);
+
+    //   console.log("Login complete:");
+    //   console.log("Token:", token);
+    //   console.log("User:", user);
+
+    //   router.replace("/(tabs)/home");
+    // } catch (err: any) {
+    //   Alert.alert("Login Failed", err.message || "Invalid email or password");
+    // }
+    router.replace("/(tabs)/home");
   };
 
   return (

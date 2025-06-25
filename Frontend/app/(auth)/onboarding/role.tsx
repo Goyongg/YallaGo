@@ -1,16 +1,42 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+// import { useRegistration } from '@/context/RegistrationContext';
+// import { registerUser } from "@/services/register";
 
 const Role = () => {
   const router = useRouter();
+  // const { registrationData, setRegistrationData } = useRegistration();
+  // const [selectedRole, setSelectedRole] = useState<'passenger' | 'driver'>(registrationData.role);
   const [selectedRole, setSelectedRole] = useState<'passenger' | 'driver'>('passenger');
+  // const [loading, setLoading] = useState(false);
 
-  const handleNext = () => {
-    if (selectedRole === 'driver') {
-      router.push('/onboarding/driver-license');
-    } else {
-      router.push('/(tabs)/home');
+  const handleNext = async () => {
+    // setRegistrationData((prev) => ({
+    //   ...prev,
+    //   role: selectedRole,
+    // }));
+
+    if (selectedRole === "driver") {
+      router.push("/onboarding/driver-license");
+    } 
+    else {
+      // Register passenger
+      // setLoading(true);
+      // try {
+      //   await registerUser({
+      //     ...registrationData,
+      //     role: selectedRole,
+      //   });
+      //   router.replace("/(tabs)/home");
+      // } 
+      // catch (err: any) {
+      //   Alert.alert("Registration Failed", err.message || "Something went wrong");
+      // } 
+      // finally {
+      //   setLoading(false);
+      // }
+      router.replace("/(tabs)/home");
     }
   };
 

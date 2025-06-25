@@ -1,22 +1,24 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+// import { useRegistration } from '@/context/RegistrationContext';
 
 const Password = () => {
   const router = useRouter();
+  // const { registrationData, setRegistrationData } = useRegistration();
   const { email } = useLocalSearchParams<{ email?: string }>(); // get email from params
+
+  // const [password, setPassword] = useState(registrationData.password);
   const [password, setPassword] = useState('');
 
   const isValid = password.trim().length > 0;
 
   const handleNext = () => {
+    // setRegistrationData((prev) => ({
+    //   ...prev,
+    //   password,
+    // }));
+
     router.push('/onboarding/emergency');
   };
 
@@ -33,7 +35,7 @@ const Password = () => {
         </Text>
 
         <Text className="text-base text-gray-600 mb-6">
-          For <Text className="font-semibold">{email ?? 'your account'}</Text>
+          For{" "}<Text className="font-semibold">{email ?? 'your account'}</Text>
         </Text>
 
         <TextInput

@@ -2,10 +2,16 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, Modal, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
 import { isValidEmail } from '@/utils/validation';
+// import { RegistrationData, useRegistration } from '@/context/RegistrationContext';
 
 const NameAndContact = () => {
   const router = useRouter();
+  // const { registrationData, setRegistrationData } = useRegistration();
 
+  // const [name, setName] = useState(registrationData.name);
+  // const [gender, setGender] = useState(registrationData.gender);
+  // const [email, setEmail] = useState(registrationData.email);
+  // const [phone, setPhone] = useState(registrationData.phone);
   const [name, setName] = useState('');
   const [gender, setGender] = useState('');
   const [email, setEmail] = useState('');
@@ -18,9 +24,16 @@ const NameAndContact = () => {
     phone.trim().length > 0;
 
   const handleNext = () => {
+    // setRegistrationData((prev: RegistrationData) => ({
+    //   ...prev,
+    //   name,
+    //   gender,
+    //   email,
+    //   phone,
+    // }));
     router.push({
       pathname: '/onboarding/password',
-      params: { email },
+      params: { email }, // this can stay if you want to show email on password screen
     });
   };
 
@@ -83,7 +96,6 @@ const NameAndContact = () => {
           >
             Why we need this info?
           </Text>
-
         </View>
 
         {/* Email Input */}

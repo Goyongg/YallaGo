@@ -13,6 +13,9 @@ module.exports = {
         'brand-light': '#A8E2C5', // soft green
         'gray-bg': '#F3F3F3', // background light gray
       },
+      fontFamily: {
+        afacad: ['Afacad', 'sans-serif'],
+      },
     },
   },
   plugins: [],

@@ -1,15 +1,39 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+// import { useRegistration } from '@/context/RegistrationContext';
+// import { registerUser } from '@/services/register';
 
 const DriverLicense = () => {
   const router = useRouter();
+  // const { registrationData, setRegistrationData } = useRegistration();
+  // const [licenseNumber, setLicenseNumber] = useState(registrationData.license);
   const [licenseNumber, setLicenseNumber] = useState('');
+  // const [loading, setLoading] = useState(false);
 
   const isValid = licenseNumber.trim().length > 0;
 
-  const handleSubmit = () => {
-    router.push('/(tabs)/home');
+  const handleSubmit = async () => {
+    // setRegistrationData((prev) => ({
+    //   ...prev,
+    //   license: licenseNumber,
+    // }));
+
+    // setLoading(true);
+    // try {
+    //   await registerUser({
+    //     ...registrationData,
+    //     license: licenseNumber,
+    //   });
+
+    //   router.replace('/(tabs)/home');
+    // } catch (err: any) {
+    //   Alert.alert("Registration Failed", err.message || "Something went wrong");
+    // } finally {
+    //   setLoading(false);
+    // }
+
+    router.replace('/(tabs)/home');
   };
 
   return (
@@ -45,7 +69,9 @@ const DriverLicense = () => {
         disabled={!isValid}
         onPress={handleSubmit}
       >
-        <Text className="text-white font-semibold text-2xl">Submit</Text>
+        <Text className="text-white font-semibold text-2xl">
+          Submit
+        </Text>
       </Pressable>
     </KeyboardAvoidingView>
   );

@@ -1,5 +1,9 @@
-import { View, Text, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { ScrollView, ImageBackground } from 'react-native';
+import Header from '../components/Header';
+import GreetingCard from '../components/GreetingCard';
+import RideSearchForm from '../components/RideSearchForm';
+import RecentSearches from '../components/RecentSearches';
 
 export const unstable_settings = {
   gestureEnabled: false,
@@ -7,50 +11,32 @@ export const unstable_settings = {
 };
 
 const Home = () => {
-  const router = useRouter();
-
-  const handleLogout = () => {
-    // TODO: Add backend/Firebase logout logic here
-    router.replace('../(auth)/onboarding/greeting');
-    console.log('Logged out');
-  };
-
-  const handleDeleteAccount = () => {
-    // TODO: Add backend/Firebase delete logic here
-    console.log('Account deleted');
-  };
-
+  const [femaleOnly, setFemaleOnly] = useState(false);
+  const [passengerCount, setPassengerCount] = useState('');
+  
   return (
-    <View className="flex-1 justify-around bg-white p-8">
-      {/* Welcome Section */}
-      <View>
-        <Text className="text-5xl font-bold leading-[60px] tracking-wide mb-4">
-          Welcome to
-          <Text className="text-brand italic"> YallaGo</Text> 🚗
-        </Text>
-
-        <Text className="text-base text-gray-600 pl-1 leading-[24px]">
-          This is the homepage. You are now signed in and have completed onboarding.
-        </Text>
-      </View>
-
-      {/* Action Buttons */}
-      <View className="w-full">
-        <Pressable
-          className="bg-brand py-4 rounded-xl mb-4 items-center"
-          onPress={handleLogout}
-        >
-          <Text className="text-white font-semibold text-lg">Log Out</Text>
-        </Pressable>
-
-        <Pressable
-          className="border border-red-500 py-4 rounded-xl items-center"
-          onPress={handleDeleteAccount}
-        >
-          <Text className="text-red-500 font-semibold text-lg">Delete Account</Text>
-        </Pressable>
-      </View>
-    </View>
+    <ImageBackground
+      source={require('../../assets/images/background_image_1.png')}
+      resizeMode="cover"
+      className="flex-1"
+    >
+      <ScrollView className="flex-1 pt-[70px]">
+        <Header />
+        <GreetingCard userName="Ahmed" ecoPoints={325} />
+        <RideSearchForm
+          femaleOnly={femaleOnly}
+          setFemaleOnly={setFemaleOnly}
+          passengerCount={passengerCount}
+          setPassengerCount={setPassengerCount}
+        />
+        <RecentSearches
+          recentSearches={[
+            { from: 'Dubai', to: 'AbuDhabi', passengers: 1 },
+            { from: 'Dubai', to: 'Sharjah', passengers: 2 },
+          ]}
+        />
+      </ScrollView>
+    </ImageBackground>
   );
 };
 

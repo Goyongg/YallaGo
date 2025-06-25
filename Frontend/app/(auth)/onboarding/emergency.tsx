@@ -1,15 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useRegistration } from '@/context/RegistrationContext';
 
 const Emergency = () => {
   const router = useRouter();
+  // const { registrationData, setRegistrationData } = useRegistration();
+
+  // const [contactName, setContactName] = useState(registrationData.emergencyContact.name);
+  // const [contactPhone, setContactPhone] = useState(registrationData.emergencyContact.phone);
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
 
   const isFormFilled = contactName.trim().length > 0 && contactPhone.trim().length > 0;
 
   const handleNext = () => {
+    // setRegistrationData((prev) => ({
+    //   ...prev,
+    //   emergencyContact: {
+    //     name: contactName,
+    //     phone: contactPhone,
+    //   },
+    // }));
+
     router.push('/onboarding/role');
   };
 
@@ -22,7 +35,11 @@ const Emergency = () => {
       <View>
         <Text className="text-5xl font-bold leading-[60px] tracking-wide mb-6">
           Emergency
-          <Text className="text-brand italic"> contact info</Text>
+          <Text className="text-brand italic"> contact</Text>
+        </Text>
+
+        <Text className="text-base text-gray-600 mb-6">
+          Please provide someone we can contact in case of an emergency.
         </Text>
 
         <View className="mb-4">
@@ -32,6 +49,7 @@ const Emergency = () => {
             placeholder="Enter full name"
             value={contactName}
             onChangeText={setContactName}
+            placeholderTextColor="#A0AEC0"
           />
         </View>
 
@@ -43,6 +61,9 @@ const Emergency = () => {
             value={contactPhone}
             onChangeText={setContactPhone}
             keyboardType="phone-pad"
+            placeholderTextColor="#A0AEC0"
+            returnKeyType="done"
+            onSubmitEditing={Keyboard.dismiss}
           />
         </View>
       </View>
