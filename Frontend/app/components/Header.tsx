@@ -21,7 +21,7 @@ const Header = () => {
       <ProfileMenu
         visible={menuVisible}
         onClose={() => setMenuVisible(false)}
-        userName="Bekhruz"
+        userName="Ahmed"
         rating={5}
       />
     </View>

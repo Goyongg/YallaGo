@@ -13,6 +13,7 @@ export const unstable_settings = {
 const Home = () => {
   const [femaleOnly, setFemaleOnly] = useState(false);
   const [passengerCount, setPassengerCount] = useState('');
+  const [date, setDate] = useState('');
   
   return (
     <ImageBackground
@@ -28,6 +29,8 @@ const Home = () => {
           setFemaleOnly={setFemaleOnly}
           passengerCount={passengerCount}
           setPassengerCount={setPassengerCount}
+          date={date}
+          setDate={setDate}
         />
         <RecentSearches
           recentSearches={[

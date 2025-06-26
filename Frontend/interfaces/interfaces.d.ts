@@ -5,6 +5,8 @@ export interface RideSearchFormProps {
   setFemaleOnly: (value: boolean) => void;
   passengerCount: string;
   setPassengerCount: (value: string) => void;
+  date: string;
+  setDate: (value: string) => void;
 }
 
 export interface GreetingCardProps {

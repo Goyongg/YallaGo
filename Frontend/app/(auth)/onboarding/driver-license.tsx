@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 // import { useRegistration } from '@/context/RegistrationContext';
 // import { registerUser } from '@/services/register';
 
@@ -41,6 +42,13 @@ const DriverLicense = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       className="flex-1 bg-white justify-around p-8"
     >
+      {/* Back Arrow */}
+      <Pressable onPress={() => router.back()} className="absolute top-20 left-6 z-10">
+        <Text>
+          <Ionicons name="arrow-back" size={38} color="#00BD5F" />
+        </Text>
+      </Pressable>
+      
       {/* Top Section */}
       <View>
         <Text className="text-5xl font-bold leading-[60px] tracking-wide mb-4">
