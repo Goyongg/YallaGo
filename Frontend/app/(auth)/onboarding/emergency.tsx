@@ -10,8 +10,6 @@ const Emergency = () => {
 
   const [contactName, setContactName] = useState(registrationData.emergencyContact.name);
   const [contactPhone, setContactPhone] = useState(registrationData.emergencyContact.phone);
-  // const [contactName, setContactName] = useState('');
-  // const [contactPhone, setContactPhone] = useState('');
 
   const isFormFilled = contactName.trim().length > 0 && contactPhone.trim().length > 0;
 

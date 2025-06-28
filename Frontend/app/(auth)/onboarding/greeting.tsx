@@ -1,11 +1,17 @@
-import { View, Text, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 
 const Greeting = () => {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const handleNext = () => {
-    router.push('/onboarding/name-contact');
+    setLoading(true);
+    setTimeout(() => {
+      router.push('/onboarding/name-contact');
+      setLoading(false);
+    }, 250); // just enough to flash the spinner
   };
 
   const handleLogin = () => {
@@ -29,10 +35,17 @@ const Greeting = () => {
       {/* Bottom Section */}
       <View className="w-full">
         <Pressable
-          className="bg-brand px-6 py-5 rounded-xl w-full flex items-center"
+          className={`px-6 py-5 rounded-xl w-full flex items-center ${
+            !loading ? 'bg-brand' : 'bg-gray-300'
+          }`}
           onPress={handleNext}
+          disabled={loading}
         >
-          <Text className="text-white font-semibold text-2xl">Next</Text>
+          {loading ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <Text className="text-white font-semibold text-2xl">Next</Text>
+          )}
         </Pressable>
 
         <View className="mt-6 flex-row justify-center items-center">

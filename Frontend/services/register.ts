@@ -13,17 +13,27 @@ export const registerUser = async (data: RegistrationData) => {
 
     // 2. Prepare user data for NestJS
     const userData: any = {
-      name,
-      email,
+      name: name,
+      email: email,
       phoneNumber: phone,
-      role,
-      gender,
-      emergencyContact,
-      ...(role === "driver" && { licenseNumber: license }),
+      role: role,
+      ...(role === "driver" && { licenseNumber: Number(license) }),
     };
 
+    // Add gender only if it's provided
+    if (gender?.trim()) {
+      userData.gender = gender.trim().toLowerCase(); // 'Male' -> 'male' to match enum
+    }
+
+    // Add emergencyContact only if both fields are non-empty
+    if (emergencyContact?.name.trim() && emergencyContact?.phone.trim()) {
+      userData.emergencyContactName = emergencyContact.name.trim();
+      userData.emergencyContactPhone = emergencyContact.phone.trim();
+    }
+
     // 3. Send to backend
-    const response = await axios.post( "http://10.128.24.33/users/register", userData, {
+    // check the IP address before running
+    const response = await axios.post( "http://10.128.24.33:3000/users/register", userData, {
         headers: { Authorization: `Bearer ${idToken}` }
     });
 

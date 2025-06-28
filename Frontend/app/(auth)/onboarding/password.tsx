@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useRegistration } from '@/context/RegistrationContext';
@@ -8,19 +8,25 @@ const Password = () => {
   const router = useRouter();
   const { registrationData, setRegistrationData } = useRegistration();
   const { email } = useLocalSearchParams<{ email?: string }>(); // get email from params
-
   const [password, setPassword] = useState(registrationData.password);
-  // const [password, setPassword] = useState('');
+
+  const [loading, setLoading] = useState(false);
 
   const isValid = password.trim().length > 0;
 
   const handleNext = () => {
+    setLoading(true);
+
     setRegistrationData((prev) => ({
       ...prev,
       password: password.trim(), // avoid user tapping "Next" if they enter only spaces
     }));
 
-    router.push('/onboarding/emergency');
+    // Slight delay to let UI show the spinner before navigating
+    setTimeout(() => {
+      router.push('/onboarding/emergency');
+      setLoading(false);
+    }, 250);
   };
 
   return (
@@ -58,12 +64,16 @@ const Password = () => {
       {/* Bottom Button */}
       <Pressable
         className={`py-5 rounded-xl w-full flex items-center ${
-          isValid ? 'bg-brand' : 'bg-gray-300'
+          isValid && !loading ? 'bg-brand' : 'bg-gray-300'
         }`}
-        disabled={!isValid}
+        disabled={!isValid || loading}
         onPress={handleNext}
       >
-        <Text className="text-white font-semibold text-2xl">Next</Text>
+        {loading ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text className="text-white font-semibold text-2xl">Next</Text>
+        )}
       </Pressable>
     </KeyboardAvoidingView>
   );

@@ -3,12 +3,15 @@ import React from 'react';
 import { View, Text, Modal, Pressable, TouchableWithoutFeedback, ScrollView, Image } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { ProfileMenuProps } from '../../interfaces/interfaces'
+import { signOut } from 'firebase/auth';
+import { auth } from '../../firebase';
+
 
 const menuItems = [
   { label: 'Gifts and discounts', sub: 'Enter promo code', route: '../(auth)/onboarding/' },
   { label: 'History', route: '../(auth)/onboarding/' },
   { label: 'Info', route: '../(auth)/onboarding/' },
-  { label: 'Log Out', route: '../(auth)/onboarding/greeting' },
+  { label: 'Log Out', action: 'logout' },
   { label: 'Delete Acc', route: '../(auth)/onboarding/greeting' },
   { label: 'Create a ride', route: './(tabs)/create' },
 ];
@@ -16,18 +19,22 @@ const menuItems = [
 const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, rating }) => {
   const router = useRouter();
 
-  const handleMenuPress = (item: any) => {
-    if (item.route) {
-      onClose();
-      router.push(item.route);
-    } else if (item.action === 'logout') {
-      console.log('Logging out...');
-      // TODO: Implement logout
-      onClose();
+  const handleMenuPress = async (item: any) => {
+    onClose();
+
+    if (item.action === 'logout') {
+      try {
+        await signOut(auth);
+        console.log('User signed out');
+        router.replace('../(auth)/onboarding/greeting');
+      } catch (err) {
+        console.error('Logout error:', err);
+      }
     } else if (item.action === 'delete') {
       console.log('Deleting account...');
-      // TODO: Confirm + delete logic
-      onClose();
+      // TODO: delete account logic
+    } else if (item.route) {
+      router.push(item.route);
     }
   };
 

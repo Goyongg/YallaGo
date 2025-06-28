@@ -1,9 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { loginUser } from "@/services/login";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../firebase";
 import { Alert } from "react-native";
+
+
+export const loginUser = async (email: string, password: string) => {
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  const idToken = await userCredential.user.getIdToken();
+
+  return {
+    token: idToken,
+    user: userCredential.user,
+  };
+};
 
 const Login = () => {
   const router = useRouter();
@@ -12,19 +24,23 @@ const Login = () => {
 
   const isValid = email.trim().length > 0 && password.trim().length > 0;
 
-  const handleLogin = async () => {
-    try {
-      // const { token, user } = await loginUser(email, password);
+  const [loading, setLoading] = useState(false);
 
-      // console.log("Login complete:");
-      // console.log("Token:", token);
-      // console.log("User:", user);
+  const handleLogin = async () => {
+    setLoading(true);
+    try {
+      const { token, user } = await loginUser(email, password);
+
+      console.log("Login complete:");
+      console.log("Token:", token);
+      console.log("User:", user);
 
       router.replace("/(tabs)/home");
     } catch (err: any) {
       Alert.alert("Login Failed", err.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
     }
-    router.replace("/(tabs)/home");
   };
 
   return (
@@ -80,12 +96,16 @@ const Login = () => {
       {/* Log In Button */}
       <Pressable
         className={`py-5 rounded-xl w-full flex items-center ${
-          isValid ? 'bg-brand' : 'bg-gray-300'
+          isValid && !loading ? 'bg-brand' : 'bg-gray-300'
         }`}
-        disabled={!isValid}
+        disabled={!isValid || loading}
         onPress={handleLogin}
       >
-        <Text className="text-white font-semibold text-2xl">Log in</Text>
+        {loading ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text className="text-white font-semibold text-2xl">Log in</Text>
+        )}
       </Pressable>
     </KeyboardAvoidingView>
   );

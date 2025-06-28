@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, Modal, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { View, Text, TextInput, Pressable, Modal, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { isValidEmail } from '@/utils/validation';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,11 +13,9 @@ const NameAndContact = () => {
   const [gender, setGender] = useState(registrationData.gender);
   const [email, setEmail] = useState(registrationData.email);
   const [phone, setPhone] = useState(registrationData.phone);
-  // const [name, setName] = useState('');
-  // const [gender, setGender] = useState('');
-  // const [email, setEmail] = useState('');
-  // const [phone, setPhone] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
+
+  const [loading, setLoading] = useState(false);
 
   const isFormValid =
     name.trim().length > 0 &&
@@ -25,6 +23,8 @@ const NameAndContact = () => {
     phone.trim().length > 0;
 
   const handleNext = () => {
+    setLoading(true);
+
     setRegistrationData((prev: RegistrationData) => ({
       ...prev,
       name,
@@ -32,10 +32,15 @@ const NameAndContact = () => {
       email,
       phone,
     }));
-    router.push({
-      pathname: '/onboarding/password',
-      params: { email }, // this can stay if you want to show email on password screen
-    });
+
+    // slight delay to show spinner before routing
+    setTimeout(() => {
+      router.push({
+        pathname: '/onboarding/password',
+        params: { email },
+      });
+      setLoading(false);
+    }, 250);
   };
 
   const handleGenderSelect = (selected: string) => {
@@ -144,12 +149,16 @@ const NameAndContact = () => {
       {/* Bottom Button */}
       <Pressable
         className={`py-5 rounded-xl w-full flex items-center ${
-          isFormValid ? 'bg-brand' : 'bg-gray-300'
+          isFormValid && !loading ? 'bg-brand' : 'bg-gray-300'
         }`}
-        disabled={!isFormValid}
+        disabled={!isFormValid || loading}
         onPress={handleNext}
       >
-        <Text className="text-white font-semibold text-2xl">Next</Text>
+        {loading ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text className="text-white font-semibold text-2xl">Next</Text>
+        )}
       </Pressable>
 
       {/* Gender Info Modal */}

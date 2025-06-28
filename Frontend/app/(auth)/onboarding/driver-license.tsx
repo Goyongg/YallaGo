@@ -23,7 +23,7 @@ const DriverLicense = () => {
     setLoading(true);
 
     try {
-      // await registerUser(finalData);
+      await registerUser(finalData);
       router.replace('/(tabs)/home');
     } catch (err: any) {
       Alert.alert("Registration Failed", err.message || "Something went wrong");
@@ -61,6 +61,7 @@ const DriverLicense = () => {
           value={licenseNumber}
           onChangeText={setLicenseNumber}
           autoCapitalize="characters"
+          placeholderTextColor="#A0AEC0"
         />
       </View>
 
