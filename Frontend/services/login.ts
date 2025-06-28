@@ -13,7 +13,7 @@ export const loginUser = async (email: string, password: string) => {
     console.log("Firebase ID Token:", idToken);
 
     // 2. Get user profile from backend
-    const response = await axios.get("http://localhost:3000/users/me", {
+    const response = await axios.get("http://10.128.24.33/users/me", {
       headers: {
         Authorization: `Bearer ${idToken}`,
       },

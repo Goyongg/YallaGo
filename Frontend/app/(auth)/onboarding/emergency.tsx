@@ -6,23 +6,23 @@ import { Ionicons } from '@expo/vector-icons';
 
 const Emergency = () => {
   const router = useRouter();
-  // const { registrationData, setRegistrationData } = useRegistration();
+  const { registrationData, setRegistrationData } = useRegistration();
 
-  // const [contactName, setContactName] = useState(registrationData.emergencyContact.name);
-  // const [contactPhone, setContactPhone] = useState(registrationData.emergencyContact.phone);
-  const [contactName, setContactName] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
+  const [contactName, setContactName] = useState(registrationData.emergencyContact.name);
+  const [contactPhone, setContactPhone] = useState(registrationData.emergencyContact.phone);
+  // const [contactName, setContactName] = useState('');
+  // const [contactPhone, setContactPhone] = useState('');
 
   const isFormFilled = contactName.trim().length > 0 && contactPhone.trim().length > 0;
 
   const handleNext = () => {
-    // setRegistrationData((prev) => ({
-    //   ...prev,
-    //   emergencyContact: {
-    //     name: contactName,
-    //     phone: contactPhone,
-    //   },
-    // }));
+    setRegistrationData((prev) => ({
+      ...prev,
+      emergencyContact: {
+        name: contactName.trim(),
+        phone: contactPhone.trim(),
+      },
+    }));
 
     router.push('/onboarding/role');
   };

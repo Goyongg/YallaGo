@@ -23,15 +23,9 @@ export const registerUser = async (data: RegistrationData) => {
     };
 
     // 3. Send to backend
-    const response = await axios.post(
-      "http://localhost:3000/users/register",
-      userData,
-      {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      }
-    );
+    const response = await axios.post( "http://10.128.24.33/users/register", userData, {
+        headers: { Authorization: `Bearer ${idToken}` }
+    });
 
     console.log("Registration Successful:", response.data);
     console.log("Sent to backend:", userData);

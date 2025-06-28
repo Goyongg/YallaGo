@@ -1,43 +1,41 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, Pressable, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-// import { useRegistration } from '@/context/RegistrationContext';
-// import { registerUser } from "@/services/register";
+import { useRegistration } from '@/context/RegistrationContext';
+import { registerUser } from "@/services/register";
 
 const Role = () => {
   const router = useRouter();
-  // const { registrationData, setRegistrationData } = useRegistration();
-  // const [selectedRole, setSelectedRole] = useState<'passenger' | 'driver'>(registrationData.role);
-  const [selectedRole, setSelectedRole] = useState<'passenger' | 'driver'>('passenger');
-  // const [loading, setLoading] = useState(false);
+  const { registrationData, setRegistrationData } = useRegistration();
+  const [selectedRole, setSelectedRole] = useState<'passenger' | 'driver'>(registrationData.role || 'passenger');
+  const [loading, setLoading] = useState(false);
 
   const handleNext = async () => {
-    // setRegistrationData((prev) => ({
-    //   ...prev,
-    //   role: selectedRole,
-    // }));
+    setRegistrationData((prev) => ({
+      ...prev,
+      role: selectedRole,
+    }));
 
     if (selectedRole === "driver") {
       router.push("/onboarding/driver-license");
     } 
     else {
       // Register passenger
-      // setLoading(true);
-      // try {
-      //   await registerUser({
-      //     ...registrationData,
-      //     role: selectedRole,
-      //   });
-      //   router.replace("/(tabs)/home");
-      // } 
-      // catch (err: any) {
-      //   Alert.alert("Registration Failed", err.message || "Something went wrong");
-      // } 
-      // finally {
-      //   setLoading(false);
-      // }
-      router.replace("/(tabs)/home");
+      setLoading(true);
+      try {
+        // await registerUser({
+        //   ...registrationData,
+        //   role: selectedRole,
+        // });
+        router.replace("/(tabs)/home");
+      } 
+      catch (err: any) {
+        Alert.alert("Registration Failed", err.message || "Something went wrong");
+      } 
+      finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -87,10 +85,17 @@ const Role = () => {
 
       {/* Bottom Button */}
       <Pressable
-        className="py-5 rounded-xl bg-brand w-full flex items-center"
+        className={`py-5 rounded-xl w-full flex items-center ${
+          loading ? 'bg-gray-300' : 'bg-brand'
+        }`}
+        disabled={loading}
         onPress={handleNext}
       >
-        <Text className="text-white font-semibold text-2xl">Next</Text>
+        {loading ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text className="text-white font-semibold text-2xl">Next</Text>
+        )}
       </Pressable>
     </KeyboardAvoidingView>
   );

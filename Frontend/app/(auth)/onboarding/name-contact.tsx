@@ -3,20 +3,20 @@ import { View, Text, TextInput, Pressable, Modal, TouchableOpacity, KeyboardAvoi
 import { useRouter } from 'expo-router';
 import { isValidEmail } from '@/utils/validation';
 import { Ionicons } from '@expo/vector-icons';
-// import { RegistrationData, useRegistration } from '@/context/RegistrationContext';
+import { RegistrationData, useRegistration } from '@/context/RegistrationContext';
 
 const NameAndContact = () => {
   const router = useRouter();
-  // const { registrationData, setRegistrationData } = useRegistration();
+  const { registrationData, setRegistrationData } = useRegistration();
 
-  // const [name, setName] = useState(registrationData.name);
-  // const [gender, setGender] = useState(registrationData.gender);
-  // const [email, setEmail] = useState(registrationData.email);
-  // const [phone, setPhone] = useState(registrationData.phone);
-  const [name, setName] = useState('');
-  const [gender, setGender] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [name, setName] = useState(registrationData.name);
+  const [gender, setGender] = useState(registrationData.gender);
+  const [email, setEmail] = useState(registrationData.email);
+  const [phone, setPhone] = useState(registrationData.phone);
+  // const [name, setName] = useState('');
+  // const [gender, setGender] = useState('');
+  // const [email, setEmail] = useState('');
+  // const [phone, setPhone] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
 
   const isFormValid =
@@ -25,13 +25,13 @@ const NameAndContact = () => {
     phone.trim().length > 0;
 
   const handleNext = () => {
-    // setRegistrationData((prev: RegistrationData) => ({
-    //   ...prev,
-    //   name,
-    //   gender,
-    //   email,
-    //   phone,
-    // }));
+    setRegistrationData((prev: RegistrationData) => ({
+      ...prev,
+      name,
+      gender,
+      email,
+      phone,
+    }));
     router.push({
       pathname: '/onboarding/password',
       params: { email }, // this can stay if you want to show email on password screen

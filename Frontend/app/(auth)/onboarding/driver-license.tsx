@@ -1,40 +1,35 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-// import { useRegistration } from '@/context/RegistrationContext';
-// import { registerUser } from '@/services/register';
+import { useRegistration } from '@/context/RegistrationContext';
+import { registerUser } from '@/services/register';
 
 const DriverLicense = () => {
   const router = useRouter();
-  // const { registrationData, setRegistrationData } = useRegistration();
-  // const [licenseNumber, setLicenseNumber] = useState(registrationData.license);
-  const [licenseNumber, setLicenseNumber] = useState('');
-  // const [loading, setLoading] = useState(false);
+  const { registrationData, setRegistrationData } = useRegistration();
+  const [licenseNumber, setLicenseNumber] = useState(registrationData.license);
+  const [loading, setLoading] = useState(false);
 
   const isValid = licenseNumber.trim().length > 0;
 
   const handleSubmit = async () => {
-    // setRegistrationData((prev) => ({
-    //   ...prev,
-    //   license: licenseNumber,
-    // }));
+    const finalData = {
+      ...registrationData,
+      license: licenseNumber.trim(),
+    };
 
-    // setLoading(true);
-    // try {
-    //   await registerUser({
-    //     ...registrationData,
-    //     license: licenseNumber,
-    //   });
+    setRegistrationData(finalData);
+    setLoading(true);
 
-    //   router.replace('/(tabs)/home');
-    // } catch (err: any) {
-    //   Alert.alert("Registration Failed", err.message || "Something went wrong");
-    // } finally {
-    //   setLoading(false);
-    // }
-
-    router.replace('/(tabs)/home');
+    try {
+      // await registerUser(finalData);
+      router.replace('/(tabs)/home');
+    } catch (err: any) {
+      Alert.alert("Registration Failed", err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -72,14 +67,16 @@ const DriverLicense = () => {
       {/* Submit Button */}
       <Pressable
         className={`py-5 rounded-xl w-full flex items-center ${
-          isValid ? 'bg-brand' : 'bg-gray-300'
+          isValid && !loading ? 'bg-brand' : 'bg-gray-300'
         }`}
-        disabled={!isValid}
+        disabled={!isValid || loading}
         onPress={handleSubmit}
       >
-        <Text className="text-white font-semibold text-2xl">
-          Submit
-        </Text>
+        {loading ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text className="text-white font-semibold text-2xl">Submit</Text>
+        )}
       </Pressable>
     </KeyboardAvoidingView>
   );
