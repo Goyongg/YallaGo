@@ -9,6 +9,9 @@ export class FirebaseService implements OnModuleInit{
     private authInstance: admin.auth.Auth;
     private messagingInstance: admin.messaging.Messaging;
 
+    // Expose Timestamp
+    public readonly Timestamp = admin.firestore.Timestamp;
+
     onModuleInit() {
         const app = admin.initializeApp({
             credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),

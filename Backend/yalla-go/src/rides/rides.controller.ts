@@ -8,7 +8,7 @@ export class RidesController {
     constructor(private readonly rideService: RidesService) {}
 
     @UseGuards(FirebaseAuthGuard)
-    @Post('ride')
+    @Post()
     async createRide(@Body(ValidationPipe) createRideDto: CreateRideDto, @Req() req) {
         const firebaseUid = req.user.uid; // extract user id from the request
 

@@ -11,7 +11,11 @@ export class CreateRideDto {
 
     @IsNotEmpty()
     @IsString()
-    departureTime: string;
+    date: string;
+
+    @IsNotEmpty()
+    @IsString()
+    time: string;
 
     @IsNotEmpty()
     @IsNumber()
@@ -21,12 +25,13 @@ export class CreateRideDto {
     @IsNotEmpty()
     @IsNumber()
     @Min(1)
-    availableseats: number;
+    availableSeats: number;
 
     @IsOptional()
     @IsBoolean()
     femaleOnly: boolean;
 
+    @IsOptional()
     @IsArray()
     waypoints: string[]
 }
