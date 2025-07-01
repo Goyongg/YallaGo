@@ -8,6 +8,8 @@ export class FirebaseService implements OnModuleInit{
     private firestoreInstance: admin.firestore.Firestore;
     private authInstance: admin.auth.Auth;
     private messagingInstance: admin.messaging.Messaging;
+    
+    public readonly Timestamp = admin.firestore.Timestamp;
 
     onModuleInit() {
         const app = admin.initializeApp({

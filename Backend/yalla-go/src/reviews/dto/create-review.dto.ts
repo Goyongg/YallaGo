@@ -1,6 +1,10 @@
-import { IsNumber, IsOptional } from "class-validator";
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from "class-validator";
 
 export class CreateReviewDto {
+    @IsNotEmpty()
+    @IsString()
+    rideId: string;
+
     @IsNumber()
     rating: number;
 
