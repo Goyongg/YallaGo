@@ -3,13 +3,9 @@ export const getUserDefaults = (role: string) => {
     const base = {
         averageRating: 0,
         ratingcount: 0,
-        languagePreference: 'en'
+        languagePreference: 'en',
+        ecoPoints: 0
     };
-
-    // passenger default fields
-    if (role === "passenger") {
-        return { ...base, ecoPoints: 0};
-    }
     
     // driver default fields
     if (role === "driver") {
