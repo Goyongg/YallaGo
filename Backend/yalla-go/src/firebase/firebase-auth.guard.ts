@@ -24,15 +24,17 @@ export class FirebaseAuthGuard implements CanActivate {
             throw new UnauthorizedException('Missing or malformed Authorization header');
         }
 
-        // split the idToken from the request sent by frontend
-        const idToken = authHeader.split('Bearer ')[1];
+        // Remove Bearer prefix, trim, and strip all whitespace
+        const idToken = authHeader.replace(/^Bearer\s+/i, '').replace(/\s+/g, '');
 
         try { // verify token
+            console.log('🔑 Verifying token...');
             const decodedToken = await admin.auth().verifyIdToken(idToken);
             request.user = decodedToken; // attach the Firebase user info
             return true;
         } catch (error) { // send UnauthorizedException if token failed to verify
-            throw new UnauthorizedException('Invalid or expired token')
+            console.error('❌ Token verification failed:', error);
+            throw new UnauthorizedException('Invalid or expired token');
         }
     }
 }
