@@ -3,8 +3,9 @@ import React from 'react';
 import { View, Text, Modal, Pressable, TouchableWithoutFeedback, ScrollView, Image } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { ProfileMenuProps } from '../../interfaces/interfaces'
-import { signOut } from 'firebase/auth';
-import { auth } from '../../firebase';
+// import { signOut } from 'firebase/auth';
+// import { auth } from '../../firebase';
+import auth from '@react-native-firebase/auth';
 
 
 const menuItems = [
@@ -24,7 +25,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, r
 
     if (item.action === 'logout') {
       try {
-        await signOut(auth);
+        await auth().signOut();
         console.log('User signed out');
         router.replace('../(auth)/onboarding/greeting');
       } catch (err) {

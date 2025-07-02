@@ -1,39 +1,80 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# Node modules
 node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Expo
 .expo/
+.expo-shared/
 dist/
 web-build/
 expo-env.d.ts
+*.expo/*
+*.expo-shared/*
 
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+# Builds
+build/
+android/app/build/
+ios/build/
+web-build/
 
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
+# Environment files
+.env
 .env*.local
+.env*.development
+.env*.production
 
-# typescript
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# TypeScript
 *.tsbuildinfo
 
+# Android / Gradle
+android/.gradle/
+android/.idea/
+android/.settings/
+android/local.properties
+android/gradle.properties
+android/gradlew
+android/gradlew.bat
+android/gradle/wrapper/
+android/build/
+android/.externalNativeBuild/
+*.jks
+*.keystore
+android/app/build/
+*.apk
+*.ap_
+*.so
+
+
+# iOS
+ios/Pods/
+ios/Podfile.lock
+ios/DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+*.xcuserstate
+*.xcuserdatad/
+
+# Debug
+*.orig.*
+*.key
+*.p8
+*.p12
+*.mobileprovision
+
+# Firebase / Google config
+*.plist
+*.json
+
+# Git conflict files
+*.orig
+
+# Example data
 app-example

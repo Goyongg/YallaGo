@@ -1,14 +1,18 @@
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase";
+import auth from '@react-native-firebase/auth';
 import axios from "axios";
+import { Platform } from 'react-native';
 import { RegistrationData } from "@/context/RegistrationContext";
+
+// This should be checked to match the current IP address
+const BASE_URL =
+  Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://10.128.24.33:3000';
 
 export const registerUser = async (data: RegistrationData) => {
   const { email, password, name, phone, gender, role, emergencyContact, license } = data;
 
   try {
     // 1. Register on Firebase Auth
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const userCredential = await auth().createUserWithEmailAndPassword(email, password);
     const idToken = await userCredential.user.getIdToken();
 
     // 2. Prepare user data for NestJS
@@ -33,8 +37,8 @@ export const registerUser = async (data: RegistrationData) => {
 
     // 3. Send to backend
     // check the IP address before running
-    const response = await axios.post( "http://10.128.24.33:3000/users/register", userData, {
-        headers: { Authorization: `Bearer ${idToken}` }
+    const response = await axios.post(`${BASE_URL}/users/register`, userData, {
+      headers: { Authorization: `Bearer ${idToken}` }
     });
 
     console.log("Registration Successful:", response.data);

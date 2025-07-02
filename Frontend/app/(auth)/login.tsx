@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../firebase";
-import { Alert } from "react-native";
+import auth from '@react-native-firebase/auth';
 
 
 export const loginUser = async (email: string, password: string) => {
-  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  const userCredential = await auth().signInWithEmailAndPassword(email, password);
   const idToken = await userCredential.user.getIdToken();
 
   return {
@@ -23,7 +21,6 @@ const Login = () => {
   const [password, setPassword] = useState('');
 
   const isValid = email.trim().length > 0 && password.trim().length > 0;
-
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -34,6 +31,7 @@ const Login = () => {
       console.log("Login complete:");
       console.log("Token:", token);
       console.log("User:", user);
+      console.log("User ID (UID):", user.uid);
 
       router.replace("/(tabs)/home");
     } catch (err: any) {
