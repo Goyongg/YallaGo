@@ -5,7 +5,6 @@ import { CreateDriverDto } from './dto/create-driver.dto';
 import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { plainToInstance } from 'class-transformer';
 import { validateOrReject } from 'class-validator';
-import { Response } from 'express';
 
 @Controller('users')
 export class UsersController {
@@ -14,17 +13,11 @@ export class UsersController {
     // GET /users/home
     @UseGuards(FirebaseAuthGuard)
     @Get('home')
-    async getHomePageInfo(@Req() req, @Res() res: Response) {
+    async getHomePageInfo(@Req() req) {
         const firebaseUid = req.user.uid;
         console.log(firebaseUid);
 
-        try { // return relevant user data
-            const data = await this.userService.getHomePageInfo(firebaseUid);
-            return res.status(200).json(data);
-        }
-        catch (err) {
-            return res.status(404).json({ message: err.message || "User not found" });
-        }
+        return await this.userService.getHomePageInfo(firebaseUid);
     }
 
     // POST /users/register

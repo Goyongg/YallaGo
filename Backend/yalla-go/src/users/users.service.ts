@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CreateDriverDto } from './dto/create-driver.dto';
@@ -10,7 +10,7 @@ function cleanUserData(data: Record<string, any>) {
 
     // go through each key value pairs and check undefined values
     for (const [key, value] of Object.entries(data)) {
-        if (value === undefined) { // check undefined values
+        if (value === undefined || (typeof value === "string" && value.trim() === "")) { // check undefined/empty values
             if (key === 'gender') { // set default gender
                 result[key] = 'prefer_not_to_say'
             }
@@ -30,12 +30,12 @@ export class UsersService {
     async getHomePageInfo(firebaseUid: string) {
         const userDoc = await this.firebase.firestore.collection('users').doc(firebaseUid).get();
         if (!userDoc.exists) {
-            throw new Error('User not found');
+            throw new NotFoundException('User not found');
         };
 
         const userData = userDoc.data();
         if (!userData) {
-            throw new Error('User data is undefined');
+            throw new NotFoundException('User data is undefined');
         }
 
         const response: any = {
@@ -46,7 +46,8 @@ export class UsersService {
             ecoPoints: userData.ecoPoints
         };
 
-        return response;
+        // return user info
+        return response; 
     }
 
     // create the user in firestore
