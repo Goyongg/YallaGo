@@ -60,3 +60,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Firebase get-token.js
 /Backend/yalla-go/scripts/get-token.js
+
+# Heap dump files
+*.hprof
