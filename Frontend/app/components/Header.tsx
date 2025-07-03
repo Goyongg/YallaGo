@@ -3,7 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ProfileMenu from './ProfileMenu';
 
-const Header = () => {
+const Header: React.FC<{ userName: string; rating: number }> = ({ userName, rating }) => {
   const [menuVisible, setMenuVisible] = useState(false);
 
   return (
@@ -21,8 +21,8 @@ const Header = () => {
       <ProfileMenu
         visible={menuVisible}
         onClose={() => setMenuVisible(false)}
-        userName="Ahmed"
-        rating={5}
+        userName={userName}
+        rating={rating}
       />
     </View>
   );

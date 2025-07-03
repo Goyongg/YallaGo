@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { RecentSearchesProps } from '../../interfaces/interfaces';
+import { RecentSearch } from '../../interfaces/interfaces';
 
-const RecentSearches: React.FC<RecentSearchesProps> = ({ recentSearches }) => {
+const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSearches }) => {
   return (
     <View className="px-12 mb-8">
       <Text className="text-2xl font-[Afacad] mb-4">Recent Searches</Text>

@@ -5,7 +5,7 @@ import { GreetingCardProps } from '../../interfaces/interfaces';
 const GreetingCard: React.FC<GreetingCardProps> = ({ userName, ecoPoints }) => (
   <View
     style={{ backgroundColor: '#A8E2C5' }}
-    className="self-center w-[80%] aspect-[303/129] rounded-xl p-4 mb-6 justify-center"
+    className="self-center w-[80%] rounded-xl p-4 mb-6 justify-center"
   >
     <Text className="text-3xl font-semibold text-black font-[Afacad]">
       Good Morning, {`${userName}\u00A0👋`}

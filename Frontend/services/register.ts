@@ -4,8 +4,10 @@ import { Platform } from 'react-native';
 import { RegistrationData } from "@/context/RegistrationContext";
 
 // This should be checked to match the current IP address
+// Uni: 10.45.49.69
+// Home: 10.128.24.33
 const BASE_URL =
-  Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://10.128.24.33:3000';
+  Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://10.45.49.69:3000';
 
 export const registerUser = async (data: RegistrationData) => {
   const { email, password, name, phone, gender, role, emergencyContact, license } = data;

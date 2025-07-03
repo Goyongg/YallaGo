@@ -1,20 +1,14 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { View, Text, Modal, Pressable, TouchableWithoutFeedback, ScrollView, Image } from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { ProfileMenuProps } from '../../interfaces/interfaces'
-// import { signOut } from 'firebase/auth';
-// import { auth } from '../../firebase';
-import auth from '@react-native-firebase/auth';
-
+import { View, Text, Modal, Pressable, TouchableWithoutFeedback, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { ProfileMenuProps } from '../../interfaces/interfaces';
 
 const menuItems = [
-  { label: 'Gifts and discounts', sub: 'Enter promo code', route: '../(auth)/onboarding/' },
-  { label: 'History', route: '../(auth)/onboarding/' },
-  { label: 'Info', route: '../(auth)/onboarding/' },
-  { label: 'Log Out', action: 'logout' },
-  { label: 'Delete Acc', route: '../(auth)/onboarding/greeting' },
-  { label: 'Create a ride', route: './(tabs)/create' },
+  { label: 'Manage Profile', route: '../profile/manage' },
+  { label: 'Gifts and discounts', sub: 'Enter promo code', route: '../profile/gifts' },
+  { label: 'History', route: '../profile/history' },
+  { label: 'Info', route: '../profile/info' },
 ];
 
 const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, rating }) => {
@@ -22,19 +16,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, r
 
   const handleMenuPress = async (item: any) => {
     onClose();
-
-    if (item.action === 'logout') {
-      try {
-        await auth().signOut();
-        console.log('User signed out');
-        router.replace('../(auth)/onboarding/greeting');
-      } catch (err) {
-        console.error('Logout error:', err);
-      }
-    } else if (item.action === 'delete') {
-      console.log('Deleting account...');
-      // TODO: delete account logic
-    } else if (item.route) {
+    if (item.route) {
       router.push(item.route);
     }
   };
@@ -42,7 +24,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, r
   return (
     <Modal transparent animationType="slide" visible={visible} onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <View className="flex-1 bg-black/40 justify-end">
+        <View className="flex-1 justify-end">
           <TouchableWithoutFeedback>
             <View className="bg-white rounded-t-3xl pt-6 pb-12 px-6">
               {/* Close Button */}
@@ -66,18 +48,22 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, r
               <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Icon Row */}
                 <View className="flex-row justify-around items-center mb-6">
-                  <View className="items-center">
+                  <Pressable
+                    onPress={() => {
+                      onClose();
+                      router.push('/profile/safety');
+                    }} className="items-center">
                     <Ionicons name="shield-checkmark" size={26} color="#444" />
                     <Text className="text-sm font-[Afacad] mt-1">Safety</Text>
-                  </View>
-                  <View className="items-center">
-                    <Ionicons name="chatbubble-ellipses" size={26} color="#444" />
-                    <Text className="text-sm font-[Afacad] mt-1">Support</Text>
-                  </View>
-                  <View className="items-center">
+                  </Pressable>
+                  
+                  <Pressable onPress={() => {
+                    onClose();
+                    router.push('/profile/settings');
+                  }} className="items-center">
                     <Ionicons name="settings" size={26} color="#444" />
                     <Text className="text-sm font-[Afacad] mt-1">Settings</Text>
-                  </View>
+                  </Pressable>
                 </View>
 
                 {/* List Items */}
