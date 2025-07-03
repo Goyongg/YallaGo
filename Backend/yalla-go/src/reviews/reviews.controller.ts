@@ -11,7 +11,6 @@ export class ReviewsController {
     @UseGuards(FirebaseAuthGuard)
     @Post('addreview')
     async addReview(@Body(ValidationPipe) createReviewDto: CreateReviewDto, @Req() req) {
-
         const firebaseUid = req.user.uid; // extract user id from the request
 
         return this.reviewsService.createReview(createReviewDto, firebaseUid)

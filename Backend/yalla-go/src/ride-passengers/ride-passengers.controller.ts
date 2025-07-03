@@ -9,9 +9,8 @@ export class RidePassengersController {
     constructor(private readonly ridePassengerService: RidePassengersService) {}
 
     @UseGuards(FirebaseAuthGuard)
-    @Post('createbooking')
+    @Post()
     async createBooking(@Body(ValidationPipe) createRidePassengerDto: CreateRidePassengerDto, @Req() req) {
-        
         const firebaseUid = req.user.uid; // extract user id from the request
 
         return this.ridePassengerService.createBooking(createRidePassengerDto, firebaseUid)
@@ -19,8 +18,9 @@ export class RidePassengersController {
 
     @UseGuards(FirebaseAuthGuard)
     @Get()
-    async getMyBookings(@Req() req) {
-        const firebaseUid = req.user.uid;
-        return this.ridePassengerService.getBookingsForPassenger(firebaseUid);
+    async getBookings(@Req() req) {
+        const firebaseUid = req.user.uid; // extract user id from the request
+
+        return this.ridePassengerService.getBookings(firebaseUid);
     }
 }

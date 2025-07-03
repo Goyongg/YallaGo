@@ -9,8 +9,6 @@ export class FirebaseService implements OnModuleInit{
     private authInstance: admin.auth.Auth;
     private messagingInstance: admin.messaging.Messaging;
     
-    public readonly Timestamp = admin.firestore.Timestamp;
-
     // Expose Timestamp
     public readonly Timestamp = admin.firestore.Timestamp;
 
