@@ -1,13 +1,23 @@
-import { IsArray, IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from "class-validator";
+import { Type } from "class-transformer";
+import { IsArray, IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString, Min, ValidateNested } from "class-validator";
+import { Coordinates } from "src/common/coordinates.dto";
 
 export class CreateRideDto {
     @IsNotEmpty()
     @IsString()
     startLocation: string;
 
+    @ValidateNested()
+    @Type(() => Coordinates)
+    startPoint: Coordinates
+
     @IsNotEmpty()
     @IsString()
     endLocation: string;
+
+    @ValidateNested()
+    @Type(() => Coordinates)
+    endPoint: Coordinates
 
     @IsNotEmpty()
     @IsString()

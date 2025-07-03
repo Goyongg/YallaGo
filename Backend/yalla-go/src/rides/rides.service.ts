@@ -31,7 +31,7 @@ function cleanRideData(data: Record<string, any>) {
 export class RidesService {
     constructor(private readonly firebase: FirebaseService) {}
 
-    // Check if the user is a driver and check for kycStatus
+    // Check if user role is driver, then check if kyc is verified and if vehicle exists for driver
     private async validateDriver(firebaseUid: string) {
         const userSnap = await this.firebase.firestore.collection('users').doc(firebaseUid).get();
         if (!userSnap.exists) {
@@ -43,9 +43,12 @@ export class RidesService {
         if (user.role !== 'driver') { // check role
             throw new ForbiddenException('Only Drivers can create rides.');
         }
-        // if (user.kycStatus !== 'verified') { // check kycStatus
-        //     throw new ForbiddenException('Driver account is not verified');
-        // }
+        if (user.kycStatus !== 'verified') { // check kycStatus
+            throw new ForbiddenException('Driver account is not verified');
+        }
+        if (!user.vehicleId) { // check if driver has a vehicle
+            throw new ForbiddenException('Driver must have a registered vehicle.');
+        }
     }
 
     // parse date and time from dto and convert to Timestamp
@@ -66,21 +69,34 @@ export class RidesService {
     // create ride service
     async createRide(createRideDto: CreateRideDto, firebaseUid: string) {
 
-        // check role and kycStatus
+        // verify driver
         await this.validateDriver(firebaseUid);
+
+        // Convert coordinates into GeoPoint
+        const startGeoPoint = new this.firebase.GeoPoint(
+            createRideDto.startPoint.lat, 
+            createRideDto.startPoint.lng
+        );
+        const endGeoPoint = new this.firebase.GeoPoint(
+            createRideDto.endPoint.lat, 
+            createRideDto.endPoint.lng
+        );
 
         // combine date and time (convert to UAE timezone)
         const departureTime = this.parseUaeDateTime(createRideDto.date, createRideDto.time);
 
-        // destructure to pull out date and time
-        const {date, time, ...rest } = createRideDto; 
+        // destructure to pull out date, time, start/end coordinates
+        const {date, time, startPoint, endPoint, ...rest } = createRideDto; 
 
+        // create the ride doc
         const rideRef = this.firebase.firestore.collection('rides').doc();
         const rawRideData = {
             rideId: rideRef.id, // set rideId
             driverId: firebaseUid, // link driverId
-            ...rest, // spread out ride fields w/o date & time
+            startGeo: startGeoPoint,
+            endGeo: endGeoPoint,
             departureTime: departureTime,
+            ...rest, // spread out ride fields 
             status: RideStatus.IN_PROGRESS
         };
 
