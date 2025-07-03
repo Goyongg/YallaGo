@@ -2,7 +2,7 @@
 export const getUserDefaults = (role: string) => {
     const base = {
         averageRating: 0,
-        ratingcount: 0,
+        ratingCount: 0,
         languagePreference: 'en',
         ecoPoints: 0
     };

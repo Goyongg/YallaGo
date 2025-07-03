@@ -9,6 +9,12 @@ export class FirebaseService implements OnModuleInit{
     private authInstance: admin.auth.Auth;
     private messagingInstance: admin.messaging.Messaging;
 
+    // Expose Timestamp
+    public readonly Timestamp = admin.firestore.Timestamp;
+
+    // Expose GeoPoint
+    public readonly GeoPoint = admin.firestore.GeoPoint;
+
     onModuleInit() {
         const app = admin.initializeApp({
             credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
