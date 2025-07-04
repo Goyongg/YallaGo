@@ -3,7 +3,21 @@ import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ProfileMenu from './ProfileMenu';
 
-const Header: React.FC<{ userName: string; rating: number }> = ({ userName, rating }) => {
+interface HeaderProps {
+  userName: string;
+  rating: number;
+  isDriver?: boolean;
+  isCreateMode?: boolean;
+  toggleCreateMode?: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({
+  userName,
+  rating,
+  isDriver = false,
+  isCreateMode = false,
+  toggleCreateMode,
+}) => {
   const [menuVisible, setMenuVisible] = useState(false);
 
   return (
@@ -14,7 +28,17 @@ const Header: React.FC<{ userName: string; rating: number }> = ({ userName, rati
           <Ionicons name="menu" size={34} color="black" />
         </Pressable>
         <Text className="text-5xl font-bold text-black font-[Afacad]">YallaGo</Text>
-        <View className="w-6" />
+        {isDriver ? (
+          <Pressable onPress={toggleCreateMode}>
+            <Ionicons
+              name={isCreateMode ? 'search' : 'add-circle-outline'}
+              size={30}
+              color="black"
+            />
+          </Pressable>
+        ) : (
+          <View className="w-6" /> // Keeps spacing consistent
+        )}
       </View>
 
       {/* Bottom Sheet Modal */}
