@@ -1,4 +1,19 @@
-import { Controller } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards, ValidationPipe } from '@nestjs/common';
+import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
+import { ReviewsService } from './reviews.service';
+import { CreateReviewDto } from './dto/create-review.dto';
 
 @Controller('reviews')
-export class ReviewsController {}
+export class ReviewsController {
+
+    constructor(private readonly reviewsService: ReviewsService) {}
+
+    @UseGuards(FirebaseAuthGuard)
+    @Post('addreview')
+    async addReview(@Body(ValidationPipe) createReviewDto: CreateReviewDto, @Req() req) {
+        const firebaseUid = req.user.uid; // extract user id from the request
+
+        return this.reviewsService.createReview(createReviewDto, firebaseUid)
+    }
+
+}
