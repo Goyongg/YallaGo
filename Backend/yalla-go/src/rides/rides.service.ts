@@ -2,6 +2,8 @@ import { BadRequestException, ForbiddenException, Injectable, InternalServerErro
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreateRideDto } from './dto/create-ride.dto';
 import { RideStatus } from './enums/ride-status.enum';
+import { GoogleMapsService } from 'src/google/google-maps/google-maps.service';
+import { RidePlanDto } from './dto/ride-plan.dto';
 
 // clean any undefined fields for ride data
 function cleanRideData(data: Record<string, any>) {
@@ -29,7 +31,10 @@ function cleanRideData(data: Record<string, any>) {
 
 @Injectable()
 export class RidesService {
-    constructor(private readonly firebase: FirebaseService) {}
+    constructor(
+        private readonly firebase: FirebaseService, 
+        private readonly googleMaps: GoogleMapsService
+    ) {}
 
     // Check if user role is driver, then check if kyc is verified and if vehicle exists for driver
     private async validateDriver(firebaseUid: string) {
@@ -105,4 +110,34 @@ export class RidesService {
         await rideRef.set(rideData); // set ride data
         return { message: "Ride created successfull", rideId: rideData.rideId }
     };
+
+    // calculate recommended price per seat based on the start and end coordinates
+    async recommendPrice(ridePlantDto: RidePlanDto) {
+
+        // call distance matrix API to get distance and duration of the route
+        const { distanceMeters, durationSeconds } =
+            await this.googleMaps.getDistanceAndDuration(
+                ridePlantDto.startPoint.lat,
+                ridePlantDto.startPoint.lng,
+                ridePlantDto.endPoint.lat,
+                ridePlantDto.endPoint.lng,
+                ridePlantDto.date,
+                ridePlantDto.time
+            );
+            
+        // convert distance to KM and duratin to mins
+        const distanceKm = distanceMeters / 1000;
+        const durationMin = durationSeconds / 60;
+
+        // Price formula (AED)
+        // sample
+        const baseFee = 5.5;
+        const perKmRate = 2.14;
+        const perMinRate = 0.5;
+        const maxPassengers = 3;
+        
+        const price = baseFee + (distanceKm * perKmRate) + (durationMin * perMinRate);
+        
+        return { recommendedPrice: Math.round(price / maxPassengers) };
+    }
 }

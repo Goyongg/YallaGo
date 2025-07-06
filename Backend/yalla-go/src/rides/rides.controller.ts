@@ -2,10 +2,17 @@ import { Body, Controller, Post, Req, UseGuards, ValidationPipe } from '@nestjs/
 import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { CreateRideDto } from './dto/create-ride.dto';
 import { RidesService } from './rides.service';
+import { RidePlanDto } from './dto/ride-plan.dto';
 
 @Controller('rides')
 export class RidesController {
     constructor(private readonly rideService: RidesService) {}
+    
+    @UseGuards(FirebaseAuthGuard)
+    @Post('recommend-price')
+    async recommendPrice(@Body(ValidationPipe) ridePlantDto: RidePlanDto) {
+        return this.rideService.recommendPrice(ridePlantDto);
+    }
 
     @UseGuards(FirebaseAuthGuard)
     @Post()
