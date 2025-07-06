@@ -1,31 +1,14 @@
-import { Type } from "class-transformer";
-import { IsArray, IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString, Min, ValidateNested } from "class-validator";
-import { Coordinates } from "src/common/coordinates.dto";
+import { IsArray, IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from "class-validator";
+import { RidePlanDto } from "./ride-plan.dto";
 
-export class CreateRideDto {
+export class CreateRideDto extends RidePlanDto {
     @IsNotEmpty()
     @IsString()
     startLocation: string;
 
-    @ValidateNested()
-    @Type(() => Coordinates)
-    startPoint: Coordinates
-
     @IsNotEmpty()
     @IsString()
     endLocation: string;
-
-    @ValidateNested()
-    @Type(() => Coordinates)
-    endPoint: Coordinates
-
-    @IsNotEmpty()
-    @IsString()
-    date: string;
-
-    @IsNotEmpty()
-    @IsString()
-    time: string;
 
     @IsNotEmpty()
     @IsNumber()
@@ -43,5 +26,5 @@ export class CreateRideDto {
 
     @IsOptional()
     @IsArray()
-    waypoints: string[]
+    waypoints: string[];
 }
