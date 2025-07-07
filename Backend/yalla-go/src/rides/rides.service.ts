@@ -78,17 +78,20 @@ export class RidesService {
         return this.firebase.Timestamp.fromDate(jsDate); // return firestore Timestamp
     }
 
+    // search nearby rides around a center point based on radiusKm (uses geofirestore query)
     private async searchNearbyRides(centerLat: number, centerLng: number, radiusKm: number) {
         const geoRidesCollection = await this.firebase.geoFirestore.collection('rides');
 
-        // query rides that are near the radius (based on radiusKm)
+        // query rides that are near the radius
         const query = geoRidesCollection.near({
             center: new this.firebase.GeoPoint(centerLat, centerLng),
             radius: radiusKm
         });
 
+        // get the snapshot of the query
         const snapshot = await query.get();
 
+        // map firestore documents into ride objects
         const rides = snapshot.docs.map(doc => ({
             rideId: doc.id,
             ...(doc.data() as any)
@@ -155,8 +158,6 @@ export class RidesService {
             status: RideStatus.IN_PROGRESS
         };
 
-        console.log(rawRideData.coordinates);
-
         const rideData = cleanRideData(rawRideData);
 
         // Set the document using GeoFirestore to add geohash
@@ -184,8 +185,7 @@ export class RidesService {
         const distanceKm = distanceMeters / 1000;
         const durationMin = durationSeconds / 60;
 
-        // Price formula (AED)
-        // sample
+        // Price formula (AED) sample
         const baseFee = 5.5;
         const perKmRate = 2.14;
         const perMinRate = 0.5;
@@ -198,8 +198,8 @@ export class RidesService {
 
     // search ride service
     async searchRides(searchRidesDto: SearchRidesDto) {
-        const radiusKm = 5; // deviation radius
-        const toleranceKm = 0.7; // tolerance distance from destination
+        const radiusKm = 5; // pickup radius
+        const toleranceKm = 1; // tolerance distance for destination matching
 
         // Step 1: search rides near pickup
         const candidates = await this.searchNearbyRides(
@@ -208,13 +208,16 @@ export class RidesService {
             radiusKm
         );
 
-        console.log(candidates);
-
         // Step 2: filter rides by endpoint, seats, date
         const filtered = candidates.filter(ride => {
             // Filter by available seats
             if (ride.availableSeats < searchRidesDto.requestedSeats) return false;
-            console.log(`Seats: ride=${ride.availableSeats}, requested=${searchRidesDto.requestedSeats}`);
+
+            // Filter female-only preference
+            if (searchRidesDto.femaleOnly) { 
+                // only include rides that have femaleOnly === true
+                if (!ride.femaleOnly) return false;
+            }
 
             // Filter by date (assuming departureTime is Firestore Timestamp)
             const rideDate = ride.departureTime.toDate();
@@ -222,7 +225,7 @@ export class RidesService {
             if (rideDateString !== searchRidesDto.date) return false;
 
             // Filter by end location radius (haversine)
-            // with tolerance of 700m from ride's destination
+            // with toleranceKm from ride's destination
             const distanceToEnd = this.haversine(
                 { // ride destination
                     lat: ride.endGeo.latitude,
