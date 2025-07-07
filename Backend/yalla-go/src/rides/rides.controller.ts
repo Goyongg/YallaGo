@@ -3,11 +3,19 @@ import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { CreateRideDto } from './dto/create-ride.dto';
 import { RidesService } from './rides.service';
 import { RidePlanDto } from './dto/ride-plan.dto';
+import { SearchRidesDto } from './dto/search-rides.dto';
 
 @Controller('rides')
 export class RidesController {
     constructor(private readonly rideService: RidesService) {}
-    
+
+    @UseGuards(FirebaseAuthGuard)
+    @Post('search')
+    async searchRides(@Body(ValidationPipe) searchRideDto: SearchRidesDto) {
+        return this.rideService.searchRides(searchRideDto);
+    }
+
+
     @UseGuards(FirebaseAuthGuard)
     @Post('recommend-price')
     async recommendPrice(@Body(ValidationPipe) ridePlantDto: RidePlanDto) {
