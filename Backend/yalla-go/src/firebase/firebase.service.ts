@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import serviceAccount from '../config/yallago-app-e3745-firebase-adminsdk-fbsvc-66667a44a9.json';
+import { GeoFirestore } from 'geofirestore';
 
 @Injectable()
 export class FirebaseService implements OnModuleInit{
@@ -8,7 +9,8 @@ export class FirebaseService implements OnModuleInit{
     private firestoreInstance: admin.firestore.Firestore;
     private authInstance: admin.auth.Auth;
     private messagingInstance: admin.messaging.Messaging;
-
+    private geoFirestoreInstance: GeoFirestore;
+    
     // Expose Timestamp
     public readonly Timestamp = admin.firestore.Timestamp;
 
@@ -23,6 +25,7 @@ export class FirebaseService implements OnModuleInit{
         this.firestoreInstance = app.firestore();
         this.authInstance = app.auth();
         this.messagingInstance = app.messaging();
+        this.geoFirestoreInstance = new GeoFirestore(this.firestoreInstance);
     }
     
     get firestore() {
@@ -35,5 +38,9 @@ export class FirebaseService implements OnModuleInit{
 
     get messaging() {
         return this.messagingInstance;
+    }
+
+    get geoFirestore() {
+        return this.geoFirestoreInstance;
     }
 }

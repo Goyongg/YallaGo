@@ -20,6 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@googlemaps/google-maps-services-js": "^3.4.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -28,6 +29,7 @@
     "class-validator": "^0.14.2",
     "firebase": "^11.9.1",
     "firebase-admin": "^13.4.0",
+    "geofirestore": "^5.2.0",
     "moment": "^2.30.1",
     "moment-timezone": "^0.6.0",
     "reflect-metadata": "^0.2.2",
