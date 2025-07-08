@@ -78,10 +78,10 @@ export class ReviewsService {
             }
 
             // Extract ride data from the document
-            const rideData = rideSnap.data();
+            const rideData = rideSnap.data()!;
 
-            if (!rideData?.driverId) {
-                throw new Error(`Ride ${rideId} does not have a driverId`);
+            if (!rideData.driverId) {
+                throw new NotFoundException(`Ride does not have a driverId`);
             }
 
             return rideData.driverId;

@@ -58,7 +58,7 @@ export class RidePassengersService {
         const rideData = rideSnap.data()!;
 
         // Compute the new number of available seats
-        const currentAvailableSeats = rideData.availableseats;
+        const currentAvailableSeats = rideData.availableSeats;
         const newAvailableSeats = currentAvailableSeats - seatsBooked;
 
         // Update the ride document with the new seat count
