@@ -1,9 +1,11 @@
-import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreateRideDto } from './dto/create-ride.dto';
 import { RideStatus } from './enums/ride-status.enum';
 import { GoogleMapsService } from 'src/google/google-maps/google-maps.service';
 import { RidePlanDto } from './dto/ride-plan.dto';
+import { Coordinates } from 'src/common/coordinates.dto';
+import { SearchRidesDto } from './dto/search-rides.dto';
 
 // clean any undefined fields for ride data
 function cleanRideData(data: Record<string, any>) {
@@ -27,6 +29,11 @@ function cleanRideData(data: Record<string, any>) {
     }
 
     return result; // return cleaned ride data
+}
+
+// degress to radius
+function deg2rad(deg) {
+    return deg * (Math.PI / 180);
 }
 
 @Injectable()
@@ -71,6 +78,43 @@ export class RidesService {
         return this.firebase.Timestamp.fromDate(jsDate); // return firestore Timestamp
     }
 
+    // search nearby rides around a center point based on radiusKm (uses geofirestore query)
+    private async searchNearbyRides(centerLat: number, centerLng: number, radiusKm: number) {
+        const geoRidesCollection = await this.firebase.geoFirestore.collection('rides');
+
+        // query rides that are near the radius
+        const query = geoRidesCollection.near({
+            center: new this.firebase.GeoPoint(centerLat, centerLng),
+            radius: radiusKm
+        });
+
+        // get the snapshot of the query
+        const snapshot = await query.get();
+
+        // map firestore documents into ride objects
+        const rides = snapshot.docs.map(doc => ({
+            rideId: doc.id,
+            ...(doc.data() as any)
+        }));
+
+        return rides;
+    }
+
+    // haversine function to find distance between 2 coordinates
+    private haversine(coord1: Coordinates, coord2: Coordinates) {
+        const R = 6371; // Radius of Earth in km
+        const dLat = deg2rad(coord2.lat - coord1.lat);
+        const dLng = deg2rad(coord2.lng - coord1.lng);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(deg2rad(coord1.lat)) *
+            Math.cos(deg2rad(coord2.lat)) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
+    }
+
     // create ride service
     async createRide(createRideDto: CreateRideDto, firebaseUid: string) {
 
@@ -82,6 +126,7 @@ export class RidesService {
             createRideDto.startPoint.lat, 
             createRideDto.startPoint.lng
         );
+
         const endGeoPoint = new this.firebase.GeoPoint(
             createRideDto.endPoint.lat, 
             createRideDto.endPoint.lng
@@ -91,23 +136,45 @@ export class RidesService {
         const departureTime = this.parseUaeDateTime(createRideDto.date, createRideDto.time);
 
         // destructure to pull out date, time, start/end coordinates
-        const {date, time, startPoint, endPoint, ...rest } = createRideDto; 
+        const {date, time, startPoint, endPoint, ...rest } = createRideDto;
+        
+        // Get duration of the trip
+        const { durationSeconds } = await this.googleMaps.getDistanceAndDuration(
+            createRideDto.startPoint.lat,
+            createRideDto.startPoint.lng,
+            createRideDto.endPoint.lat,
+            createRideDto.endPoint.lng,
+            createRideDto.date,
+            createRideDto.time
+        )
 
-        // create the ride doc
+        // create the ride doc reference
         const rideRef = this.firebase.firestore.collection('rides').doc();
+
+        // get GeoFirestore collection
+        const geoRidesCollection = this.firebase.geoFirestore.collection('rides');
+
+        // prepare data
         const rawRideData = {
             rideId: rideRef.id, // set rideId
             driverId: firebaseUid, // link driverId
-            startGeo: startGeoPoint,
-            endGeo: endGeoPoint,
+
+            // named as coordinates since GeoFirestore expects a 'coordinates' field for index hashing
+            coordinates: startGeoPoint, // starting point and query anchor
+
+            endGeo: endGeoPoint, // ending point
             departureTime: departureTime,
+            durationSeconds: durationSeconds, // duration of the trip in secs
             ...rest, // spread out ride fields 
             status: RideStatus.IN_PROGRESS
         };
 
         const rideData = cleanRideData(rawRideData);
 
-        await rideRef.set(rideData); // set ride data
+        // Set the document using GeoFirestore to add geohash
+        await geoRidesCollection.doc(rideRef.id).set(rideData);
+
+        // await rideRef.set(rideData); // set ride data
         return { message: "Ride created successfull", rideId: rideData.rideId }
     };
 
@@ -129,8 +196,7 @@ export class RidesService {
         const distanceKm = distanceMeters / 1000;
         const durationMin = durationSeconds / 60;
 
-        // Price formula (AED)
-        // sample
+        // Price formula (AED) sample
         const baseFee = 5.5;
         const perKmRate = 2.14;
         const perMinRate = 0.5;
@@ -139,5 +205,54 @@ export class RidesService {
         const price = baseFee + (distanceKm * perKmRate) + (durationMin * perMinRate);
         
         return { recommendedPrice: Math.round(price / maxPassengers) };
+    }
+
+    // search ride service
+    async searchRides(searchRidesDto: SearchRidesDto) {
+        const radiusKm = 5; // pickup radius
+        const toleranceKm = 1; // tolerance distance for destination matching
+
+        // Step 1: search rides near pickup
+        const candidates = await this.searchNearbyRides(
+            searchRidesDto.startPoint.lat,
+            searchRidesDto.startPoint.lng,
+            radiusKm
+        );
+
+        // Step 2: filter rides by endpoint, seats, date
+        const filtered = candidates.filter(ride => {
+            // Filter by available seats
+            if (ride.availableSeats < searchRidesDto.requestedSeats) return false;
+
+            // Filter female-only preference
+            if (searchRidesDto.femaleOnly) { 
+                // only include rides that have femaleOnly === true
+                if (!ride.femaleOnly) return false;
+            }
+
+            // Filter by date (assuming departureTime is Firestore Timestamp)
+            const rideDate = ride.departureTime.toDate();
+            const rideDateString = rideDate.toISOString().split('T')[0];
+            if (rideDateString !== searchRidesDto.date) return false;
+
+            // Filter by end location radius (haversine)
+            // with toleranceKm from ride's destination
+            const distanceToEnd = this.haversine(
+                { // ride destination
+                    lat: ride.endGeo.latitude,
+                    lng: ride.endGeo.longitude
+                },
+                { // search end location
+                    lat: searchRidesDto.endPoint.lat,
+                    lng: searchRidesDto.endPoint.lng
+                }
+            );
+
+            if (distanceToEnd > toleranceKm) return false;
+
+            return true;
+        });
+
+        return filtered;
     }
 }

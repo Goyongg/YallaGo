@@ -41,6 +41,7 @@ export class UsersService {
         const response: any = {
             uid: userData.userId,
             name: userData.name,
+            gender: userData.gender,
             role: userData.role,
             averageRating: userData.averageRating,
             ecoPoints: userData.ecoPoints
