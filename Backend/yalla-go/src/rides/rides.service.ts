@@ -136,7 +136,17 @@ export class RidesService {
         const departureTime = this.parseUaeDateTime(createRideDto.date, createRideDto.time);
 
         // destructure to pull out date, time, start/end coordinates
-        const {date, time, startPoint, endPoint, ...rest } = createRideDto; 
+        const {date, time, startPoint, endPoint, ...rest } = createRideDto;
+        
+        // Get duration of the trip
+        const { durationSeconds } = await this.googleMaps.getDistanceAndDuration(
+            createRideDto.startPoint.lat,
+            createRideDto.startPoint.lng,
+            createRideDto.endPoint.lat,
+            createRideDto.endPoint.lng,
+            createRideDto.date,
+            createRideDto.time
+        )
 
         // create the ride doc reference
         const rideRef = this.firebase.firestore.collection('rides').doc();
@@ -154,6 +164,7 @@ export class RidesService {
 
             endGeo: endGeoPoint, // ending point
             departureTime: departureTime,
+            durationSeconds: durationSeconds, // duration of the trip in secs
             ...rest, // spread out ride fields 
             status: RideStatus.IN_PROGRESS
         };
