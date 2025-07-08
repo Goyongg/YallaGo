@@ -28,6 +28,28 @@ export interface RecentSearch {
   femaleOnly?: boolean;
 }
 
+export interface DriverUpcomingRideCardProps {
+  id: string;
+  departureTime: string;
+  arrivalTime: string;
+  duration: string;
+  from: string;
+  to: string;
+  price: string;
+  availableSeats: number;
+  status?: string; // optional status
+}
+
+export interface DriverHistoryRideCardProps {
+  id: string;
+  from: string;
+  to: string;
+  departureTime: string;
+  arrivalTime: string;
+  duration: string;
+  price: string;
+}
+
 export interface RideSearchFormProps {
   femaleOnly: boolean;
   setFemaleOnly: (value: boolean) => void;
@@ -40,16 +62,6 @@ export interface RideSearchFormProps {
 export interface GreetingCardProps {
   userName: string;
   ecoPoints: number;
-}
-
-export interface SearchEntry {
-  from: string;
-  to: string;
-  passengers: number;
-}
-
-export interface RecentSearchesProps {
-  recentSearches: SearchEntry[];
 }
 
 export interface ProfileMenuProps {

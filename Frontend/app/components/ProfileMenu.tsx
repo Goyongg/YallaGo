@@ -6,6 +6,7 @@ import { ProfileMenuProps } from '../../interfaces/interfaces';
 
 const menuItems = [
   { label: 'Manage Profile', route: '../profile/manage' },
+  { label: 'Driver Dashboard', route: '../(tabs)/DriverDashboard' },
   { label: 'Gifts and discounts', sub: 'Enter promo code', route: '../profile/gifts' },
   { label: 'History', route: '../profile/history' },
   { label: 'Info', route: '../profile/info' },

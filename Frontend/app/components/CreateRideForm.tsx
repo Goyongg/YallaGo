@@ -1,11 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, Switch, Pressable, KeyboardAvoidingView, Platform, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePickerModal from './DateTimePickerModal';
+import auth from '@react-native-firebase/auth';
+import { router, useGlobalSearchParams, useFocusEffect } from 'expo-router';
+
+const BASE_URL =
+  Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://10.128.24.33:3000';
+
+interface LocationData {
+  name: string;
+  lat: number;
+  lng: number;
+}
 
 const CreateRideForm: React.FC = () => {
+  const params = useGlobalSearchParams();
+  
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [fromLocation, setFromLocation] = useState<LocationData | null>(null);
+  const [toLocation, setToLocation] = useState<LocationData | null>(null);
   const [passengerCount, setPassengerCount] = useState('');
   const [price, setPrice] = useState('');
   const [femaleOnly, setFemaleOnly] = useState(false);
@@ -14,47 +29,149 @@ const CreateRideForm: React.FC = () => {
   const [stopovers, setStopovers] = useState<string[]>([]);
   const [comment, setComment] = useState('');
 
+  // Handle location data from location picker
+  useFocusEffect(
+    useCallback(() => {
+      // Handle pickup location
+      if (params.pickupName && params.pickupLat && params.pickupLng) {
+        const locationData: LocationData = {
+          name: params.pickupName as string,
+          lat: parseFloat(params.pickupLat as string),
+          lng: parseFloat(params.pickupLng as string),
+        };
+        setFrom(locationData.name);
+        setFromLocation(locationData);
+        
+        // Clear pickup params to prevent re-processing
+        router.setParams({
+          pickupName: undefined,
+          pickupLat: undefined,
+          pickupLng: undefined,
+        });
+      }
+
+      // Handle dropoff location
+      if (params.dropoffName && params.dropoffLat && params.dropoffLng) {
+        const locationData: LocationData = {
+          name: params.dropoffName as string,
+          lat: parseFloat(params.dropoffLat as string),
+          lng: parseFloat(params.dropoffLng as string),
+        };
+        setTo(locationData.name);
+        setToLocation(locationData);
+        
+        // Clear dropoff params to prevent re-processing
+        router.setParams({
+          dropoffName: undefined,
+          dropoffLat: undefined,
+          dropoffLng: undefined,
+        });
+      }
+    }, [params])
+  );
+
   const formattedDateTime = dateTime
     ? `${dateTime.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}, ${String(
         dateTime.getHours(),
       ).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`
     : 'Select date & time';
 
-  // Helper to update specific stopover
   const updateStopover = (index: number, value: string) => {
     const updated = [...stopovers];
     updated[index] = value;
     setStopovers(updated);
   };
 
-  // Add Stopover Field
   const addStopover = () => {
     if (stopovers.length < 3) {
       setStopovers([...stopovers, '']);
     }
   };
 
-  const handleCreate = () => {
+  const navigateToLocationPicker = (type: 'pickup' | 'dropoff') => {
+    // Save current locations to global state before navigating
+    const state = {
+      currentPickup: fromLocation ? JSON.stringify(fromLocation) : undefined,
+      currentDropoff: toLocation ? JSON.stringify(toLocation) : undefined,
+      currentPickupName: from,
+      currentDropoffName: to,
+    };
+    
+    router.push({ 
+      pathname: '/(modals)/location-picker', 
+      params: { type, ...state } 
+    });
+  };
+
+  const handleCreate = async () => {
     if (!from || !to || !dateTime || !passengerCount || !price) {
       Alert.alert('Missing Info', 'Please fill all the fields');
       return;
     }
 
+    if (!fromLocation || !toLocation) {
+      Alert.alert('Missing Location', 'Please select pickup and dropoff locations from the map');
+      return;
+    }
+
+    const token = await auth().currentUser?.getIdToken();
+    if (!token) {
+      Alert.alert('Error', 'Unable to authenticate user');
+      return;
+    }
+
     const filteredStopovers = stopovers.filter((s) => s.trim() !== '');
 
-    // TODO: Replace with backend logic
-    console.log({
-      from,
-      to,
-      stopovers: filteredStopovers,
-      date: dateTime.toISOString(),
-      passengerCount: Number(passengerCount),
-      price: Number(price),
-      femaleOnly,
-      comment,
-    });
+    const dateStr = dateTime.toISOString().split('T')[0];
+    const timeStr = dateTime.toTimeString().slice(0, 5);
 
-    Alert.alert('Success', 'Ride created successfully!');
+    const ridePayload = {
+      startLocation: from,
+      startPoint: { lat: fromLocation.lat, lng: fromLocation.lng },
+      endLocation: to,
+      endPoint: { lat: toLocation.lat, lng: toLocation.lng },
+      date: dateStr,
+      time: timeStr,
+      pricePerSeat: Number(price),
+      availableSeats: Number(passengerCount),
+      femaleOnly,
+      waypoints: filteredStopovers.length > 0 ? filteredStopovers : undefined,
+      comment: comment.trim() || undefined,
+    };
+
+    try {
+      const response = await fetch(`${BASE_URL}/rides`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(ridePayload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText);
+      }
+
+      Alert.alert('Success', 'Ride created successfully!', [
+        { text: 'OK', onPress: () => {
+          // Reset form
+          setFrom('');
+          setTo('');
+          setFromLocation(null);
+          setToLocation(null);
+          setPassengerCount('');
+          setPrice('');
+          setFemaleOnly(false);
+          setDateTime(null);
+          setStopovers([]);
+          setComment('');
+        }}
+      ]);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Ride creation failed');
+    }
   };
 
   return (
@@ -74,13 +191,17 @@ const CreateRideForm: React.FC = () => {
             <View className="mb-3 mx-4">
               <View className="flex-row items-center border-b border-gray-400">
                 <Ionicons name="radio-button-on" size={16} color="#00BD5F" />
-                <TextInput
-                  placeholder="Enter starting point"
-                  placeholderTextColor="#A0AEC0"
-                  value={from}
-                  onChangeText={setFrom}
-                  className="ml-2 flex-1 text-lg font-[Afacad]"
-                />
+                <Pressable
+                  onPress={() => navigateToLocationPicker('pickup')}
+                  className="ml-2 flex-1"
+                >
+                  <Text className={`ml-2 text-lg font-[Afacad] py-3 ${from ? 'text-black' : 'text-[#A0AEC0]'}`}>
+                    {from || 'Select starting point'}
+                  </Text>
+                </Pressable>
+                {from && (
+                  <Ionicons name="checkmark-circle" size={20} color="#00BD5F" />
+                )}
               </View>
             </View>
 
@@ -88,16 +209,21 @@ const CreateRideForm: React.FC = () => {
             <View className="mb-3 mx-4">
               <View className="flex-row items-center border-b border-gray-400">
                 <Ionicons name="radio-button-on" size={16} color="#00BD5F" />
-                <TextInput
-                  placeholder="Enter destination"
-                  placeholderTextColor="#A0AEC0"
-                  value={to}
-                  onChangeText={setTo}
-                  className="ml-2 flex-1 text-lg font-[Afacad]"
-                />
+                <Pressable
+                  onPress={() => navigateToLocationPicker('dropoff')}
+                  className="ml-2 flex-1"
+                >
+                  <Text className={`ml-2 text-lg font-[Afacad] py-3 ${to ? 'text-black' : 'text-[#A0AEC0]'}`}>
+                    {to || 'Select destination'}
+                  </Text>
+                </Pressable>
+                {to && (
+                  <Ionicons name="checkmark-circle" size={20} color="#00BD5F" />
+                )}
               </View>
             </View>
 
+            {/* Rest of the form remains the same... */}
             {stopovers.map((stop, idx) => (
               <View key={idx} className="mb-3 mx-4">
                 <View className="flex-row items-center border-b border-gray-400">
@@ -154,7 +280,7 @@ const CreateRideForm: React.FC = () => {
                   value={price}
                   onChangeText={setPrice}
                   keyboardType="decimal-pad"
-                  placeholder="Price per seat"
+                  placeholder="Price per seat (AED)"
                   placeholderTextColor="#A0AEC0"
                   className="ml-2 flex-1 text-lg font-[Afacad]"
                 />
@@ -174,7 +300,6 @@ const CreateRideForm: React.FC = () => {
 
             {/* Comment Field */}
             <View className="m-4">
-              {/* Label with icon */}
               <View className="flex-row items-center mb-2">
                 <Ionicons name="chatbubble-ellipses-outline" size={18} color="#00BD5F" />
                 <Text className="ml-2 text-[16px] text-black font-[Afacad]">
@@ -182,7 +307,6 @@ const CreateRideForm: React.FC = () => {
                 </Text>
               </View>
 
-              {/* Multiline input */}
               <View className="border border-gray-300 rounded-md px-3 py-2 bg-white">
                 <TextInput
                   placeholder="Add any notes for passengers (e.g. okay with kids, no heavy luggage)"

@@ -22,7 +22,12 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.nexora.yallago"
+      "package": "com.nexora.yallago",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyA-Y2fbV85Sawfa-VG3lcFpAxMMHdIdZdw"
+        }
+      }
     },
     "web": {
       "bundler": "metro",
