@@ -1,9 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreateReviewDto } from './dto/create-review.dto';
-import { Timestamp } from 'firebase-admin/firestore';
-import { UserGender } from 'src/users/dto/create-user.dto';
-
 
 @Injectable()
 export class ReviewsService {
@@ -120,6 +117,27 @@ export class ReviewsService {
             averageRating: updatedRating,
             ratingCount: updatedRatingCount
         })
+    }
+
+    async getReviews(firebaseUid: string) {
+        // Query the 'reviews' collection for documents where revieweeId matches the Firebase UID
+        const reviewSnapshot = await this.firebase.firestore.collection('reviews').where('revieweeId', '==', firebaseUid).get();
+
+        const reviews: any [] = [];
+
+        // Iterate over each review document
+        for (const doc of reviewSnapshot.docs) {
+            const data = doc.data();
+
+            // Push details of each review into the array
+            reviews.push({
+                rating: data.rating,
+                comment: data?.comment,
+            });
+        }
+
+        // Return the compiled list of reviews
+        return reviews;
     }
 
 }

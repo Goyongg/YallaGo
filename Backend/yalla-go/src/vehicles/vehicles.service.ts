@@ -1,6 +1,8 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
+import { instanceToPlain } from 'class-transformer';
+import { UpdateVehicleColorDto } from './dto/update-vehicle-color.dto';
 
 @Injectable()
 export class VehiclesService {
@@ -111,5 +113,35 @@ export class VehiclesService {
         }
 
         return { vehRef, vehSnap };
+    }
+
+    async updateVehicleColor(firebaseUid: string, updateVehicleColorDto: UpdateVehicleColorDto) {
+        const { userSnap } = await this.getUserSnapshot(firebaseUid);
+
+        const userData = userSnap.data()!;
+
+        const vehicleId = userData.vehicleId;
+
+        if (!vehicleId) {
+            throw new NotFoundException('User has no linked vehicle');
+        }
+
+        const { vehRef } = await this.getVehicleSnapshot(vehicleId);
+
+        // Convert DTO to plain object
+        const plainData = instanceToPlain(updateVehicleColorDto);
+
+        // Remove undefined fields
+        const filteredData = Object.fromEntries(
+            Object.entries(plainData).filter(([_, v]) => v !== undefined)
+        );
+
+        if (Object.keys(filteredData).length === 0) {
+            throw new Error('No valid fields provided for update.');
+        }
+
+        await vehRef.update(filteredData);
+
+        return { message: 'Vehicle color updated successfully'}      
     }
 }
