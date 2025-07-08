@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { ScrollView, ImageBackground, KeyboardAvoidingView, Platform, View, Text } from 'react-native';
 import Header from '../components/Header';
 import GreetingCard from '../components/GreetingCard';
@@ -7,6 +7,7 @@ import RecentSearches from '../components/RecentSearches';
 import useHomeUserData from '../../hooks/useHomeUserData';
 import useRecentSearches from '@/hooks/useRecentSearches';
 import CreateRideForm from '../components/CreateRideForm';
+import { useGlobalSearchParams, useFocusEffect } from 'expo-router';
 
 export const unstable_settings = {
   gestureEnabled: false,
@@ -21,12 +22,23 @@ const Home = () => {
 
   const { recentSearches } = useRecentSearches();
   const { userData, loading } = useHomeUserData();
+  const params = useGlobalSearchParams();
 
   useEffect(() => {
     if (userData?.role === 'driver') {
       setIsCreateMode(true); // Default to create mode for drivers
     }
   }, [userData]);
+
+  // Handle switching to search mode when returning from location picker with search context
+  useFocusEffect(
+    useCallback(() => {
+      // If we have location data with search context, switch to search mode
+      if (params.context === 'search' && userData?.role === 'driver') {
+        setIsCreateMode(false);
+      }
+    }, [params.context, userData?.role])
+  );
 
   if (loading || !userData) {
     return null;

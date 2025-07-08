@@ -20,13 +20,14 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@googlemaps/google-maps-services-js": "^3.4.1",
+    "@googlemaps/google-maps-services-js": "^3.4.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "dotenv": "^17.1.0",
     "firebase": "^11.9.1",
     "firebase-admin": "^13.4.0",
     "geofirestore": "^5.2.0",

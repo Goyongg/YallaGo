@@ -44,8 +44,11 @@ const DriverUpcomingRideCard: React.FC<DriverUpcomingRideCardProps> = ({
         <Text className="text-lg font-bold text-black">{price} AED</Text>
       </View>
 
+      {/* Divider Line */}
+      <View className="h-[1px] bg-gray-300 my-3" />
+
       {/* Footer: Seats & Status */}
-      <View className="mt-4 flex-row justify-between px-1">
+      <View className="flex-row justify-between items-center pt-1">
         <Text className="text-sm text-gray-600 font-[Afacad]">🧍 {availableSeats} seats available</Text>
         {status && (
           <Text className="text-sm text-white bg-[#00BD5F] px-2 py-1 rounded-full font-[Afacad]">

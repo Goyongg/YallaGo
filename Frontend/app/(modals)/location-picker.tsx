@@ -32,9 +32,10 @@ const LocationPicker = () => {
     currentDropoff?: string;
     currentPickupName?: string;
     currentDropoffName?: string;
+    context?: string; // Add context parameter
   }>();
   
-  const { type, index } = params;
+  const { type, index, context } = params;
 
   const mapRef = useRef<MapView>(null);
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
@@ -274,6 +275,11 @@ const LocationPicker = () => {
       navigationParams.dropoffLng = selectedLocation.longitude.toFixed(6);
     }
 
+    // Add context to maintain form separation
+    if (context) {
+      navigationParams.context = context;
+    }
+
     // Navigate back with all params
     router.push({
       pathname: '/(tabs)/home',
@@ -461,9 +467,6 @@ const LocationPicker = () => {
               <Text className="text-base text-gray-800 font-[Afacad] font-semibold" numberOfLines={2}>
                 {selectedLocation.name}
               </Text>
-              {/* <Text className="text-xs text-gray-600 font-[Afacad] mt-1">
-                {selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}
-              </Text> */}
             </View>
           </View>
         </View>

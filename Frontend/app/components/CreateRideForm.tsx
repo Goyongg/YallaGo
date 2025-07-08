@@ -28,10 +28,15 @@ const CreateRideForm: React.FC = () => {
   const [pickerVisible, setPickerVisible] = useState(false);
   const [stopovers, setStopovers] = useState<string[]>([]);
   const [comment, setComment] = useState('');
+  const [isLoadingPrice, setIsLoadingPrice] = useState(false);
+  const [recommendedPrice, setRecommendedPrice] = useState<number | null>(null);
 
-  // Handle location data from location picker
+  // Handle location data from location picker - only for create context
   useFocusEffect(
     useCallback(() => {
+      // Only process if the context is 'create' or undefined (for backward compatibility)
+      if (params.context === 'search') return;
+
       // Handle pickup location
       if (params.pickupName && params.pickupLat && params.pickupLng) {
         const locationData: LocationData = {
@@ -95,6 +100,7 @@ const CreateRideForm: React.FC = () => {
       currentDropoff: toLocation ? JSON.stringify(toLocation) : undefined,
       currentPickupName: from,
       currentDropoffName: to,
+      context: 'create', // Add context to differentiate from search form
     };
     
     router.push({ 
@@ -102,6 +108,68 @@ const CreateRideForm: React.FC = () => {
       params: { type, ...state } 
     });
   };
+
+  const getRecommendedPrice = async () => {
+    if (!fromLocation || !toLocation || !dateTime) {
+      return; // Don't show errors, just return silently
+    }
+
+    const token = await auth().currentUser?.getIdToken();
+    if (!token) return;
+
+    setIsLoadingPrice(true);
+    setRecommendedPrice(null);
+
+    try {
+      const dateStr = dateTime.toISOString().split('T')[0];
+      const timeStr = dateTime.toTimeString().slice(0, 5);
+
+      const pricePayload = {
+        startPoint: { lat: fromLocation.lat, lng: fromLocation.lng },
+        endPoint: { lat: toLocation.lat, lng: toLocation.lng },
+        date: dateStr,
+        time: timeStr,
+      };
+
+      console.log('Getting price recommendation for:', pricePayload);
+
+      const response = await fetch(`${BASE_URL}/rides/recommend-price`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(pricePayload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Price recommendation failed:', errorText);
+        return;
+      }
+
+      const result = await response.json();
+      console.log('Price recommendation result:', result);
+
+      if (result.recommendedPrice) {
+        setRecommendedPrice(result.recommendedPrice);
+        // Don't auto-fill the price - just show recommendation
+      }
+    } catch (error: any) {
+      console.error('Price recommendation error:', error);
+    } finally {
+      setIsLoadingPrice(false);
+    }
+  };
+
+  // Auto-calculate price when all required data is available
+  useEffect(() => {
+    if (fromLocation && toLocation && dateTime) {
+      getRecommendedPrice();
+    } else {
+      setRecommendedPrice(null);
+    }
+  }, [fromLocation, toLocation, dateTime]);
 
   const handleCreate = async () => {
     if (!from || !to || !dateTime || !passengerCount || !price) {
@@ -125,6 +193,15 @@ const CreateRideForm: React.FC = () => {
     const dateStr = dateTime.toISOString().split('T')[0];
     const timeStr = dateTime.toTimeString().slice(0, 5);
 
+    // Prepare waypoints in the correct format for backend (Waypoint objects)
+    const waypoints = filteredStopovers.length > 0 ? filteredStopovers.map((stopover, index) => ({
+      coordinates: {
+        lat: fromLocation.lat + (index * 0.01), // Dummy coordinates - you'd need real coordinates
+        lng: fromLocation.lng + (index * 0.01)
+      },
+      label: stopover
+    })) : undefined;
+
     const ridePayload = {
       startLocation: from,
       startPoint: { lat: fromLocation.lat, lng: fromLocation.lng },
@@ -134,10 +211,12 @@ const CreateRideForm: React.FC = () => {
       time: timeStr,
       pricePerSeat: Number(price),
       availableSeats: Number(passengerCount),
-      femaleOnly,
-      waypoints: filteredStopovers.length > 0 ? filteredStopovers : undefined,
-      comment: comment.trim() || undefined,
+      femaleOnly: femaleOnly || undefined, // Only send if true
+      waypoints: waypoints,
+      comment: comment.trim() || undefined, // Re-enable comment for when DTO is updated
     };
+
+    console.log('Creating ride with payload:', ridePayload);
 
     try {
       const response = await fetch(`${BASE_URL}/rides`, {
@@ -151,8 +230,12 @@ const CreateRideForm: React.FC = () => {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('Create ride error:', errorText);
         throw new Error(errorText);
       }
+
+      const result = await response.json();
+      console.log('Ride created successfully:', result);
 
       Alert.alert('Success', 'Ride created successfully!', [
         { text: 'OK', onPress: () => {
@@ -170,6 +253,7 @@ const CreateRideForm: React.FC = () => {
         }}
       ]);
     } catch (err: any) {
+      console.error('Create ride failed:', err);
       Alert.alert('Error', err.message || 'Ride creation failed');
     }
   };
@@ -223,7 +307,7 @@ const CreateRideForm: React.FC = () => {
               </View>
             </View>
 
-            {/* Rest of the form remains the same... */}
+            {/* Stopovers */}
             {stopovers.map((stop, idx) => (
               <View key={idx} className="mb-3 mx-4">
                 <View className="flex-row items-center border-b border-gray-400">
@@ -233,8 +317,14 @@ const CreateRideForm: React.FC = () => {
                     placeholderTextColor="#A0AEC0"
                     value={stop}
                     onChangeText={(text) => updateStopover(idx, text)}
-                    className="ml-2 flex-1 text-lg font-[Afacad]"
+                    className="ml-2 flex-1 text-lg font-[Afacad] py-3"
                   />
+                  <Pressable onPress={() => {
+                    const updated = stopovers.filter((_, index) => index !== idx);
+                    setStopovers(updated);
+                  }}>
+                    <Ionicons name="close-circle" size={20} color="#ccc" />
+                  </Pressable>
                 </View>
               </View>
             ))}
@@ -267,7 +357,7 @@ const CreateRideForm: React.FC = () => {
                   keyboardType="number-pad"
                   placeholder="Max passengers"
                   placeholderTextColor="#A0AEC0"
-                  className="ml-2 flex-1 text-lg font-[Afacad]"
+                  className="ml-2 flex-1 text-lg font-[Afacad] py-3"
                 />
               </View>
             </View>
@@ -282,8 +372,29 @@ const CreateRideForm: React.FC = () => {
                   keyboardType="decimal-pad"
                   placeholder="Price per seat (AED)"
                   placeholderTextColor="#A0AEC0"
-                  className="ml-2 flex-1 text-lg font-[Afacad]"
+                  className="ml-2 flex-1 text-lg font-[Afacad] py-3"
                 />
+              </View>
+              
+              {/* Recommended Price Display */}
+              <View className="mt-2 ml-2">
+                {isLoadingPrice ? (
+                  <View className="flex-row items-center">
+                    <Ionicons name="sync" size={14} color="#666" />
+                    <Text className="text-sm text-gray-500 font-[Afacad] ml-2">
+                      Calculating recommended price...
+                    </Text>
+                  </View>
+                ) : recommendedPrice ? (
+                  <Text className="text-sm font-[Afacad] font-medium">
+                    <Text className="text-[#00BD5F]">Recommended price: </Text>
+                    <Text className="text-black">{recommendedPrice} AED</Text>
+                  </Text>
+                ) : (fromLocation && toLocation && dateTime) && !isLoadingPrice ? (
+                  <Text className="text-sm text-gray-400 font-[Afacad]">
+                    Unable to calculate recommended price
+                  </Text>
+                ) : null}
               </View>
             </View>
 
@@ -298,7 +409,7 @@ const CreateRideForm: React.FC = () => {
               />
             </View>
 
-            {/* Comment Field */}
+            {/* Comment Field - Re-enabled for when backend DTO is updated */}
             <View className="m-4">
               <View className="flex-row items-center mb-2">
                 <Ionicons name="chatbubble-ellipses-outline" size={18} color="#00BD5F" />

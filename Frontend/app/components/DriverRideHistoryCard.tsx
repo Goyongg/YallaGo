@@ -12,31 +12,44 @@ const DriverRideHistoryCard: React.FC<DriverHistoryRideCardProps> = ({
   price,
 }) => {
   return (
-    <View className="bg-[#F3F3F3] rounded-2xl mb-4 overflow-hidden w-full">
-      {/* Time & Route */}
-      <View className="flex-row justify-between px-4 pt-4">
-        <View className="items-start">
-          <Text className="font-[Afacad] text-black text-base">{departureTime}</Text>
-          <Text className="text-xs text-gray-500 font-[Afacad]">{duration}</Text>
-          <Text className="font-[Afacad] text-black text-base mt-1">{arrivalTime}</Text>
+    <View className="bg-[#F3F3F3] rounded-2xl p-4 mb-6 shadow border border-gray-100">
+      {/* Ride Route Info */}
+      <View className="flex-row justify-between items-start min-h-[70px]">
+        <View className="flex-row items-center">
+          {/* Left: Time */}
+          <View className="items-end pr-2">
+            <Text className="text-md font-bold">{departureTime}</Text>
+            <Text className="text-xs text-gray-500">{duration}</Text>
+            <Text className="text-md font-bold mt-1">{arrivalTime}</Text>
+          </View>
+
+          {/* Middle: Line */}
+          <View className="items-center mx-2">
+            <Ionicons name="ellipse-outline" size={10} color="black" />
+            <View className="w-px h-8 bg-black" />
+            <Ionicons name="ellipse-outline" size={10} color="black" />
+          </View>
+
+          {/* Right: Locations */}
+          <View className="ml-2">
+            <Text className="text-md font-semibold">{from}</Text>
+            <View className="h-5" />
+            <Text className="text-md font-semibold">{to}</Text>
+          </View>
         </View>
-        <View className="justify-center items-center">
-          <Ionicons name="ellipsis-vertical" size={24} color="#00BD5F" />
-        </View>
-        <View className="items-end">
-          <Text className="font-[Afacad] text-black text-base">{from}</Text>
-          <Text className="text-base font-[Afacad]">➜</Text>
-          <Text className="font-[Afacad] text-black text-base">{to}</Text>
-        </View>
+
+        {/* Right: Price */}
+        <Text className="text-lg font-bold text-black">{price} AED</Text>
       </View>
 
-      {/* Divider */}
-      <View className="h-[1px] bg-gray-300 my-3 mx-4" />
+      {/* Divider Line */}
+      <View className="h-[1px] bg-gray-300 my-3" />
 
-      {/* Price */}
-      <View className="flex-row justify-between items-center px-4 pb-4">
-        <Text className="font-[Afacad] text-sm text-gray-500">Ride completed</Text>
-        <Text className="text-black font-[Afacad] text-lg">{price} AED</Text>
+      {/* Footer: Completed Label */}
+      <View className="flex-row justify-end px-1">
+        <Text className="text-sm text-white bg-gray-400 px-2 py-1 rounded-full font-[Afacad]">
+          Ride completed
+        </Text>
       </View>
     </View>
   );
