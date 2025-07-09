@@ -1,6 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import * as admin from 'firebase-admin';
-import serviceAccount from '../config/yallago-app-e3745-firebase-adminsdk-fbsvc-66667a44a9.json';
 import { GeoFirestore } from 'geofirestore';
 
 @Injectable()
@@ -18,9 +17,16 @@ export class FirebaseService implements OnModuleInit{
     public readonly GeoPoint = admin.firestore.GeoPoint;
 
     onModuleInit() {
-        const app = admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
-        });
+        // If there is already a Firebase Admin app initialized re-use it
+        const app = admin.apps.length
+        ? admin.app()
+        // Otherwise, if GOOGLE_APPLICATION_CREDENTIALS is set (for local dev), initialize using the service account JSON key
+        : process.env.GOOGLE_APPLICATION_CREDENTIALS
+        ? admin.initializeApp({
+            credential: admin.credential.cert(require(process.env.GOOGLE_APPLICATION_CREDENTIALS)),
+            })
+        // Otherwise, initialize with default credentials (Firebase Cloud Functions)
+        : admin.initializeApp();
 
         this.firestoreInstance = app.firestore();
         this.authInstance = app.auth();
