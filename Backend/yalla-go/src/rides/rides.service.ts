@@ -7,7 +7,6 @@ import { RidePlanDto } from './dto/ride-plan.dto';
 import { Coordinates } from 'src/common/coordinates.dto';
 import { SearchRidesDto } from './dto/search-rides.dto';
 import { BookingStatus } from 'src/ride-passengers/enums/booking-status.enum';
-import { FieldValue } from 'firebase-admin/firestore';
 
 // clean any undefined fields for ride data
 function cleanRideData(data: Record<string, any>) {
@@ -97,7 +96,7 @@ export class RidesService {
         const rides = snapshot.docs.map(doc => ({
             rideId: doc.id,
             ...(doc.data() as any)
-        }));
+        }))
 
         return rides;
     }
@@ -117,7 +116,6 @@ export class RidesService {
         return R * c;
     }
 
-    
     private async calculateEcoPoints(rideId: string) {
         // Fetch the ride document from the 'rides' collection using the rideId
         const rideSnap = await this.firebase.firestore.collection('rides').doc(rideId).get();
@@ -151,6 +149,54 @@ export class RidesService {
         const userData = userSnap.data()!;
 
         return userData.vehicleId
+    }
+
+    // remove unwanted fields from an object. keeping only specified ones
+    private redactFields(doc: any, allowedFields: string[]): any {
+        if (!doc) return null;
+        const redacted: any = {};
+        for (const field of allowedFields) {
+            if (doc.hasOwnProperty(field)) {
+                redacted[field] = doc[field];
+            }
+        }
+
+        return redacted;
+    }
+
+    // Redact each enriched ride to include only allowed fields for frontend
+    private redactEnrichedRides(enrichedRides: any[]): any[] {
+        const allowedRideFields = [
+            'rideId',
+            'startLocation',
+            'coordinates',
+            'endLocation',
+            'endGeo',
+            'departureTime',
+            'durationSeconds',
+            'availableSeats',
+            'pricePerSeat',
+            'waypoints',
+            'femaleOnly'
+        ];
+
+        const allowedDriverFields = [
+            'name',
+            'averageRating',
+        ];
+
+        const allowedVehicleFields = [
+            'make',
+            'model',
+            'color',
+            'plateNumber'
+        ];
+
+        return enrichedRides.map(item => ({
+            ride: this.redactFields(item.ride, allowedRideFields),
+            driver: this.redactFields(item.driver, allowedDriverFields),
+            vehicle: this.redactFields(item.vehicle, allowedVehicleFields)
+        }));
     }
 
     // create ride service
@@ -296,7 +342,43 @@ export class RidesService {
             return true;
         });
 
-        return filtered;
+        // Step 3: Collect unique driver and vehicle IDs
+        const driverIds = Array.from(new Set(filtered.map(ride => ride.driverId)));
+        const vehicleIds = Array.from(new Set(filtered.map(ride => ride.vehicleId)));
+
+        console.log({
+            driverIds,
+            vehicleIds
+        });
+
+        // Step 4: fetch drivers and vehicle in batches
+        const driverSnapShot = await this.firebase.firestore
+        .collection('users')
+        .where(this.firebase.FieldPath.documentId(), 'in', driverIds)
+        .get();
+
+        const driversMap = new Map(
+            driverSnapShot.docs.map(doc => [doc.id, doc.data()])
+        );
+
+        const vehicleSnapshot = await this.firebase.firestore
+        .collection('vehicles')
+        .where(this.firebase.FieldPath.documentId(), 'in', vehicleIds)
+        .get();
+
+        const vehiclesMap = new Map(
+            vehicleSnapshot.docs.map(doc => [doc.id, doc.data()])
+        );
+
+        // Step 5: enrich rides
+        const enrichedRides = filtered.map(ride => ({
+            ride,
+            driver: driversMap.get(ride.driverId) ?? null,
+            vehicle: vehiclesMap.get(ride.vehicleId) ?? null
+        }));
+
+        // return ride data with redacted fields
+        return this.redactEnrichedRides(enrichedRides);
     }
 
     // Service method to handle the "Start Ride" action
