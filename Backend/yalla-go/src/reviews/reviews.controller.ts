@@ -9,7 +9,7 @@ export class ReviewsController {
     constructor(private readonly reviewsService: ReviewsService) {}
 
     @UseGuards(FirebaseAuthGuard)
-    @Post('addreview')
+    @Post()
     async addReview(@Body(ValidationPipe) createReviewDto: CreateReviewDto, @Req() req) {
         const firebaseUid = req.user.uid; // extract user id from the request
 

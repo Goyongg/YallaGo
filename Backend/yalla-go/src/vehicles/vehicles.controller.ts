@@ -10,7 +10,7 @@ export class VehiclesController {
     constructor(private readonly vehiclesService: VehiclesService) {}
 
     @UseGuards(FirebaseAuthGuard)
-    @Post('addvehicle')
+    @Post()
     async addVehicle(@Body(ValidationPipe) createVehicleDto: CreateVehicleDto, @Req() req) {
         const firebaseUid = req.user.uid; // extract user id from the request
 

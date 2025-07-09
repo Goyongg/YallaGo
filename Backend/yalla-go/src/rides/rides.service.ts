@@ -156,6 +156,9 @@ export class RidesService {
         // get GeoFirestore collection
         const geoRidesCollection = this.firebase.geoFirestore.collection('rides');
 
+        //get the vehicleId
+        const vehicleId = await this.fetchVehicleId(firebaseUid);
+
         // prepare data
         const rawRideData = {
             rideId: rideRef.id, // set rideId
@@ -168,6 +171,7 @@ export class RidesService {
             departureTime: departureTime,
             durationSeconds: distanceData.durationSeconds, // duration of the trip in secs
             distanceMeters: distanceData.distanceMeters, //distance in meters
+            vehicleId,
             ...rest, // spread out ride fields 
             status: RideStatus.IN_PROGRESS
         };
@@ -354,5 +358,17 @@ export class RidesService {
         const ecoPoints = Math.floor(distance/1000);
 
         return ecoPoints
+    }
+
+    private async fetchVehicleId(driverId: string) {
+        const userSnap = await this.firebase.firestore.collection('users').doc(driverId).get();
+
+        if(!userSnap.exists){
+            throw new NotFoundException('User does not exist')
+        }
+
+        const userData = userSnap.data()!;
+
+        return userData.vehicleId
     }
 }
