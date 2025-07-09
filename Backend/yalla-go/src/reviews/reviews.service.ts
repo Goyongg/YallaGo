@@ -19,7 +19,7 @@ export class ReviewsService {
         const reviewData = {
             reviewId: revRef.id,
             reviewerId: firebaseUid,
-            revieweeId,
+            revieweeId: revieweeId,
             //spread out the fields of the review
             ...createReviewDto,
             timeStamp: this.firebase.Timestamp.now()

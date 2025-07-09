@@ -117,6 +117,42 @@ export class RidesService {
         return R * c;
     }
 
+    
+    private async calculateEcoPoints(rideId: string) {
+        // Fetch the ride document from the 'rides' collection using the rideId
+        const rideSnap = await this.firebase.firestore.collection('rides').doc(rideId).get();
+
+        if (!rideSnap.exists){
+            throw new NotFoundException('Ride does not exist')
+        }
+
+        // Extract ride data (non-null assertion since we already checked existence)
+        const rideData = rideSnap.data()!;
+
+        // Get the distance in meters from the ride data
+        const distance = rideData.distanceMeters;
+
+        console.log(distance)
+
+        // Calculate eco points using the formula:
+        // 1 point per 1000 meters, rounded down using Math.floor
+        const ecoPoints = Math.floor(distance/1000);
+
+        return ecoPoints
+    }
+
+    private async fetchVehicleId(driverId: string) {
+        const userSnap = await this.firebase.firestore.collection('users').doc(driverId).get();
+
+        if(!userSnap.exists){
+            throw new NotFoundException('User does not exist')
+        }
+
+        const userData = userSnap.data()!;
+
+        return userData.vehicleId
+    }
+
     // create ride service
     async createRide(createRideDto: CreateRideDto, firebaseUid: string) {
 
@@ -171,7 +207,7 @@ export class RidesService {
             departureTime: departureTime,
             durationSeconds: distanceData.durationSeconds, // duration of the trip in secs
             distanceMeters: distanceData.distanceMeters, //distance in meters
-            vehicleId,
+            vehicleId: vehicleId,
             ...rest, // spread out ride fields 
             status: RideStatus.IN_PROGRESS
         };
@@ -335,40 +371,5 @@ export class RidesService {
         await batch.commit();
 
         return { message: 'Ride ended, booking status for all bookings updated'}
-    }
-
-    private async calculateEcoPoints(rideId: string) {
-        // Fetch the ride document from the 'rides' collection using the rideId
-        const rideSnap = await this.firebase.firestore.collection('rides').doc(rideId).get();
-
-        if (!rideSnap.exists){
-            throw new NotFoundException('Ride does not exist')
-        }
-
-        // Extract ride data (non-null assertion since we already checked existence)
-        const rideData = rideSnap.data()!;
-
-        // Get the distance in meters from the ride data
-        const distance = rideData.distanceMeters;
-
-        console.log(distance)
-
-        // Calculate eco points using the formula:
-        // 1 point per 1000 meters, rounded down using Math.floor
-        const ecoPoints = Math.floor(distance/1000);
-
-        return ecoPoints
-    }
-
-    private async fetchVehicleId(driverId: string) {
-        const userSnap = await this.firebase.firestore.collection('users').doc(driverId).get();
-
-        if(!userSnap.exists){
-            throw new NotFoundException('User does not exist')
-        }
-
-        const userData = userSnap.data()!;
-
-        return userData.vehicleId
     }
 }

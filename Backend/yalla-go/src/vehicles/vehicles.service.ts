@@ -35,6 +35,32 @@ export class VehiclesService {
         })
     }
 
+    // Private helper to get a user document snapshot
+    private async getUserSnapshot(firebaseUid: string) {
+        const userRef = this.firebase.firestore.collection('users').doc(firebaseUid);
+
+        // Retrieve user document
+        const userSnap = await userRef.get();
+
+        if (!userSnap.exists) {
+            throw new NotFoundException('User profile not found');
+        }
+
+        return { userRef, userSnap };
+    }
+
+    // Private helper to get vehicleRef and vehicleSnap for a given vehicleId
+    private async getVehicleSnapshot(vehicleId: string) {
+        const vehRef = this.firebase.firestore.collection('vehicles').doc(vehicleId);
+        const vehSnap = await vehRef.get();
+
+        if (!vehSnap.exists) {
+            throw new NotFoundException('Vehicle not found');
+        }
+
+        return { vehRef, vehSnap };
+    }
+
     async getSeats(firebaseUid: string) {
         const { userSnap } = await this.getUserSnapshot(firebaseUid);
 
@@ -87,32 +113,6 @@ export class VehiclesService {
         })
 
         return { message: 'Vehicle deleted successfully' }
-    }
-
-    // Private helper to get a user document snapshot
-    private async getUserSnapshot(firebaseUid: string) {
-        const userRef = this.firebase.firestore.collection('users').doc(firebaseUid);
-
-        // Retrieve user document
-        const userSnap = await userRef.get();
-
-        if (!userSnap.exists) {
-            throw new NotFoundException('User profile not found');
-        }
-
-        return { userRef, userSnap };
-    }
-
-    // Private helper to get vehicleRef and vehicleSnap for a given vehicleId
-    private async getVehicleSnapshot(vehicleId: string) {
-        const vehRef = this.firebase.firestore.collection('vehicles').doc(vehicleId);
-        const vehSnap = await vehRef.get();
-
-        if (!vehSnap.exists) {
-            throw new NotFoundException('Vehicle not found');
-        }
-
-        return { vehRef, vehSnap };
     }
 
     async updateVehicleColor(firebaseUid: string, updateVehicleColorDto: UpdateVehicleColorDto) {

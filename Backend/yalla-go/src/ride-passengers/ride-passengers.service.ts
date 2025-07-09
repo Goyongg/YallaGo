@@ -67,6 +67,20 @@ export class RidePassengersService {
         })
     }
 
+    private async validateSeats(rideId: string, seatsBooked: number){
+        const rideSnap = await this.firebase.firestore.collection('rides').doc(rideId).get()
+
+        if(!rideSnap.exists) {
+            throw new NotFoundException('Ride does not exist')
+        }
+
+        const rideData = rideSnap.data()!;
+
+        if(seatsBooked > rideData.availableSeats) {
+            throw new ForbiddenException('Booked seats cannot be more than available seats')
+        }
+    }
+
     async getBookings(firebaseUid: string) {
         // Query the 'bookings' collection for documents where passengerId matches the Firebase UID
         const bookingSnapshot = await this.firebase.firestore.collection('bookings').where('passengerId', '==', firebaseUid).get();
@@ -99,19 +113,5 @@ export class RidePassengersService {
 
         // Return the compiled list of bookings
         return bookings;
-    }
-
-    private async validateSeats(rideId: string, seatsBooked: number){
-        const rideSnap = await this.firebase.firestore.collection('rides').doc(rideId).get()
-
-        if(!rideSnap.exists) {
-            throw new NotFoundException('Ride does not exist')
-        }
-
-        const rideData = rideSnap.data()!;
-
-        if(seatsBooked > rideData.availableSeats) {
-            throw new ForbiddenException('Booked seats cannot be more than available seats')
-        }
     }
 }
