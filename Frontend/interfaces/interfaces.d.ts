@@ -26,6 +26,14 @@ export interface RecentSearch {
   passengers: number;
   date?: string;
   femaleOnly?: boolean;
+  fromCoordinates?: {
+    lat: number;
+    lng: number;
+  };
+  toCoordinates?: {
+    lat: number;
+    lng: number;
+  };
 }
 
 export interface DriverUpcomingRideCardProps {

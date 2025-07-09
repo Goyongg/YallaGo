@@ -387,8 +387,8 @@ const CreateRideForm: React.FC = () => {
                   </View>
                 ) : recommendedPrice ? (
                   <Text className="text-sm font-[Afacad] font-medium">
-                    <Text className="text-[#00BD5F]">Recommended price: </Text>
-                    <Text className="text-black">{recommendedPrice} AED</Text>
+                    <Text className="text-black">Recommended price: </Text>
+                    <Text className="text-[#00BD5F]">{recommendedPrice} AED</Text>
                   </Text>
                 ) : (fromLocation && toLocation && dateTime) && !isLoadingPrice ? (
                   <Text className="text-sm text-gray-400 font-[Afacad]">

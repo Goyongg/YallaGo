@@ -153,6 +153,8 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
         femaleOnly: femaleOnly || undefined, // Send only if true
       };
 
+      console.log('BASE_URL:', BASE_URL);
+      console.log('Full URL:', `${BASE_URL}/rides/search`);
       console.log('Searching with payload:', searchPayload);
 
       // Make API call to search rides
@@ -173,13 +175,15 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
       const searchResults = await response.json();
       console.log('Search results:', searchResults);
 
-      // Save recent search
+      // Save recent search with coordinates
       await saveRecentSearch({
         from,
         to,
         passengers: parseInt(passengerCount),
         date: dateTime.toISOString(),
         femaleOnly,
+        fromCoordinates: { lat: fromLocation.lat, lng: fromLocation.lng },
+        toCoordinates: { lat: toLocation.lat, lng: toLocation.lng },
       });
 
       // Navigate to search results screen with the results
