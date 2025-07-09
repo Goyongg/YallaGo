@@ -6,6 +6,8 @@ import { GoogleMapsService } from 'src/google/google-maps/google-maps.service';
 import { RidePlanDto } from './dto/ride-plan.dto';
 import { Coordinates } from 'src/common/coordinates.dto';
 import { SearchRidesDto } from './dto/search-rides.dto';
+import { BookingStatus } from 'src/ride-passengers/enums/booking-status.enum';
+import { FieldValue } from 'firebase-admin/firestore';
 
 // clean any undefined fields for ride data
 function cleanRideData(data: Record<string, any>) {
@@ -115,6 +117,42 @@ export class RidesService {
         return R * c;
     }
 
+    
+    private async calculateEcoPoints(rideId: string) {
+        // Fetch the ride document from the 'rides' collection using the rideId
+        const rideSnap = await this.firebase.firestore.collection('rides').doc(rideId).get();
+
+        if (!rideSnap.exists){
+            throw new NotFoundException('Ride does not exist')
+        }
+
+        // Extract ride data (non-null assertion since we already checked existence)
+        const rideData = rideSnap.data()!;
+
+        // Get the distance in meters from the ride data
+        const distance = rideData.distanceMeters;
+
+        console.log(distance)
+
+        // Calculate eco points using the formula:
+        // 1 point per 1000 meters, rounded down using Math.floor
+        const ecoPoints = Math.floor(distance/1000);
+
+        return ecoPoints
+    }
+
+    private async fetchVehicleId(driverId: string) {
+        const userSnap = await this.firebase.firestore.collection('users').doc(driverId).get();
+
+        if(!userSnap.exists){
+            throw new NotFoundException('User does not exist')
+        }
+
+        const userData = userSnap.data()!;
+
+        return userData.vehicleId
+    }
+
     // create ride service
     async createRide(createRideDto: CreateRideDto, firebaseUid: string) {
 
@@ -139,7 +177,7 @@ export class RidesService {
         const {date, time, startPoint, endPoint, ...rest } = createRideDto;
         
         // Get duration of the trip
-        const { durationSeconds } = await this.googleMaps.getDistanceAndDuration(
+        const distanceData = await this.googleMaps.getDistanceAndDuration(
             createRideDto.startPoint.lat,
             createRideDto.startPoint.lng,
             createRideDto.endPoint.lat,
@@ -154,6 +192,9 @@ export class RidesService {
         // get GeoFirestore collection
         const geoRidesCollection = this.firebase.geoFirestore.collection('rides');
 
+        //get the vehicleId
+        const vehicleId = await this.fetchVehicleId(firebaseUid);
+
         // prepare data
         const rawRideData = {
             rideId: rideRef.id, // set rideId
@@ -164,7 +205,9 @@ export class RidesService {
 
             endGeo: endGeoPoint, // ending point
             departureTime: departureTime,
-            durationSeconds: durationSeconds, // duration of the trip in secs
+            durationSeconds: distanceData.durationSeconds, // duration of the trip in secs
+            distanceMeters: distanceData.distanceMeters, //distance in meters
+            vehicleId: vehicleId,
             ...rest, // spread out ride fields 
             status: RideStatus.IN_PROGRESS
         };
@@ -254,5 +297,79 @@ export class RidesService {
         });
 
         return filtered;
+    }
+
+    // Service method to handle the "Start Ride" action
+    async startRide(rideId: string) {
+        const rideRef = this.firebase.firestore.collection('rides').doc(rideId);
+
+        // Update ride status to departed
+        await rideRef.update({status: RideStatus.DEPARTED});
+
+        // Query all bookings where the rideId matches the ride being started
+        const bookingsSnap = await this.firebase.firestore.collection('bookings').where('rideId', '==', rideId).get();
+
+        // Initialize a Firestore batch to perform all updates atomically
+        const batch = this.firebase.firestore.batch();
+        
+        // Loop through each booking and update its status to ONGOING
+        bookingsSnap.forEach(doc => {
+            batch.update(doc.ref, { status: BookingStatus.ONGOING})
+        })
+
+        // Commit all booking status updates in a single batch operation
+        await batch.commit();
+
+        return { message: 'Ride started, booking status for all bookings updated'}
+    }
+
+    // Service method to handle the "End Ride" action
+    async endRide(rideId: string) {
+        const rideRef = this.firebase.firestore.collection('rides').doc(rideId);
+
+        // Update ride status to COMPLETED
+        await rideRef.update({status: RideStatus.COMPLETED});
+
+        // Query all bookings that belong to this ride
+        const bookingsSnap = await this.firebase.firestore.collection('bookings').where('rideId', '==', rideId).get();
+
+        // Calculate eco points once based on the ride's distance
+        const calculatedEcoPoints = await this.calculateEcoPoints(rideId);
+
+        // Initialize Firestore batch for grouped atomic updates
+        const batch = this.firebase.firestore.batch();
+
+        // Loop through each booking to:
+        // -Set status to COMPLETED
+        // -Reward passenger with eco points
+        for (const bookingDoc of bookingsSnap.docs) {
+            const bookingData = bookingDoc.data();
+            const passengerId = bookingData.passengerId;
+
+            // Update booking status to COMPLETED
+            batch.update(bookingDoc.ref, { status: BookingStatus.COMPLETED });
+
+            // Get user doc
+            const userRef = this.firebase.firestore.collection('users').doc(passengerId);
+            const userSnap = await userRef.get();
+
+            if(!userSnap.exists){
+                throw new NotFoundException('User doesnt exist');
+            }
+
+            // Get current ecoPoints of the user
+            const userData = userSnap.data()!;
+            const currentEcoPoints = userData.ecoPoints;
+
+            console.log(calculatedEcoPoints)
+
+            // Update user’s ecoPoints by adding newly earned points
+            batch.update(userRef, { ecoPoints: currentEcoPoints + calculatedEcoPoints });
+        }
+
+        // Commit all updates in a single transaction
+        await batch.commit();
+
+        return { message: 'Ride ended, booking status for all bookings updated'}
     }
 }
