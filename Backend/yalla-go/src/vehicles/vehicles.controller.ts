@@ -1,8 +1,7 @@
-import { Body, Controller, Delete, Get, Patch, Post, Req, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Req, UseGuards, ValidationPipe } from '@nestjs/common';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { VehiclesService } from './vehicles.service';
 import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
-import { UpdateVehicleColorDto } from './dto/update-vehicle-color.dto';
 
 @Controller('vehicles')
 export class VehiclesController {
@@ -10,7 +9,7 @@ export class VehiclesController {
     constructor(private readonly vehiclesService: VehiclesService) {}
 
     @UseGuards(FirebaseAuthGuard)
-    @Post()
+    @Post('addvehicle')
     async addVehicle(@Body(ValidationPipe) createVehicleDto: CreateVehicleDto, @Req() req) {
         const firebaseUid = req.user.uid; // extract user id from the request
 
@@ -31,14 +30,6 @@ export class VehiclesController {
         const firebaseUid = req.user.uid;
         
         return this.vehiclesService.deleteVehicle(firebaseUid)
-    }
-
-    @UseGuards(FirebaseAuthGuard)
-    @Patch()
-    async updateVehicleColor(@Body(ValidationPipe) updateVehicleColorDto: UpdateVehicleColorDto, @Req() req) {
-        const firebaseUid = req.user.uid;
-
-        return this.vehiclesService.updateVehicleColor(firebaseUid, updateVehicleColorDto)
     }
 
     

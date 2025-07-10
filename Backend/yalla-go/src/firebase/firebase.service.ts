@@ -16,9 +16,6 @@ export class FirebaseService implements OnModuleInit{
     // Expose GeoPoint
     public readonly GeoPoint = admin.firestore.GeoPoint;
 
-    // Expose FieldPath
-    public readonly FieldPath = admin.firestore.FieldPath;
-
     onModuleInit() {
         // If there is already a Firebase Admin app initialized re-use it
         const app = admin.apps.length

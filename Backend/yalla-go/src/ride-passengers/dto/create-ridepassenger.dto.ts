@@ -1,6 +1,4 @@
-import { Type } from "class-transformer";
-import { IsNotEmpty, IsNumber, IsString, ValidateNested } from "class-validator";
-import { Coordinates } from "src/common/coordinates.dto";
+import { IsNotEmpty, IsNumber, IsString } from "class-validator";
 
 export class CreateRidePassengerDto {
     @IsNotEmpty()
@@ -11,17 +9,9 @@ export class CreateRidePassengerDto {
     @IsString()
     pickupPoint: string;
 
-    @ValidateNested()
-    @Type(() => Coordinates)
-    startPoint: Coordinates;
-
     @IsNotEmpty()
     @IsString()
     dropOffPoint: string;
-
-    @ValidateNested()
-    @Type(() => Coordinates)
-    endPoint: Coordinates;
 
     @IsNotEmpty()
     @IsNumber()
