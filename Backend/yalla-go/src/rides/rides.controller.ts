@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Patch, Post, Query, Req, UseGuards, ValidationPipe } from '@nestjs/common';
 import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { CreateRideDto } from './dto/create-ride.dto';
 import { RidesService } from './rides.service';
@@ -28,5 +28,17 @@ export class RidesController {
         const firebaseUid = req.user.uid; // extract user id from the request
 
         return this.rideService.createRide(createRideDto, firebaseUid);
+    }
+
+    @UseGuards(FirebaseAuthGuard)
+    @Patch('start-ride')
+    async startRide(@Query('rideId') rideId: string) {
+        return this.rideService.startRide(rideId);
+    }
+
+    @UseGuards(FirebaseAuthGuard)
+    @Patch('end-ride')
+    async endRide(@Query('rideId') rideId: string) {
+        return this.rideService.endRide(rideId);
     }
 }

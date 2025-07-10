@@ -1,6 +1,8 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
+import { instanceToPlain } from 'class-transformer';
+import { UpdateVehicleColorDto } from './dto/update-vehicle-color.dto';
 
 @Injectable()
 export class VehiclesService {
@@ -31,6 +33,32 @@ export class VehiclesService {
         await userRef.update({
             vehicleId: newVehicleId
         })
+    }
+
+    // Private helper to get a user document snapshot
+    private async getUserSnapshot(firebaseUid: string) {
+        const userRef = this.firebase.firestore.collection('users').doc(firebaseUid);
+
+        // Retrieve user document
+        const userSnap = await userRef.get();
+
+        if (!userSnap.exists) {
+            throw new NotFoundException('User profile not found');
+        }
+
+        return { userRef, userSnap };
+    }
+
+    // Private helper to get vehicleRef and vehicleSnap for a given vehicleId
+    private async getVehicleSnapshot(vehicleId: string) {
+        const vehRef = this.firebase.firestore.collection('vehicles').doc(vehicleId);
+        const vehSnap = await vehRef.get();
+
+        if (!vehSnap.exists) {
+            throw new NotFoundException('Vehicle not found');
+        }
+
+        return { vehRef, vehSnap };
     }
 
     async getSeats(firebaseUid: string) {
@@ -87,29 +115,33 @@ export class VehiclesService {
         return { message: 'Vehicle deleted successfully' }
     }
 
-    // Private helper to get a user document snapshot
-    private async getUserSnapshot(firebaseUid: string) {
-        const userRef = this.firebase.firestore.collection('users').doc(firebaseUid);
+    async updateVehicleColor(firebaseUid: string, updateVehicleColorDto: UpdateVehicleColorDto) {
+        const { userSnap } = await this.getUserSnapshot(firebaseUid);
 
-        // Retrieve user document
-        const userSnap = await userRef.get();
+        const userData = userSnap.data()!;
 
-        if (!userSnap.exists) {
-            throw new NotFoundException('User profile not found');
+        const vehicleId = userData.vehicleId;
+
+        if (!vehicleId) {
+            throw new NotFoundException('User has no linked vehicle');
         }
 
-        return { userRef, userSnap };
-    }
+        const { vehRef } = await this.getVehicleSnapshot(vehicleId);
 
-    // Private helper to get vehicleRef and vehicleSnap for a given vehicleId
-    private async getVehicleSnapshot(vehicleId: string) {
-        const vehRef = this.firebase.firestore.collection('vehicles').doc(vehicleId);
-        const vehSnap = await vehRef.get();
+        // Convert DTO to plain object
+        const plainData = instanceToPlain(updateVehicleColorDto);
 
-        if (!vehSnap.exists) {
-            throw new NotFoundException('Vehicle not found');
+        // Remove undefined fields
+        const filteredData = Object.fromEntries(
+            Object.entries(plainData).filter(([_, v]) => v !== undefined)
+        );
+
+        if (Object.keys(filteredData).length === 0) {
+            throw new Error('No valid fields provided for update.');
         }
 
-        return { vehRef, vehSnap };
+        await vehRef.update(filteredData);
+
+        return { message: 'Vehicle color updated successfully'}      
     }
 }
