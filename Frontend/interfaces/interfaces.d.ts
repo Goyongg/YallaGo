@@ -1,4 +1,4 @@
-// interfaces.d.ts
+// interfaces.d.ts - Updated with vehicle interfaces
 
 export interface HomeUserData {
   id: string;
@@ -77,4 +77,41 @@ export interface ProfileMenuProps {
   onClose: () => void;
   userName: string;
   rating: number;
+}
+
+// vehicle-interfaces.ts
+export interface Vehicle {
+  id: string;
+  make: string;
+  model: string;
+  plateNumber: string;
+  color?: string;
+  seats: number;
+  userId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateVehicleDto {
+  make: string;
+  model: string;
+  plateNumber: string;
+  color?: string;
+  seats: number;
+}
+
+export interface UpdateVehicleDto {
+  color?: string;
+  // Add other updatable fields as needed
+}
+
+export interface VehicleResponse {
+  message: string;
+  vehicle?: Vehicle;
+  maxSeats?: number;
+}
+
+export interface VehicleListResponse {
+  vehicles: Vehicle[];
+  totalCount: number;
 }
