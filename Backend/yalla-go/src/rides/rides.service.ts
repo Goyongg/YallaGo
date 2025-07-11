@@ -7,6 +7,9 @@ import { RidePlanDto } from './dto/ride-plan.dto';
 import { Coordinates } from 'src/common/coordinates.dto';
 import { SearchRidesDto } from './dto/search-rides.dto';
 import { BookingStatus } from 'src/ride-passengers/enums/booking-status.enum';
+import { omitFields, pickFields } from 'src/common/helpers/object.helpers';
+import { FirebaseUserService } from 'src/firebase/firebase-user.service';
+import { FirebaseDriverService } from 'src/firebase/firebase-driver.service';
 
 // clean any undefined fields for ride data
 function cleanRideData(data: Record<string, any>) {
@@ -40,18 +43,16 @@ function deg2rad(deg) {
 @Injectable()
 export class RidesService {
     constructor(
-        private readonly firebase: FirebaseService, 
+        private readonly firebase: FirebaseService,
+        private readonly firebaseUserService: FirebaseUserService,
+        private readonly firebaseDriverService: FirebaseDriverService, 
         private readonly googleMaps: GoogleMapsService
     ) {}
 
     // Check if user role is driver, then check if kyc is verified and if vehicle exists for driver
     private async validateDriver(firebaseUid: string) {
-        const userSnap = await this.firebase.firestore.collection('users').doc(firebaseUid).get();
-        if (!userSnap.exists) {
-            throw new NotFoundException('User profile not found');
-        }
-
-        const user = userSnap.data()!; // assert non-null as already checked if exists
+        // fetch user data
+        const user = await this.firebaseUserService.fetchUserData(firebaseUid);
 
         if (user.role !== 'driver') { // check role
             throw new ForbiddenException('Only Drivers can create rides.');
@@ -118,14 +119,7 @@ export class RidesService {
 
     private async calculateEcoPoints(rideId: string) {
         // Fetch the ride document from the 'rides' collection using the rideId
-        const rideSnap = await this.firebase.firestore.collection('rides').doc(rideId).get();
-
-        if (!rideSnap.exists){
-            throw new NotFoundException('Ride does not exist')
-        }
-
-        // Extract ride data (non-null assertion since we already checked existence)
-        const rideData = rideSnap.data()!;
+        const rideData = await this.firebaseDriverService.getRideById(rideId);
 
         // Get the distance in meters from the ride data
         const distance = rideData.distanceMeters;
@@ -140,63 +134,27 @@ export class RidesService {
     }
 
     private async fetchVehicleId(driverId: string) {
-        const userSnap = await this.firebase.firestore.collection('users').doc(driverId).get();
-
-        if(!userSnap.exists){
-            throw new NotFoundException('User does not exist')
-        }
-
-        const userData = userSnap.data()!;
+        // fetch user data from users collection
+        const userData = await this.firebaseUserService.fetchUserData(driverId);
 
         return userData.vehicleId
     }
 
-    // remove unwanted fields from an object. keeping only specified ones
-    private redactFields(doc: any, allowedFields: string[]): any {
-        if (!doc) return null;
-        const redacted: any = {};
-        for (const field of allowedFields) {
-            if (doc.hasOwnProperty(field)) {
-                redacted[field] = doc[field];
-            }
-        }
-
-        return redacted;
-    }
-
     // Redact each enriched ride to include only allowed fields for frontend
     private redactEnrichedRides(enrichedRides: any[]): any[] {
-        const allowedRideFields = [
-            'rideId',
-            'startLocation',
-            'coordinates',
-            'endLocation',
-            'endGeo',
-            'departureTime',
-            'durationSeconds',
-            'availableSeats',
-            'pricePerSeat',
-            'waypoints',
-            'femaleOnly'
-        ];
-
-        const allowedDriverFields = [
-            'name',
-            'averageRating',
-        ];
-
-        const allowedVehicleFields = [
-            'make',
-            'model',
-            'color',
-            'plateNumber'
-        ];
-
         return enrichedRides.map(item => ({
-            ride: this.redactFields(item.ride, allowedRideFields),
-            driver: this.redactFields(item.driver, allowedDriverFields),
-            vehicle: this.redactFields(item.vehicle, allowedVehicleFields)
+            ride:  omitFields(item.ride, ['g', 'distanceMeters', 'vehicleId', 'status']),
+            driver: pickFields(item.driver, ['name', 'averageRating']),
+            vehicle: omitFields(item.vehicle, ['vehicleId', 'driverId'])
         }));
+    }
+
+    async fetchDriverRides(firebaseUid: string) {
+        const rides = await this.firebaseDriverService.getRideByDriver(firebaseUid);
+
+        return rides.map(ride =>
+            omitFields(ride, ['g', 'distanceMeters' ,'driverId', 'vehicleId'])
+        )
     }
 
     // create ride service
@@ -238,7 +196,7 @@ export class RidesService {
         // get GeoFirestore collection
         const geoRidesCollection = this.firebase.geoFirestore.collection('rides');
 
-        //get the vehicleId
+        // get the vehicleId of the driver
         const vehicleId = await this.fetchVehicleId(firebaseUid);
 
         // prepare data
@@ -308,8 +266,16 @@ export class RidesService {
             radiusKm
         );
 
+        // if no rides found within search radius, return empty result
+        if (candidates.length === 0) {
+            return [];
+        }
+
         // Step 2: filter rides by endpoint, seats, date
         const filtered = candidates.filter(ride => {
+            // Don't include rides that are departed, completed, or cancelled
+            if (ride.status !== RideStatus.IN_PROGRESS) return false;
+
             // Filter by available seats
             if (ride.availableSeats < searchRidesDto.requestedSeats) return false;
 
@@ -342,14 +308,14 @@ export class RidesService {
             return true;
         });
 
+        // if no rides match the filters, return empty result
+        if (filtered.length === 0) {
+            return [];
+        }
+
         // Step 3: Collect unique driver and vehicle IDs
         const driverIds = Array.from(new Set(filtered.map(ride => ride.driverId)));
         const vehicleIds = Array.from(new Set(filtered.map(ride => ride.vehicleId)));
-
-        console.log({
-            driverIds,
-            vehicleIds
-        });
 
         // Step 4: fetch drivers and vehicle in batches
         const driverSnapShot = await this.firebase.firestore
@@ -370,7 +336,7 @@ export class RidesService {
             vehicleSnapshot.docs.map(doc => [doc.id, doc.data()])
         );
 
-        // Step 5: enrich rides
+        // Step 5: enrich rides (link driver and vehicle data with each ride)
         const enrichedRides = filtered.map(ride => ({
             ride,
             driver: driversMap.get(ride.driverId) ?? null,
