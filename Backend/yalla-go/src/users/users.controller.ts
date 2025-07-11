@@ -14,10 +14,20 @@ export class UsersController {
     @UseGuards(FirebaseAuthGuard)
     @Get('home')
     async getHomePageInfo(@Req() req) {
-        const firebaseUid = req.user.uid;
+        const firebaseUid = req.user.uid; // get uid from request
         console.log(firebaseUid);
 
         return await this.userService.getHomePageInfo(firebaseUid);
+    }
+
+    // GET /users/profile
+    @UseGuards(FirebaseAuthGuard)
+    @Get('profile')
+    async getUserProfile(@Req() req) {
+        const firebaseUid = req.user.uid;
+        console.log(firebaseUid);
+
+        return await this.userService.getUserProfile(firebaseUid);
     }
 
     // POST /users/register
