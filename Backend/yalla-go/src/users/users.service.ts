@@ -3,6 +3,9 @@ import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { getUserDefaults } from './dto/user-defaults.dto';
+import { omitFields, pickFields } from 'src/common/helpers/object.helpers';
+import { FirebaseUserService } from 'src/firebase/firebase-user.service';
+import { FirebaseDriverService } from 'src/firebase/firebase-driver.service';
 
 // clean any undefined fields for userData
 function cleanUserData(data: Record<string, any>) {
@@ -24,31 +27,39 @@ function cleanUserData(data: Record<string, any>) {
 
 @Injectable()
 export class UsersService {
-    constructor(private readonly firebase: FirebaseService) {}
+    constructor(
+        private readonly firebase: FirebaseService,
+        private readonly firebaseUserService: FirebaseUserService,
+        private readonly firebaseDriverService: FirebaseDriverService
+    ) {}
 
     // fetch homepage user data based on role
     async getHomePageInfo(firebaseUid: string) {
-        const userDoc = await this.firebase.firestore.collection('users').doc(firebaseUid).get();
-        if (!userDoc.exists) {
-            throw new NotFoundException('User not found');
-        };
+        const userData = await this.firebaseUserService.fetchUserData(firebaseUid);
 
-        const userData = userDoc.data();
-        if (!userData) {
-            throw new NotFoundException('User data is undefined');
-        }
+        const homepageFields = ['userId', 'name', 'gender', 'role', 'averageRating', 'ecoPoints'];
 
-        const response: any = {
-            uid: userData.userId,
-            name: userData.name,
-            gender: userData.gender,
-            role: userData.role,
-            averageRating: userData.averageRating,
-            ecoPoints: userData.ecoPoints
-        };
+        const response = pickFields(userData, homepageFields);
 
         // return user info
         return response; 
+    }
+
+    async getUserProfile(firebaseUid: string) {
+        const userData = await this.firebaseUserService.fetchUserData(firebaseUid);
+
+        // retrive vehicle info if driver
+        if (userData.role === 'driver') { 
+            const vehichleData = await this.firebaseDriverService.fetchVehicleData(firebaseUid);
+
+            // return user w/ vehicle data
+            return { 
+                user: omitFields(userData, ['ratingCount', 'vehicleId']),
+                vehicle: omitFields(vehichleData, ['vehicleId', 'driverId'])
+            };
+        };
+
+        return omitFields(userData, ['ratingCount']);
     }
 
     // create the user in firestore
