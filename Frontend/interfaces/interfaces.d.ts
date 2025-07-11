@@ -85,6 +85,7 @@ export interface ProfileMenuProps {
   onClose: () => void;
   userName: string;
   rating: number;
+  userRole: string; // Added userRole to ProfileMenuProps
 }
 
 // Updated vehicle interfaces to match backend response

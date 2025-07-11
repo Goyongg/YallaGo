@@ -9,6 +9,7 @@ interface HeaderProps {
   isDriver?: boolean;
   isCreateMode?: boolean;
   toggleCreateMode?: () => void;
+  userRole: string; // Added userRole prop
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -17,6 +18,7 @@ const Header: React.FC<HeaderProps> = ({
   isDriver = false,
   isCreateMode = false,
   toggleCreateMode,
+  userRole, // Added userRole to destructured props
 }) => {
   const [menuVisible, setMenuVisible] = useState(false);
 
@@ -47,6 +49,7 @@ const Header: React.FC<HeaderProps> = ({
         onClose={() => setMenuVisible(false)}
         userName={userName}
         rating={rating}
+        userRole={userRole} // Pass userRole to ProfileMenu
       />
     </View>
   );

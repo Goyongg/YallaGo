@@ -63,6 +63,7 @@ const Home = () => {
             isDriver={isDriver}
             isCreateMode={isCreateMode}
             toggleCreateMode={() => setIsCreateMode(prev => !prev)}
+            userRole={userData.role} // Pass userRole to Header
           />
           {isDriver && isCreateMode ? (
             <View className="px-4 mt-4">

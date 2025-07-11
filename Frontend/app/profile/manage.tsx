@@ -76,7 +76,7 @@ const ManageProfile = () => {
         <Text className="text-gray-600 font-[Afacad] capitalize">
           {userData?.role}
         </Text>
-        {userData?.averageRating && (
+        {typeof userData?.averageRating === 'number' && (
           <View className="flex-row items-center mt-2">
             <Ionicons name="star" size={16} color="#FFD700" />
             <Text className="text-gray-600 ml-1 font-[Afacad]">
@@ -86,22 +86,20 @@ const ManageProfile = () => {
         )}
       </View>
 
-      {/* Driver-specific options */}
+      {/* Driver-specific options - Removed fragment wrapper */}
       {isDriver && (
-        <>
-          <Pressable 
-            onPress={handleManageVehicles} 
-            className="flex-row items-center justify-between py-4 border-b border-gray-200"
-          >
-            <View className="flex-row items-center">
-              <Ionicons name="car-outline" size={20} color="black" />
-              <Text className="text-base text-black font-[Afacad] ml-3">
-                Manage Vehicles
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="gray" />
-          </Pressable>
-        </>
+        <Pressable 
+          onPress={handleManageVehicles} 
+          className="flex-row items-center justify-between py-4 border-b border-gray-200"
+        >
+          <View className="flex-row items-center">
+            <Ionicons name="car-outline" size={20} color="black" />
+            <Text className="text-base text-black font-[Afacad] ml-3">
+              Manage Vehicles
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="gray" />
+        </Pressable>
       )}
 
       {/* Common options */}
