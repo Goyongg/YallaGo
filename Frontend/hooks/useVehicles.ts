@@ -10,7 +10,8 @@ const BASE_URL =
   Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
 
 interface Vehicle {
-  id: string;
+  vehicleId: string;
+  driverId: string;
   make: string;
   model: string;
   plateNumber: string;
@@ -30,11 +31,21 @@ interface UpdateVehicleData {
   color?: string;
 }
 
+interface VehicleResponse {
+  message: string;
+  vehicleId?: string;
+}
+
+interface MaxSeatsResponse {
+  maxSeats: number;
+}
+
 const useVehicles = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasVehicle, setHasVehicle] = useState(false);
+  const [maxSeats, setMaxSeats] = useState<number | null>(null);
 
   const getAuthHeaders = async () => {
     const user = auth().currentUser;
@@ -59,24 +70,28 @@ const useVehicles = () => {
         const response = await axios.get(`${BASE_URL}/vehicles/maxseats`, { headers });
         
         // If successful, user has a vehicle
-        if (response.data && typeof response.data === 'object') {
+        if (response.data && response.data.maxSeats) {
           setHasVehicle(true);
+          setMaxSeats(response.data.maxSeats);
           
-          // Since backend doesn't return full vehicle details, we'll store basic info
-          // You might need to ask your backend developer to return more vehicle details
+          // Since backend doesn't return full vehicle details in maxseats,
+          // we'll create a placeholder. In a real app, you'd need a separate endpoint
+          // to get full vehicle details
           const vehicleData: Vehicle = {
-            id: '1', // Temporary ID since backend doesn't provide it
-            make: 'Unknown', // Backend doesn't provide this in maxseats endpoint
-            model: 'Unknown',
+            vehicleId: 'current-vehicle',
+            driverId: auth().currentUser?.uid || '',
+            make: 'Vehicle', // Backend doesn't provide this in maxseats endpoint
+            model: 'Details',
             plateNumber: 'Unknown',
-            color: 'Unknown',
-            seats: response.data.maxSeats || response.data.seats || 4,
+            color: undefined,
+            seats: response.data.maxSeats,
           };
           
           setVehicles([vehicleData]);
         } else {
           setHasVehicle(false);
           setVehicles([]);
+          setMaxSeats(null);
         }
       } catch (maxSeatsError: any) {
         // If 404 or similar, user probably doesn't have a vehicle
@@ -84,6 +99,7 @@ const useVehicles = () => {
             maxSeatsError.response?.status === 400) {
           setHasVehicle(false);
           setVehicles([]);
+          setMaxSeats(null);
         } else {
           throw maxSeatsError;
         }
@@ -94,12 +110,13 @@ const useVehicles = () => {
       setError(error.response?.data?.message || 'Failed to fetch vehicles');
       setVehicles([]);
       setHasVehicle(false);
+      setMaxSeats(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const addVehicle = async (vehicleData: CreateVehicleData) => {
+  const addVehicle = async (vehicleData: CreateVehicleData): Promise<VehicleResponse> => {
     try {
       setError(null);
       
@@ -110,8 +127,9 @@ const useVehicles = () => {
       
       const headers = await getAuthHeaders();
       
+      // Updated endpoint to match backend
       const response = await axios.post(
-        `${BASE_URL}/vehicles/addvehicle`, 
+        `${BASE_URL}/vehicles`, 
         vehicleData, 
         { headers }
       );
@@ -128,7 +146,7 @@ const useVehicles = () => {
     }
   };
 
-  const updateVehicle = async (updateData: UpdateVehicleData) => {
+  const updateVehicle = async (updateData: UpdateVehicleData): Promise<VehicleResponse> => {
     try {
       setError(null);
       
@@ -138,6 +156,7 @@ const useVehicles = () => {
       
       const headers = await getAuthHeaders();
       
+      // Updated to use PATCH method as per backend
       const response = await axios.patch(
         `${BASE_URL}/vehicles`, 
         updateData, 
@@ -159,7 +178,7 @@ const useVehicles = () => {
     }
   };
 
-  const deleteVehicle = async () => {
+  const deleteVehicle = async (): Promise<VehicleResponse> => {
     try {
       setError(null);
       
@@ -174,6 +193,7 @@ const useVehicles = () => {
       // Clear vehicles list after deleting
       setVehicles([]);
       setHasVehicle(false);
+      setMaxSeats(null);
       
       return response.data;
     } catch (error: any) {
@@ -184,7 +204,7 @@ const useVehicles = () => {
     }
   };
 
-  const getMaxSeats = async () => {
+  const getMaxSeats = async (): Promise<MaxSeatsResponse> => {
     try {
       setError(null);
       const headers = await getAuthHeaders();
@@ -212,6 +232,7 @@ const useVehicles = () => {
     loading,
     error,
     hasVehicle,
+    maxSeats,
     addVehicle,
     updateVehicle,
     deleteVehicle,

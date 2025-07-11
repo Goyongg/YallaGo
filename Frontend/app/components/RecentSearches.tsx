@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 import { clearRecentSearches } from '../../utils/recentSearchStorage';
 
 // This should be checked to match the current IP address
-// Uni: 10.45.49.172
+// Uni: 10.45.49.69
 // Home: 10.128.24.33
 const BASE_URL =
   Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
@@ -37,7 +37,7 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
 
       // Check if we have coordinates stored (for newer recent searches)
       if (recentSearch.fromCoordinates && recentSearch.toCoordinates) {
-        // We have coordinates, proceed with search
+        // We have coordinates, proceed with search using updated backend payload
         const searchPayload = {
           startPoint: {
             lat: recentSearch.fromCoordinates.lat,
@@ -48,14 +48,14 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
             lng: recentSearch.toCoordinates.lng,
           },
           date: dateStr,
-          time: timeStr,
+          time: timeStr, // Added time field as required by backend
           requestedSeats: recentSearch.passengers,
           femaleOnly: recentSearch.femaleOnly || undefined,
         };
 
         console.log('Searching with recent search payload:', searchPayload);
 
-        // Make API call to search rides
+        // Make API call to search rides using updated endpoint
         const response = await fetch(`${BASE_URL}/rides/search`, {
           method: 'POST',
           headers: {
@@ -73,7 +73,7 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
         const searchResults = await response.json();
         console.log('Recent search results:', searchResults);
 
-        // Navigate to search results
+        // Navigate to search results with enriched data
         router.push({
           pathname: '/SearchResultsScreen',
           params: {
@@ -142,7 +142,7 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
     );
   }
 
-  // Add this function in your Home component
+  // Add this function for testing - remove in production
   const handleClearSearches = async () => {
     await clearRecentSearches();
     Alert.alert('Success', 'Recent searches cleared!');
@@ -153,7 +153,7 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
     <View className="px-12 mb-8">
       <Text className="text-2xl font-[Afacad] mb-4">Recent Searches</Text>
 
-      {/* Temporarly button for testing */}
+      {/* Temporary button for testing - remove in production */}
       <Pressable 
         onPress={handleClearSearches}
         className="bg-red-500 mx-4 py-2 px-4 rounded-lg mb-4"
@@ -181,6 +181,7 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
               <Text className="text-md text-gray-500 font-[Afacad] -mt-[2px]">
                 {item.passengers} passenger{item.passengers > 1 ? 's' : ''}
                 {item.femaleOnly && ' • Female-only'}
+                {!item.fromCoordinates && ' • Needs location selection'}
               </Text>
             </View>
           </View>

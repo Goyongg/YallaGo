@@ -127,6 +127,7 @@ const CreateRideForm: React.FC = () => {
       const dateStr = dateTime.toISOString().split('T')[0];
       const timeStr = dateTime.toTimeString().slice(0, 5);
 
+      // Updated payload to match RidePlanDto from backend
       const pricePayload = {
         startPoint: { lat: fromLocation.lat, lng: fromLocation.lng },
         endPoint: { lat: toLocation.lat, lng: toLocation.lng },
@@ -197,6 +198,7 @@ const CreateRideForm: React.FC = () => {
     const timeStr = dateTime.toTimeString().slice(0, 5);
 
     // Prepare waypoints in the correct format for backend (Waypoint objects)
+    // Note: For real waypoints, you'd need actual coordinates from location picker
     const waypoints = filteredStopovers.length > 0 ? filteredStopovers.map((stopover, index) => ({
       coordinates: {
         lat: fromLocation.lat + (index * 0.01), // Dummy coordinates - you'd need real coordinates
@@ -205,18 +207,22 @@ const CreateRideForm: React.FC = () => {
       label: stopover
     })) : undefined;
 
+    // Updated payload structure to match CreateRideDto from backend
     const ridePayload = {
-      startLocation: from,
+      // From RidePlanDto
       startPoint: { lat: fromLocation.lat, lng: fromLocation.lng },
-      endLocation: to,
       endPoint: { lat: toLocation.lat, lng: toLocation.lng },
       date: dateStr,
       time: timeStr,
+      
+      // From CreateRideDto
+      startLocation: from,
+      endLocation: to,
       pricePerSeat: Number(price),
       availableSeats: Number(passengerCount),
       femaleOnly: femaleOnly || undefined, // Only send if true
       waypoints: waypoints,
-      comment: comment.trim() || undefined, // Re-enable comment for when DTO is updated
+      comments: comment.trim() || undefined, // Backend expects 'comments' not 'comment'
     };
 
     console.log('Creating ride with payload:', ridePayload);
@@ -240,7 +246,7 @@ const CreateRideForm: React.FC = () => {
       const result = await response.json();
       console.log('Ride created successfully:', result);
 
-      Alert.alert('Success', 'Ride created successfully!', [
+      Alert.alert('Success', result.message || 'Ride created successfully!', [
         { text: 'OK', onPress: () => {
           // Reset form
           setFrom('');
@@ -253,6 +259,7 @@ const CreateRideForm: React.FC = () => {
           setDateTime(null);
           setStopovers([]);
           setComment('');
+          setRecommendedPrice(null);
         }}
       ]);
     } catch (err: any) {
@@ -412,7 +419,7 @@ const CreateRideForm: React.FC = () => {
               />
             </View>
 
-            {/* Comment Field - Re-enabled for when backend DTO is updated */}
+            {/* Comment Field */}
             <View className="m-4">
               <View className="flex-row items-center mb-2">
                 <Ionicons name="chatbubble-ellipses-outline" size={18} color="#00BD5F" />
@@ -431,8 +438,12 @@ const CreateRideForm: React.FC = () => {
                   numberOfLines={4}
                   textAlignVertical="top"
                   className="text-lg font-[Afacad] text-black"
+                  maxLength={200}
                 />
               </View>
+              <Text className="text-xs text-gray-500 mt-1 font-[Afacad]">
+                {comment.length}/200 characters
+              </Text>
             </View>
 
             {/* Create Ride Button */}

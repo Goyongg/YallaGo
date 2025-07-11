@@ -4,33 +4,44 @@ import { Ionicons } from '@expo/vector-icons';
 import RideResultCard from '../components/RideResultCard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
-interface RideResult {
-  rideId: string;
-  driverId: string;
-  startLocation: string;
-  endLocation: string;
-  departureTime: {
-    toDate: () => Date;
+// Updated interface to match backend response structure
+interface EnrichedRideResult {
+  ride: {
+    rideId: string;
+    startLocation: string;
+    endLocation: string;
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+    endGeo: {
+      latitude: number;
+      longitude: number;
+    };
+    departureTime: any; // Firestore Timestamp
+    durationSeconds: number;
+    pricePerSeat: number;
+    availableSeats: number;
+    femaleOnly?: boolean;
+    waypoints?: any[];
   };
-  durationSeconds: number;
-  pricePerSeat: number;
-  availableSeats: number;
-  femaleOnly?: boolean;
-  coordinates: {
-    latitude: number;
-    longitude: number;
-  };
-  endGeo: {
-    latitude: number;
-    longitude: number;
-  };
+  driver: {
+    name: string;
+    averageRating: number;
+  } | null;
+  vehicle: {
+    make: string;
+    model: string;
+    color: string;
+    plateNumber: string;
+  } | null;
 }
 
 const SearchResultsScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
   
-  const [rides, setRides] = useState<RideResult[]>([]);
+  const [rides, setRides] = useState<EnrichedRideResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // Extract search parameters
@@ -54,9 +65,12 @@ const SearchResultsScreen = () => {
       
       // Log the first ride's data structure for debugging
       if (searchResults.length > 0) {
-        console.log('First ride data:', searchResults[0]);
-        console.log('departureTime type:', typeof searchResults[0].departureTime);
-        console.log('departureTime value:', searchResults[0].departureTime);
+        console.log('First enriched ride data:', searchResults[0]);
+        if (searchResults[0].ride) {
+          console.log('First ride departureTime:', searchResults[0].ride.departureTime);
+          console.log('First driver data:', searchResults[0].driver);
+          console.log('First vehicle data:', searchResults[0].vehicle);
+        }
       }
       
       setRides(searchResults);
@@ -80,12 +94,12 @@ const SearchResultsScreen = () => {
     return { weekday, monthDay, year };
   };
 
-  // Format ride time
+  // Format ride time - updated to handle backend Timestamp format
   const formatRideTime = (departureTime: any, durationSeconds: number) => {
     let departure: Date;
     
     try {
-      // Handle Firestore Timestamp with _seconds property
+      // Handle Firestore Timestamp with _seconds property (from backend)
       if (departureTime && typeof departureTime === 'object' && departureTime._seconds) {
         // Convert Firestore timestamp (_seconds) to JavaScript Date
         departure = new Date(departureTime._seconds * 1000);
@@ -220,9 +234,23 @@ const SearchResultsScreen = () => {
               </Pressable>
             </View>
           ) : (
-            /* Ride Results */
-            rides.map((ride, index) => {
+            /* Ride Results - Updated to handle enriched data structure */
+            rides.map((enrichedRide, index) => {
+              const { ride, driver, vehicle } = enrichedRide;
+              
+              if (!ride) {
+                console.warn('Missing ride data for index:', index);
+                return null;
+              }
+              
               const { depTime, arrTime, duration } = formatRideTime(ride.departureTime, ride.durationSeconds);
+              
+              // Get driver name and rating with fallbacks
+              const driverName = driver?.name || 'Driver';
+              const driverRating = driver?.averageRating || 0;
+              
+              // Get vehicle info for display
+              const vehicleInfo = vehicle ? `${vehicle.make} ${vehicle.model}` : '';
               
               return (
                 <RideResultCard
@@ -233,12 +261,17 @@ const SearchResultsScreen = () => {
                   from={ride.startLocation}
                   to={ride.endLocation}
                   price={ride.pricePerSeat.toString()}
-                  driverName="Driver" // You'll need to fetch driver info separately
-                  driverRating={4.5} // Placeholder - fetch from driver profile
+                  driverName={driverName}
+                  driverRating={driverRating}
                   driverImage=""
                   availableSeats={ride.availableSeats}
                   femaleOnly={ride.femaleOnly}
                   rideId={ride.rideId}
+                  // Pass vehicle information for RideDetailsScreen
+                  vehicleMake={vehicle?.make}
+                  vehicleModel={vehicle?.model}
+                  vehicleColor={vehicle?.color}
+                  vehiclePlateNumber={vehicle?.plateNumber}
                 />
               );
             })

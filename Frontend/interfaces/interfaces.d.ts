@@ -1,4 +1,4 @@
-// interfaces.d.ts - Updated with vehicle interfaces
+// interfaces.d.ts - Updated with backend compatibility
 
 export interface HomeUserData {
   id: string;
@@ -18,6 +18,14 @@ export interface RideResultCardProps {
   driverName: string;
   driverRating: number;
   driverImage?: string;
+  availableSeats?: number;
+  femaleOnly?: boolean;
+  rideId?: string;
+  // Vehicle information from backend
+  vehicleMake?: string;
+  vehicleModel?: string;
+  vehicleColor?: string;
+  vehiclePlateNumber?: string;
 }
 
 export interface RecentSearch {
@@ -79,17 +87,15 @@ export interface ProfileMenuProps {
   rating: number;
 }
 
-// vehicle-interfaces.ts
+// Updated vehicle interfaces to match backend response
 export interface Vehicle {
-  id: string;
+  vehicleId: string;
+  driverId: string;
   make: string;
   model: string;
   plateNumber: string;
   color?: string;
   seats: number;
-  userId?: string;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface CreateVehicleDto {
@@ -102,16 +108,145 @@ export interface CreateVehicleDto {
 
 export interface UpdateVehicleDto {
   color?: string;
-  // Add other updatable fields as needed
 }
 
+// Updated backend response interfaces
 export interface VehicleResponse {
   message: string;
-  vehicle?: Vehicle;
-  maxSeats?: number;
+  vehicleId?: string;
 }
 
-export interface VehicleListResponse {
-  vehicles: Vehicle[];
-  totalCount: number;
+export interface MaxSeatsResponse {
+  maxSeats: number;
+}
+
+// Backend ride interfaces
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+export interface Waypoint {
+  coordinates: Coordinates;
+  label: string;
+}
+
+export interface CreateRideDto {
+  // From RidePlanDto
+  startPoint: Coordinates;
+  endPoint: Coordinates;
+  date: string; // YYYY-MM-DD format
+  time: string; // HH:MM format
+  
+  // From CreateRideDto
+  startLocation: string;
+  endLocation: string;
+  pricePerSeat: number;
+  availableSeats: number;
+  femaleOnly?: boolean;
+  waypoints?: Waypoint[];
+  comments?: string; // Backend expects 'comments' not 'comment'
+}
+
+export interface SearchRidesDto {
+  startPoint: Coordinates;
+  endPoint: Coordinates;
+  date: string; // YYYY-MM-DD format
+  time: string; // HH:MM format - required by backend
+  requestedSeats: number;
+  femaleOnly?: boolean;
+}
+
+// Backend search response interface (enriched ride data)
+export interface EnrichedRideResult {
+  ride: {
+    rideId: string;
+    driverId: string;
+    startLocation: string;
+    endLocation: string;
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+    endGeo: {
+      latitude: number;
+      longitude: number;
+    };
+    departureTime: any; // Firestore Timestamp
+    durationSeconds: number;
+    distanceMeters: number;
+    pricePerSeat: number;
+    availableSeats: number;
+    femaleOnly?: boolean;
+    waypoints?: Waypoint[];
+    vehicleId: string;
+    status: string;
+  };
+  driver: {
+    name: string;
+    averageRating: number;
+  } | null;
+  vehicle: {
+    make: string;
+    model: string;
+    color: string;
+    plateNumber: string;
+  } | null;
+}
+
+// Price recommendation interfaces
+export interface RidePlanDto {
+  startPoint: Coordinates;
+  endPoint: Coordinates;
+  date: string;
+  time: string;
+}
+
+export interface PriceRecommendationResponse {
+  recommendedPrice: number;
+}
+
+// Create ride passenger (booking) interfaces
+export interface CreateRidePassengerDto {
+  rideId: string;
+  pickupPoint: string;
+  startPoint: Coordinates;
+  dropOffPoint: string;
+  endPoint: Coordinates;
+  seatsBooked: number;
+}
+
+export interface BookingResponse {
+  message: string;
+  bookingId: string;
+}
+
+// Review interfaces
+export interface CreateReviewDto {
+  rideId: string;
+  rating: number;
+  comment?: string;
+}
+
+export interface ReviewResponse {
+  message: string;
+  reviewId: string;
+}
+
+export interface Review {
+  rating: number;
+  comment?: string;
+}
+
+// Generic API response interface
+export interface ApiResponse<T = any> {
+  message: string;
+  data?: T;
+}
+
+// Error response interface
+export interface ApiError {
+  message: string;
+  statusCode?: number;
+  error?: string;
 }

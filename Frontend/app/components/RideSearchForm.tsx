@@ -137,7 +137,7 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
     setIsSearching(true);
 
     try {
-      // Prepare search payload according to SearchRidesDto
+      // Prepare search payload according to SearchRidesDto from backend
       const dateStr = dateTime.toISOString().split('T')[0]; // YYYY-MM-DD format
       const timeStr = dateTime.toTimeString().slice(0, 5); // HH:MM format
 
@@ -160,7 +160,7 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
       console.log('Full URL:', `${BASE_URL}/rides/search`);
       console.log('Searching with payload:', searchPayload);
 
-      // Make API call to search rides
+      // Make API call to search rides - Updated endpoint
       const response = await fetch(`${BASE_URL}/rides/search`, {
         method: 'POST',
         headers: {
@@ -172,11 +172,15 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('Search API error response:', errorText);
         throw new Error(errorText || 'Failed to search rides');
       }
 
       const searchResults = await response.json();
-      console.log('Search results:', searchResults);
+      console.log('Search results from backend:', searchResults);
+
+      // Backend now returns enriched ride data with driver and vehicle info
+      // The response structure is: [{ ride: {...}, driver: {...}, vehicle: {...} }, ...]
 
       // Save recent search with coordinates
       await saveRecentSearch({
@@ -202,7 +206,7 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
           date: dateTime.toISOString(),
           passengerCount: passengerCount,
           femaleOnly: femaleOnly ? '1' : '0',
-          searchResults: JSON.stringify(searchResults), // Pass the results
+          searchResults: JSON.stringify(searchResults), // Pass the enriched results
         },
       });
 

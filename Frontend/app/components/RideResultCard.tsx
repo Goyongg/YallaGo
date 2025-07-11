@@ -16,6 +16,11 @@ interface RideResultCardProps {
   availableSeats?: number;
   femaleOnly?: boolean;
   rideId?: string;
+  // Vehicle information from backend
+  vehicleMake?: string;
+  vehicleModel?: string;
+  vehicleColor?: string;
+  vehiclePlateNumber?: string;
 }
 
 const RideResultCard: React.FC<RideResultCardProps> = ({
@@ -31,12 +36,16 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
   availableSeats,
   femaleOnly,
   rideId,
+  vehicleMake,
+  vehicleModel,
+  vehicleColor,
+  vehiclePlateNumber,
 }) => {
   const router = useRouter();
 
   const handleCardPress = () => {
     if (rideId) {
-      // Navigate to ride details screen
+      // Navigate to ride details screen with vehicle information
       router.push({
         pathname: '/(tabs)/RideDetailsScreen',
         params: {
@@ -51,10 +60,20 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
           driverRating: driverRating.toString(),
           availableSeats: availableSeats?.toString(),
           femaleOnly: femaleOnly ? '1' : '0',
+          // Pass vehicle information
+          vehicleMake: vehicleMake || '',
+          vehicleModel: vehicleModel || '',
+          vehicleColor: vehicleColor || '',
+          vehiclePlateNumber: vehiclePlateNumber || '',
         }
       });
     }
   };
+
+  // Display vehicle info in the card if available
+  const vehicleDisplay = vehicleMake && vehicleModel 
+    ? `${vehicleColor} ${vehicleMake} ${vehicleModel} • ${vehiclePlateNumber}`
+    : 'Vehicle details available';
 
   return (
     <Pressable 
@@ -113,18 +132,23 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
 
       {/* Bottom Row: Driver Info */}
       <View className="border-t border-gray-300 mt-2 pt-4 pl-4 flex-row items-center justify-between">
-        <View className="flex-row items-center">
+        <View className="flex-row items-center flex-1">
           <View className="w-10 h-10 rounded-full items-center justify-center overflow-hidden bg-[#00BD5F]">
             <Ionicons name="person" size={22} color="white" />
           </View>
-          <View className="pl-2">
-            <Text className="font-[Afacad] text-base font-medium">{driverName}</Text>
+          <View className="pl-2 flex-1">
             <View className="flex-row items-center">
-              <Ionicons name="star" size={12} color="#FFD700" />
-              <Text className="text-sm text-gray-500 font-[Afacad] ml-1">
-                {driverRating.toFixed(1)}
-              </Text>
+              <Text className="font-[Afacad] text-base font-medium">{driverName}</Text>
+              <View className="flex-row items-center ml-2">
+                <Ionicons name="star" size={12} color="#FFD700" />
+                <Text className="text-sm text-gray-500 font-[Afacad] ml-1">
+                  {driverRating.toFixed(1)}
+                </Text>
+              </View>
             </View>
+            <Text className="text-sm text-gray-500 font-[Afacad]" numberOfLines={1}>
+              {vehicleDisplay}
+            </Text>
           </View>
         </View>
 
