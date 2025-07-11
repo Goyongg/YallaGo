@@ -82,7 +82,7 @@ const RideDetailsScreen = () => {
     return `${days[today.getDay()]}, ${today.getDate()} ${months[today.getMonth()]}`;
   };
 
-  // Book ride function that calls the backend
+  // Book ride function that calls the backend - FIXED
   const handleBookRide = async () => {
     if (!rideDetails.rideId) {
       Alert.alert('Error', 'Invalid ride information');
@@ -117,8 +117,8 @@ const RideDetailsScreen = () => {
 
       console.log('Booking ride with payload:', bookingPayload);
 
-      // Make API call to book the ride
-      const response = await fetch(`${BASE_URL}/ride-passengers`, {
+      // FIXED: Use correct endpoint /bookings instead of /ride-passengers
+      const response = await fetch(`${BASE_URL}/bookings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -136,16 +136,16 @@ const RideDetailsScreen = () => {
       const result = await response.json();
       console.log('Booking successful:', result);
 
-      // Show success message and navigate
+      // FIXED: Show success message and stay on the same page
       Alert.alert(
-        'Booking Successful!', 
-        result.message || 'Your ride has been booked successfully.',
+        'Booking Successful! 🎉', 
+        `Your ride has been booked successfully.\n\nBooking ID: ${result.bookingId || 'N/A'}\nSeats booked: ${passengerCount}\nTotal cost: ${(rideDetails.price * passengerCount).toFixed(1)} AED`,
         [
           {
             text: 'OK',
             onPress: () => {
-              // Navigate to bookings/history screen or home
-              router.push('/(tabs)/home');
+              // FIXED: Stay on the same page instead of navigating away
+              console.log('Booking completed, staying on current page');
             }
           }
         ]
@@ -153,10 +153,19 @@ const RideDetailsScreen = () => {
 
     } catch (error: any) {
       console.error('Booking failed:', error);
-      Alert.alert(
-        'Booking Failed',
-        error.message || 'Unable to book the ride. Please try again.'
-      );
+      
+      // Better error handling with more specific messages
+      let errorMessage = 'Unable to book the ride. Please try again.';
+      
+      if (error.message.includes('Booked seats cannot be more than available seats')) {
+        errorMessage = `Sorry, only ${rideDetails.availableSeats} seats are available for this ride.`;
+      } else if (error.message.includes('Authentication')) {
+        errorMessage = 'Please log in again to book this ride.';
+      } else if (error.message.includes('Ride does not exist')) {
+        errorMessage = 'This ride is no longer available.';
+      }
+      
+      Alert.alert('Booking Failed', errorMessage);
     } finally {
       setIsBooking(false);
     }
