@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreateRidePassengerDto } from './dto/create-ridepassenger.dto';
 import { BookingStatus } from './enums/booking-status.enum';
@@ -9,13 +9,30 @@ export class RidePassengersService {
     constructor(private readonly firebase: FirebaseService) {}
 
     async createBooking(createRidePassengerDto: CreateRidePassengerDto, firebaseUid: string) {
+        // Check if booked seats are less than or equal to available seats
+        await this.validateSeats(createRidePassengerDto.rideId, createRidePassengerDto.seatsBooked)
+        // Destructure to pull out startpoint and endpoint
+        const { startPoint, endPoint, ...rest} = createRidePassengerDto
+        
+        // Convert coordinates into GeoPoint
+        const startGeoPoint = new this.firebase.GeoPoint(
+            startPoint.lat, 
+            startPoint.lng
+        );
+        const endGeoPoint = new this.firebase.GeoPoint(
+            endPoint.lat, 
+            endPoint.lng
+        );
+        
         const bookRef = this.firebase.firestore.collection('bookings').doc();
         // Construct the booking data object
         const bookingData = {
             bookingId: bookRef.id,
-            passsengerId: firebaseUid,
+            passengerId: firebaseUid,
+            startGeo: startGeoPoint,
+            endGeo: endGeoPoint,
             // Spread the fields from the DTO
-            ...createRidePassengerDto,
+            ...rest,
             status: BookingStatus.PENDING
         }
 
@@ -41,18 +58,32 @@ export class RidePassengersService {
         const rideData = rideSnap.data()!;
 
         // Compute the new number of available seats
-        const currentAvailableSeats = rideData.availableseats;
+        const currentAvailableSeats = rideData.availableSeats;
         const newAvailableSeats = currentAvailableSeats - seatsBooked;
 
         // Update the ride document with the new seat count
         await rideRef.update({
-            availableseats: newAvailableSeats
+            availableSeats: newAvailableSeats
         })
+    }
+
+    private async validateSeats(rideId: string, seatsBooked: number){
+        const rideSnap = await this.firebase.firestore.collection('rides').doc(rideId).get()
+
+        if(!rideSnap.exists) {
+            throw new NotFoundException('Ride does not exist')
+        }
+
+        const rideData = rideSnap.data()!;
+
+        if(seatsBooked > rideData.availableSeats) {
+            throw new ForbiddenException('Booked seats cannot be more than available seats')
+        }
     }
 
     async getBookings(firebaseUid: string) {
         // Query the 'bookings' collection for documents where passengerId matches the Firebase UID
-        const bookingSnapshot = await this.firebase.firestore.collection('bookings').where('passsengerId', '==', firebaseUid).get();
+        const bookingSnapshot = await this.firebase.firestore.collection('bookings').where('passengerId', '==', firebaseUid).get();
 
         const bookings: any [] = [];
 
@@ -62,19 +93,25 @@ export class RidePassengersService {
             // Fetch the ride document associated with this booking
             const rideDoc = await this.firebase.firestore.collection('rides').doc(data.rideId).get();
 
-            // If the ride exists, get its data; otherwise, use an empty object
-            const rideData = rideDoc.exists ? rideDoc.data() : {};
+            if(!rideDoc.exists) {
+                throw new NotFoundException('Ride doesnt exist');
+            }
+
+            // Get the ride data
+            const rideData = rideDoc.data()!;
 
             // Push details of each booking into the array
             bookings.push({
                 pickupPoint: data.pickupPoint,
                 dropOffPoint: data.dropOffPoint,
-                date: rideData?.departureTime || null,
+                startGeo: data.startGeo,
+                endGeo: data.endGeo,
+                status: data.status,
+                date: rideData.departureTime,
             });
         }
 
         // Return the compiled list of bookings
         return bookings;
     }
-
 }
