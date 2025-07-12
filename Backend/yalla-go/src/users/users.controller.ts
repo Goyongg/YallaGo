@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Patch, Post, Req, Res, UseGuards, ValidationPipe } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserRole, CreateUserDto } from './dto/create-user.dto';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { plainToInstance } from 'class-transformer';
 import { validateOrReject } from 'class-validator';
+import { PatchUserDto } from './dto/patch-user.dto';
 
 @Controller('users')
 export class UsersController {
@@ -36,7 +37,7 @@ export class UsersController {
     async registerUser(@Body(ValidationPipe) body: any, @Req() req) {
 
         const { role } = body; // extract role from body
-        const firebaseUid = req.user.uid; // extract user id from the request
+        const firebaseUid = req.user.uid; // get uid from request
 
         // validate role against the correct DTO
         if (role === UserRole.DRIVER) { // if driver
@@ -50,5 +51,23 @@ export class UsersController {
             await validateOrReject(userDto);
             return this.userService.createUser(userDto, firebaseUid);
         }
+    }
+
+    @UseGuards(FirebaseAuthGuard)
+    @Patch()
+    async updateUser(@Body(ValidationPipe) patchUserDto: PatchUserDto, @Req() req) {
+        const firebaseUid = req.user.uid; // get uid from request
+        console.log(firebaseUid);
+
+        return await this.userService.updateUser(patchUserDto, firebaseUid);
+    } 
+
+    @UseGuards(FirebaseAuthGuard)
+    @Delete()
+    async deleteUser(@Req() req) {
+        const firebaseUid = req.user.uid; // get uid from request
+        console.log(firebaseUid);
+
+        return await this.userService.deleteUser(firebaseUid);
     }
 }
