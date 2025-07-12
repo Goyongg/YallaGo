@@ -5,8 +5,29 @@ import { FirebaseService } from "./firebase.service";
 export class FirebaseDriverService {
     constructor (private readonly firebase: FirebaseService) {}
 
+    // Private helper to get vehicleRef and vehicleSnap for a given vehicleId
+    async getVehicleSnapshot(vehicleId: string) {
+        const vehRef = this.firebase.firestore.collection('vehicles').doc(vehicleId);
+        const vehSnap = await vehRef.get();
+
+        if (!vehSnap.exists) {
+            throw new NotFoundException('Vehicle not found');
+        }
+
+        return { vehRef, vehSnap };
+    }
+
+    async fetchVehicleData(vehicleId: string) {
+        const { vehSnap } = await this.getVehicleSnapshot(vehicleId);
+
+        const vehData = vehSnap.data();
+        if (!vehData) {
+            throw new NotFoundException('Vehicle data is undefined')
+        }
+    }
+
     // fetch vehicle data of driver
-    async fetchVehicleData(driverId: string) {
+    async getVehicleByDriver(driverId: string) {
         const vehicleSnapShot = await this.firebase.firestore
         .collection('vehicles')
         .where("driverId", "==", driverId)

@@ -5,13 +5,23 @@ import { FirebaseService } from "./firebase.service";
 export class FirebaseUserService {
     constructor (private readonly firebase: FirebaseService) {}
 
-    async fetchUserData(firebaseUid: string) {
-        const userDoc = await this.firebase.firestore.collection('users').doc(firebaseUid).get();
-        if (!userDoc.exists) {
-            throw new NotFoundException('User not found');
-        };
+    async getUserSnapshot(firebaseUid: string) {
+        // Get the location of the user's document in Firestore
+        const userRef = this.firebase.firestore.collection('users').doc(firebaseUid);
 
-        const userData = userDoc.data();
+        // Retieve user doc
+        const userSnap = await userRef.get();
+        if (!userSnap.exists) {
+            throw new NotFoundException('User profile not found');
+        }
+
+        return { userRef, userSnap };
+    }
+
+    async fetchUserData(firebaseUid: string) {
+        const { userSnap } = await this.getUserSnapshot(firebaseUid);
+
+        const userData = userSnap.data();
         if (!userData) {
             throw new NotFoundException('User data is undefined');
         }

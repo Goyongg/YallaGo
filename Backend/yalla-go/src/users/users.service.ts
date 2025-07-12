@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { getUserDefaults } from './dto/user-defaults.dto';
 import { omitFields, pickFields } from 'src/common/helpers/object.helpers';
 import { FirebaseUserService } from 'src/firebase/firebase-user.service';
+import { PatchUserDto } from './dto/patch-user.dto';
 import { FirebaseDriverService } from 'src/firebase/firebase-driver.service';
 
 // clean any undefined fields for userData
@@ -50,12 +51,8 @@ export class UsersService {
 
         // retrive vehicle info if driver
         if (userData.role === 'driver') { 
-            const vehichleData = await this.firebaseDriverService.fetchVehicleData(firebaseUid);
-
-            // return user w/ vehicle data
             return { 
                 user: omitFields(userData, ['ratingCount', 'vehicleId']),
-                vehicle: omitFields(vehichleData, ['vehicleId', 'driverId'])
             };
         };
 
@@ -77,4 +74,65 @@ export class UsersService {
         await userRef.set(userData); // set data to the user
         return { message: "User created successfully", userId: firebaseUid }
     };
+
+    async updateUser(patchUserDto: PatchUserDto, firebaseUid: string) {
+        // Get user doc ref
+        const { userRef } = await this.firebaseUserService.getUserSnapshot(firebaseUid);
+
+        // Get user doc data
+        const userData = await this.firebaseUserService.fetchUserData(firebaseUid);
+
+        // If user is not a driver but trying to update licenseNumber
+        if (patchUserDto.licenseNumber && userData.role !== 'driver') {
+            throw new BadRequestException('Only drivers can update licenseNumber.');
+        }
+
+        // Prepare update object by filtering out undefined fields
+        const updates: Partial<typeof userData> = {};
+        for (const [key, value] of Object.entries(patchUserDto)) {
+            if (value !== undefined) {
+            updates[key] = value;
+            }
+        }
+        
+        // If new email is provided, update Firebase Auth
+        if (patchUserDto.email) {
+            await this.firebase.auth.updateUser( firebaseUid, {
+                email: patchUserDto.email
+            });
+        }
+
+        // If no fields were provided, optionally throw an error
+        if (Object.keys(updates).length === 0) {
+            throw new BadRequestException('No fields provided to update.');
+        }
+
+        // Update Firestore Doc
+        await userRef.update(updates);
+
+        return { message: "User updated successfully"};
+    }
+
+    async deleteUser(firebaseUid: string) {
+        // Get user doc ref
+        const { userRef } = await this.firebaseUserService.getUserSnapshot(firebaseUid);
+
+        // If driver, delete driver vehicle
+        const userData = await this.firebaseUserService.fetchUserData(firebaseUid);
+        if (userData.role === 'driver') {
+            // Get vehicle ref
+            if (userData.vehicleId) {
+            const { vehRef } = await this.firebaseDriverService.getVehicleSnapshot(userData.vehicleId);
+            await vehRef.delete(); // delete vehicle doc
+            }
+        }
+
+        // delete user doc
+        await userRef.delete();
+
+        // Delete Firebase Auth user
+        await this.firebase.auth.deleteUser(firebaseUid);
+
+        return { message: "User deleted successfully"}
+    }
 }

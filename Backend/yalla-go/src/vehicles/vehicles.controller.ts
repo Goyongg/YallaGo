@@ -10,11 +10,19 @@ export class VehiclesController {
     constructor(private readonly vehiclesService: VehiclesService) {}
 
     @UseGuards(FirebaseAuthGuard)
+    @Get()
+    async getVehicle(@Req() req) {
+        const firebaseUid = req.user.uid;
+
+        return this.vehiclesService.getVehicle(firebaseUid);
+    }
+
+    @UseGuards(FirebaseAuthGuard)
     @Post()
     async addVehicle(@Body(ValidationPipe) createVehicleDto: CreateVehicleDto, @Req() req) {
         const firebaseUid = req.user.uid; // extract user id from the request
 
-        return this.vehiclesService.createVehicle(createVehicleDto, firebaseUid)
+        return this.vehiclesService.createVehicle(createVehicleDto, firebaseUid);
     }
 
     @UseGuards(FirebaseAuthGuard)
@@ -22,7 +30,7 @@ export class VehiclesController {
     async getSeats(@Req() req) {
         const firebaseUid = req.user.uid;
 
-        return this.vehiclesService.getSeats(firebaseUid)
+        return this.vehiclesService.getSeats(firebaseUid);
     }
 
     @UseGuards(FirebaseAuthGuard)
@@ -30,7 +38,7 @@ export class VehiclesController {
     async deleteVehicle(@Req() req) {
         const firebaseUid = req.user.uid;
         
-        return this.vehiclesService.deleteVehicle(firebaseUid)
+        return this.vehiclesService.deleteVehicle(firebaseUid);
     }
 
     @UseGuards(FirebaseAuthGuard)
@@ -38,7 +46,7 @@ export class VehiclesController {
     async updateVehicleColor(@Body(ValidationPipe) updateVehicleColorDto: UpdateVehicleColorDto, @Req() req) {
         const firebaseUid = req.user.uid;
 
-        return this.vehiclesService.updateVehicleColor(firebaseUid, updateVehicleColorDto)
+        return this.vehiclesService.updateVehicleColor(firebaseUid, updateVehicleColorDto);
     }
 
     
