@@ -32,10 +32,11 @@ const LocationPicker = () => {
     currentDropoff?: string;
     currentPickupName?: string;
     currentDropoffName?: string;
-    context?: string; // Add context parameter
+    context?: string;
+    stopoverIndex?: string; // Add stopover index parameter
   }>();
   
-  const { type, index, context } = params;
+  const { type, index, context, stopoverIndex } = params;
 
   const mapRef = useRef<MapView>(null);
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
@@ -273,6 +274,12 @@ const LocationPicker = () => {
       navigationParams.dropoffName = selectedLocation.name;
       navigationParams.dropoffLat = selectedLocation.latitude.toFixed(6);
       navigationParams.dropoffLng = selectedLocation.longitude.toFixed(6);
+    } else if (type === 'stopover' && stopoverIndex) {
+      // Handle stopover location
+      navigationParams.stopoverName = selectedLocation.name;
+      navigationParams.stopoverLat = selectedLocation.latitude.toFixed(6);
+      navigationParams.stopoverLng = selectedLocation.longitude.toFixed(6);
+      navigationParams.stopoverIndex = stopoverIndex;
     }
 
     // Add context to maintain form separation
@@ -341,6 +348,20 @@ const LocationPicker = () => {
     reverseGeocode(DEFAULT_REGION.latitude, DEFAULT_REGION.longitude);
   }, []);
 
+  // Get the header title based on type
+  const getHeaderTitle = () => {
+    switch (type) {
+      case 'pickup':
+        return 'Select Pickup Location';
+      case 'dropoff':
+        return 'Select Drop-off Location';
+      case 'stopover':
+        return `Select Stopover ${stopoverIndex ? parseInt(stopoverIndex) + 1 : ''} Location`;
+      default:
+        return 'Select Location';
+    }
+  };
+
   return (
     <View className="flex-1 relative">
       {/* Header */}
@@ -354,7 +375,7 @@ const LocationPicker = () => {
           </Pressable>
           <View className="bg-white rounded-full px-4 py-2 ml-3 shadow-md">
             <Text className="text-lg font-[Afacad] font-bold">
-              Select {type === 'pickup' ? 'Pickup' : 'Drop-off'} Location
+              {getHeaderTitle()}
             </Text>
           </View>
         </View>

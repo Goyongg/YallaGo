@@ -17,6 +17,14 @@ interface LocationData {
   lng: number;
 }
 
+interface StopoverData {
+  name: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+}
+
 const CreateRideForm: React.FC = () => {
   const params = useGlobalSearchParams();
   
@@ -29,7 +37,7 @@ const CreateRideForm: React.FC = () => {
   const [femaleOnly, setFemaleOnly] = useState(false);
   const [dateTime, setDateTime] = useState<Date | null>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
-  const [stopovers, setStopovers] = useState<string[]>([]);
+  const [stopovers, setStopovers] = useState<StopoverData[]>([]);
   const [comment, setComment] = useState('');
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   const [recommendedPrice, setRecommendedPrice] = useState<number | null>(null);
@@ -37,11 +45,16 @@ const CreateRideForm: React.FC = () => {
   // Handle location data from location picker - only for create context
   useFocusEffect(
     useCallback(() => {
+      console.log('useFocusEffect triggered with params:', params);
+      
       // Only process if the context is 'create' or undefined (for backward compatibility)
       if (params.context === 'search') return;
 
+      let shouldClearParams = false;
+
       // Handle pickup location
       if (params.pickupName && params.pickupLat && params.pickupLng) {
+        console.log('Processing pickup location:', params.pickupName);
         const locationData: LocationData = {
           name: params.pickupName as string,
           lat: parseFloat(params.pickupLat as string),
@@ -49,17 +62,12 @@ const CreateRideForm: React.FC = () => {
         };
         setFrom(locationData.name);
         setFromLocation(locationData);
-        
-        // Clear pickup params to prevent re-processing
-        router.setParams({
-          pickupName: undefined,
-          pickupLat: undefined,
-          pickupLng: undefined,
-        });
+        shouldClearParams = true;
       }
 
       // Handle dropoff location
       if (params.dropoffName && params.dropoffLat && params.dropoffLng) {
+        console.log('Processing dropoff location:', params.dropoffName);
         const locationData: LocationData = {
           name: params.dropoffName as string,
           lat: parseFloat(params.dropoffLat as string),
@@ -67,12 +75,72 @@ const CreateRideForm: React.FC = () => {
         };
         setTo(locationData.name);
         setToLocation(locationData);
+        shouldClearParams = true;
+      }
+
+      // Handle stopover location
+      if (params.stopoverName && params.stopoverLat && params.stopoverLng && params.stopoverIndex) {
+        console.log('Processing stopover location:', params.stopoverName, 'at index:', params.stopoverIndex);
+        const stopoverIndex = parseInt(params.stopoverIndex as string);
+        const stopoverData: StopoverData = {
+          name: params.stopoverName as string,
+          coordinates: {
+            lat: parseFloat(params.stopoverLat as string),
+            lng: parseFloat(params.stopoverLng as string),
+          }
+        };
         
-        // Clear dropoff params to prevent re-processing
+        console.log('Stopover data to set:', stopoverData);
+        console.log('Current stopovers before update:', stopovers);
+        
+        // Update the specific stopover
+        setStopovers(prev => {
+          const updated = [...prev];
+          console.log('Updating stopover at index:', stopoverIndex, 'in array of length:', updated.length);
+          
+          // If the index is valid, update it
+          if (stopoverIndex >= 0 && stopoverIndex < updated.length) {
+            updated[stopoverIndex] = stopoverData;
+            console.log('Updated existing stopover at index:', stopoverIndex);
+          } 
+          // If the index equals the array length, it means we need to add a new stopover
+          else if (stopoverIndex === updated.length) {
+            updated.push(stopoverData);
+            console.log('Added new stopover at index:', stopoverIndex);
+          }
+          // If we need to fill gaps, create empty stopovers up to the desired index
+          else if (stopoverIndex > updated.length) {
+            // Fill any gaps with empty stopovers
+            while (updated.length < stopoverIndex) {
+              updated.push({ name: '', coordinates: { lat: 0, lng: 0 } });
+            }
+            // Add the new stopover at the correct index
+            updated.push(stopoverData);
+            console.log('Created gaps and added stopover at index:', stopoverIndex);
+          } else {
+            console.log('Invalid stopover index:', stopoverIndex, 'for array length:', updated.length);
+          }
+          
+          console.log('Final updated stopovers array:', updated);
+          return updated;
+        });
+        shouldClearParams = true;
+      }
+
+      // Clear all location params at once to prevent re-processing
+      if (shouldClearParams) {
+        console.log('Clearing location parameters');
         router.setParams({
+          pickupName: undefined,
+          pickupLat: undefined,
+          pickupLng: undefined,
           dropoffName: undefined,
           dropoffLat: undefined,
           dropoffLng: undefined,
+          stopoverName: undefined,
+          stopoverLat: undefined,
+          stopoverLng: undefined,
+          stopoverIndex: undefined,
         });
       }
     }, [params])
@@ -84,27 +152,39 @@ const CreateRideForm: React.FC = () => {
       ).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`
     : 'Select date & time';
 
-  const updateStopover = (index: number, value: string) => {
-    const updated = [...stopovers];
-    updated[index] = value;
-    setStopovers(updated);
-  };
-
   const addStopover = () => {
     if (stopovers.length < 3) {
-      setStopovers([...stopovers, '']);
+      console.log('Adding new stopover. Current length:', stopovers.length);
+      const newStopover = { name: '', coordinates: { lat: 0, lng: 0 } };
+      setStopovers(prev => {
+        const updated = [...prev, newStopover];
+        console.log('Stopovers after adding:', updated);
+        return updated;
+      });
+    } else {
+      console.log('Cannot add more stopovers. Maximum of 3 reached.');
     }
   };
 
-  const navigateToLocationPicker = (type: 'pickup' | 'dropoff') => {
+  const removeStopover = (index: number) => {
+    const updated = stopovers.filter((_, idx) => idx !== index);
+    setStopovers(updated);
+  };
+
+  const navigateToLocationPicker = (type: 'pickup' | 'dropoff' | 'stopover', stopoverIndex?: number) => {
     // Save current locations to global state before navigating
-    const state = {
+    const state: any = {
       currentPickup: fromLocation ? JSON.stringify(fromLocation) : undefined,
       currentDropoff: toLocation ? JSON.stringify(toLocation) : undefined,
       currentPickupName: from,
       currentDropoffName: to,
       context: 'create', // Add context to differentiate from search form
     };
+
+    // Add stopover index if it's a stopover selection
+    if (type === 'stopover' && stopoverIndex !== undefined) {
+      state.stopoverIndex = stopoverIndex.toString();
+    }
     
     router.push({ 
       pathname: '/(modals)/location-picker', 
@@ -186,25 +266,32 @@ const CreateRideForm: React.FC = () => {
       return;
     }
 
+    // Validate stopovers - ensure all added stopovers have coordinates
+    const validStopovers = stopovers.filter(stopover => 
+      stopover.name.trim() !== '' && stopover.coordinates.lat !== 0 && stopover.coordinates.lng !== 0
+    );
+
+    if (stopovers.some(stopover => stopover.name.trim() !== '' && (stopover.coordinates.lat === 0 || stopover.coordinates.lng === 0))) {
+      Alert.alert('Invalid Stopover', 'Please select all stopover locations from the map');
+      return;
+    }
+
     const token = await auth().currentUser?.getIdToken();
     if (!token) {
       Alert.alert('Error', 'Unable to authenticate user');
       return;
     }
 
-    const filteredStopovers = stopovers.filter((s) => s.trim() !== '');
-
     const dateStr = dateTime.toISOString().split('T')[0];
     const timeStr = dateTime.toTimeString().slice(0, 5);
 
     // Prepare waypoints in the correct format for backend (Waypoint objects)
-    // Note: For real waypoints, you'd need actual coordinates from location picker
-    const waypoints = filteredStopovers.length > 0 ? filteredStopovers.map((stopover, index) => ({
+    const waypoints = validStopovers.length > 0 ? validStopovers.map(stopover => ({
       coordinates: {
-        lat: fromLocation.lat + (index * 0.01), // Dummy coordinates - you'd need real coordinates
-        lng: fromLocation.lng + (index * 0.01)
+        lat: stopover.coordinates.lat,
+        lng: stopover.coordinates.lng
       },
-      label: stopover
+      label: stopover.name
     })) : undefined;
 
     // Updated payload structure to match CreateRideDto from backend
@@ -318,23 +405,28 @@ const CreateRideForm: React.FC = () => {
             </View>
 
             {/* Stopovers */}
-            {stopovers.map((stop, idx) => (
+            {stopovers.map((stopover, idx) => (
               <View key={idx} className="mb-3 mx-4">
                 <View className="flex-row items-center border-b border-gray-400">
                   <Ionicons name="location-outline" size={18} color="#00BD5F" />
-                  <TextInput
-                    placeholder={`Stopover ${idx + 1}`}
-                    placeholderTextColor="#A0AEC0"
-                    value={stop}
-                    onChangeText={(text) => updateStopover(idx, text)}
-                    className="ml-2 flex-1 text-lg font-[Afacad] py-3"
-                  />
-                  <Pressable onPress={() => {
-                    const updated = stopovers.filter((_, index) => index !== idx);
-                    setStopovers(updated);
-                  }}>
-                    <Ionicons name="close-circle" size={20} color="#ccc" />
+                  <Pressable
+                    onPress={() => navigateToLocationPicker('stopover', idx)}
+                    className="ml-2 flex-1"
+                  >
+                    <Text className={`text-lg font-[Afacad] py-3 ${
+                      stopover.name ? 'text-black' : 'text-[#A0AEC0]'
+                    }`}>
+                      {stopover.name || `Select stopover ${idx + 1}`}
+                    </Text>
                   </Pressable>
+                  <View className="flex-row items-center">
+                    {stopover.name && stopover.coordinates.lat !== 0 && (
+                      <Ionicons name="checkmark-circle" size={20} color="#00BD5F" style={{ marginRight: 8 }} />
+                    )}
+                    <Pressable onPress={() => removeStopover(idx)}>
+                      <Ionicons name="close-circle" size={20} color="#ccc" />
+                    </Pressable>
+                  </View>
                 </View>
               </View>
             ))}
