@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsEmail, IsEnum, IsMobilePhone, IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export enum UserRole {
     DRIVER = "driver",
@@ -19,7 +19,7 @@ export class CreateUserDto {
     email: string;
 
     @IsNotEmpty()
-    @IsString()
+    @IsMobilePhone()
     phoneNumber: string;
 
     @IsOptional()
@@ -34,6 +34,6 @@ export class CreateUserDto {
     emergencyContactName?: string;
 
     @IsOptional()
-    @IsString()
+    @IsMobilePhone()
     emergencyContactPhone?: string;
 }
