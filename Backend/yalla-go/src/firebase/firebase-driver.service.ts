@@ -24,6 +24,8 @@ export class FirebaseDriverService {
         if (!vehData) {
             throw new NotFoundException('Vehicle data is undefined')
         }
+
+        return vehData;
     }
 
     // fetch vehicle data of driver
