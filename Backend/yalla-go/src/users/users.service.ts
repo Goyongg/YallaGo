@@ -7,6 +7,9 @@ import { omitFields, pickFields } from 'src/common/helpers/object.helpers';
 import { FirebaseUserService } from 'src/firebase/firebase-user.service';
 import { PatchUserDto } from './dto/patch-user.dto';
 import { FirebaseDriverService } from 'src/firebase/firebase-driver.service';
+import { RideStatus } from 'src/rides/enums/ride-status.enum';
+import { BookingStatus } from 'src/ride-passengers/enums/booking-status.enum';
+import { GeoPoint } from 'firebase-admin/firestore';
 
 // clean any undefined fields for userData
 function cleanUserData(data: Record<string, any>) {
@@ -42,8 +45,165 @@ export class UsersService {
 
         const response = pickFields(userData, homepageFields);
 
+        const upcomingInfo = await this.getUpcomingInfo(userData, firebaseUid);
+
         // return user info
-        return response; 
+        return { response, upcomingInfo }; 
+    }
+
+    async getUpcomingInfo(userData: any, firebaseUid: string) {
+        const now = new Date();
+        // Define 1 hour from now
+        const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+
+        // Check if the user is a driver
+        if (userData.role === 'driver') {
+            // Fetch all rides created by this driver
+            const rides = await this.firebaseDriverService.getRideByDriver(firebaseUid);
+
+            // Will hold rides happening soon or departed
+            const upcomingRides: typeof rides = [];
+
+            // Loop through each ride
+            for (const ride of rides) {
+                // Cast to make TypeScript aware of optional fields
+                const rideWithDeparture = ride as {
+                departureTime?: FirebaseFirestore.Timestamp;
+                status?: string;
+                };
+
+                // If departureTime is missing or invalid, skip
+                if (!rideWithDeparture.departureTime || typeof rideWithDeparture.departureTime.toDate !== 'function') {
+                    continue;
+                }
+
+                // Convert Firestore Timestamp to JS Date
+                const departureTime = rideWithDeparture.departureTime.toDate();
+                // Check if departure is within the next hour
+                const matchesTimeWindow = departureTime >= now && departureTime <= oneHourFromNow;
+
+                // Check if status is DEPARTED
+                const status = rideWithDeparture.status;
+                const matchesStatus = status === RideStatus.DEPARTED;
+
+                // If either condition is true, consider this an upcoming ride
+                if (matchesTimeWindow || matchesStatus) {
+                    upcomingRides.push(ride);
+                }
+            }
+
+            // Array to collect enriched ride info
+            const enrichedRides: any[] = [];
+
+            // Loop through each upcoming ride
+            for (const ride of upcomingRides) {
+                // Remove fields you don't want to expose to clients
+                const rideData = omitFields(ride, ['availableSeats','distanceMeters','driverId','durationSeconds','g','pricePerSeat','vehicleId']);
+
+                // Fetch all bookings for this ride
+                const bookingsSnapshot = await this.firebase.firestore
+                .collection('bookings')
+                .where('rideId', '==', ride.rideId)
+                .get();
+
+                const bookings: any[] = [];
+
+                // Loop through bookings to enrich each with passenger data
+                for (const bookingDoc of bookingsSnapshot.docs) {
+                const bookingData = bookingDoc.data() as {
+                    passengerId: string;
+                    seatsBooked: number;
+                };
+
+                // Fetch user data for the passenger
+                const userData = await this.firebaseUserService.fetchUserData(bookingData.passengerId);
+
+                bookings.push({
+                    passengerName: userData.name,
+                    seatsBooked: bookingData.seatsBooked,
+                    phoneNumber: userData.phoneNumber
+                });
+                }
+
+                // Add the enriched ride (with bookings) to the list
+                enrichedRides.push({
+                ...rideData,
+                bookings
+                });
+            }
+
+            // Return enriched rides for driver
+            return enrichedRides;
+        }
+
+        // If the user has a booking, treat them as passenger
+        // Fetch all bookings for this passenger
+        const upcomingBookings = await this.firebase.firestore
+            .collection('bookings')
+            .where('passengerId', '==', firebaseUid)
+            .get();
+        
+        // Array to collect enriched booking info
+        const enrichedBookings: any [] = [];
+
+        // Loop through all bookings
+        for (const bookingDoc of upcomingBookings.docs) {
+            const bookingData = bookingDoc.data() as {
+                rideId: string;
+                seatsBooked: number;
+                pickupPoint: string; 
+                startGeo: GeoPoint;
+                dropOffPoint: string;
+                endGeo: GeoPoint; 
+                status: string;
+            };
+
+            // Fetch the ride document linked to this booking
+            const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId);
+            // Keep only specific ride fields
+            const cleanRideData = pickFields(rideData, ['coordinates', 'departureTime', 'endGeo'])
+
+            // Convert departure time to JS Date
+            const departureTime = rideData.departureTime.toDate();
+            console.log('Checking departure time:', departureTime.toISOString());
+
+            // Define conditions
+            const isWithinTimeWindow = departureTime >= now && departureTime <= oneHourFromNow;
+            const isOngoing = bookingData.status === BookingStatus.ONGOING;
+
+            // If neither applies, skip this booking
+            if (!isWithinTimeWindow && !isOngoing) {
+                continue;
+            }
+
+            // Fetch driver info linked to this ride
+            const driverData = await this.firebaseUserService.fetchUserData(rideData.driverId);
+            // Keep only selected driver fields
+            const cleanDriverData = pickFields(driverData, ['driverId', 'name', 'phoneNumber', 'averageRating'])
+
+            // Fetch vehicle info for this ride
+            const vehicleData = await this.firebaseDriverService.fetchVehicleData(rideData.vehicleId)
+            // Remove fields you don't want to expose
+            const cleanVehicleData = omitFields(vehicleData, ['seats', 'driverId', 'vehicleId'])
+
+            // Build the enriched booking object
+            enrichedBookings.push({
+                bookingId: bookingDoc.id,
+                seatsBooked: bookingData.seatsBooked,
+                status: bookingData.status,
+                pickupPoint: bookingData.pickupPoint,
+                bookingStart: bookingData.startGeo,
+                dropOffPoint: bookingData.dropOffPoint,
+                bookingEnd: bookingData.endGeo,
+                ride: cleanRideData,
+                driver: cleanDriverData,
+                vehicle: cleanVehicleData
+            });
+        }
+
+        
+        // Return enriched bookings for passenger
+        return enrichedBookings;
     }
 
     async getUserProfile(firebaseUid: string) {
