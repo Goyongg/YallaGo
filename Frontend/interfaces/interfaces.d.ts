@@ -251,3 +251,70 @@ export interface ApiError {
   statusCode?: number;
   error?: string;
 }
+
+// Raw ride data from backend
+export interface DriverRideResponse {
+  rideId: string;
+  startLocation: string;
+  endLocation: string;
+  departureTime: any; // Firestore Timestamp
+  durationSeconds: number;
+  pricePerSeat: number;
+  availableSeats: number;
+  totalSeats?: number; // Total seats in vehicle for calculating booked seats
+  femaleOnly?: boolean;
+  waypoints?: Waypoint[];
+  comments?: string;
+  status: 'in-progress' | 'departed' | 'completed' | 'cancelled';
+}
+
+// Processed ride data for frontend components
+export interface ProcessedDriverRide {
+  id: string;
+  from: string;
+  to: string;
+  departureTime: string;
+  arrivalTime: string;
+  duration: string;
+  price: string;
+  availableSeats: number;
+  totalSeats?: number;
+  bookedSeats: number; // Calculated: totalSeats - availableSeats
+  hasBookings: boolean; // Whether ride has any passenger bookings
+  status: string;
+  date: string; // For grouping history (YYYY-MM-DD format)
+}
+
+// Driver rides hook return type
+export interface UseDriverRidesReturn {
+  rides: ProcessedDriverRide[];
+  upcomingRides: ProcessedDriverRide[];
+  historyRides: ProcessedDriverRide[];
+  loading: boolean;
+  error: string | null;
+  refetch: () => void;
+}
+
+// Updated ride actions hook return type
+export interface UseRideActionsReturn {
+  startRide: (rideId: string) => Promise<{ success: boolean; message: string }>;
+  endRide: (rideId: string) => Promise<{ success: boolean; message: string }>;
+  deleteRide: (rideId: string) => Promise<{ success: boolean; message: string }>;
+  loading: boolean;
+}
+
+// Ride status enum for frontend
+export enum RideStatusFrontend {
+  IN_PROGRESS = 'in-progress',
+  DEPARTED = 'departed',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled'
+}
+
+// Status display mapping
+export const STATUS_DISPLAY_MAP = {
+  'in-progress': 'Upcoming',
+  'departed': 'Departed',
+  'completed': 'Completed',
+  'cancelled': 'Cancelled'
+} as const;
