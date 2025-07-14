@@ -1,12 +1,6 @@
-// hooks/useUpcomingRide.ts
-import { useEffect, useState } from 'react';
-import auth from '@react-native-firebase/auth';
-import axios from 'axios';
-import { Platform } from 'react-native';
-
-// This should be checked to match the current IP address
-const BASE_URL =
-  Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+// hooks/useUpcomingRide.ts - Fixed to use new homepage data structure
+import { useState, useEffect } from 'react';
+import useHomeUserData from './useHomeUserData';
 
 interface UpcomingRideData {
   rideId: string;
@@ -26,284 +20,147 @@ interface UpcomingRideData {
 const useUpcomingRide = (userRole: string) => {
   const [upcomingRide, setUpcomingRide] = useState<UpcomingRideData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { userData, upcomingData, loading: homeDataLoading, error } = useHomeUserData();
 
   useEffect(() => {
-    const fetchUpcomingRide = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    if (homeDataLoading) {
+      setLoading(true);
+      return;
+    }
 
-        const user = auth().currentUser;
-        if (!user || !userRole) {
-          setLoading(false);
-          return;
-        }
+    try {
+      setLoading(true);
 
-        const idToken = await user.getIdToken();
-
-        console.log('Fetching upcoming ride for user role:', userRole);
-
-        if (userRole === 'driver') {
-          // For drivers: Get upcoming rides and find the next one
-          const ridesResponse = await axios.get(`${BASE_URL}/rides`, {
-            headers: {
-              Authorization: `Bearer ${idToken}`,
-            },
-          });
-
-          const rides = ridesResponse.data;
-          console.log('Driver rides response:', rides);
-          
-          // Filter for rides that are in-progress and in the future
-          const now = new Date();
-          console.log('Current time:', now.toISOString());
-          
-          const upcomingRides = rides.filter((ride: any) => {
-            // Handle both Firestore timestamp format and regular timestamp
-            let departureTime: Date;
-            
-            try {
-              if (ride.departureTime && typeof ride.departureTime === 'object') {
-                // Handle Firestore timestamp with _seconds property
-                if (ride.departureTime._seconds) {
-                  departureTime = new Date(ride.departureTime._seconds * 1000);
-                } else if (ride.departureTime.seconds) {
-                  departureTime = new Date(ride.departureTime.seconds * 1000);
-                } else {
-                  console.log('Unknown timestamp format for ride:', ride.rideId, ride.departureTime);
-                  return false;
-                }
-              } else if (ride.departureTime) {
-                // Regular timestamp or string
-                departureTime = new Date(ride.departureTime);
-              } else {
-                console.log('No departure time for ride:', ride.rideId);
-                return false;
-              }
-              
-              // Validate the date
-              if (isNaN(departureTime.getTime())) {
-                console.log('Invalid date for ride:', ride.rideId, departureTime);
-                return false;
-              }
-              
-            } catch (error) {
-              console.log('Error parsing departure time for ride:', ride.rideId, error);
-              return false;
-            }
-            
-            console.log(`Ride ${ride.rideId}: status=${ride.status}, departureTime=${departureTime.toISOString()}, isInFuture=${departureTime > now}`);
-            
-            return (
-              ride.status === 'in-progress' && 
-              departureTime > now
-            );
-          });
-
-          console.log('Filtered upcoming rides:', upcomingRides.length);
-
-          if (upcomingRides.length > 0) {
-            // Sort by departure time and get the next one
-            upcomingRides.sort((a: any, b: any) => {
-              const getTime = (ride: any) => {
-                try {
-                  if (ride.departureTime && typeof ride.departureTime === 'object') {
-                    if (ride.departureTime._seconds) {
-                      return ride.departureTime._seconds * 1000;
-                    } else if (ride.departureTime.seconds) {
-                      return ride.departureTime.seconds * 1000;
-                    }
-                  }
-                  return new Date(ride.departureTime).getTime();
-                } catch (error) {
-                  console.log('Error getting time for sorting:', ride.rideId, error);
-                  return 0;
-                }
-              };
-              
-              return getTime(a) - getTime(b);
-            });
-
-            const nextRide = upcomingRides[0];
-            console.log('Next upcoming ride:', nextRide);
-            
-            // Calculate passenger count based on booked seats
-            // Total seats - available seats = booked seats
-            const bookedSeats = (nextRide.seats || 4) - (nextRide.availableSeats || 0);
-            const passengerCount = Math.max(0, bookedSeats);
-
-            let departureTimeISO: string;
-            try {
-              if (nextRide.departureTime && typeof nextRide.departureTime === 'object') {
-                if (nextRide.departureTime._seconds) {
-                  departureTimeISO = new Date(nextRide.departureTime._seconds * 1000).toISOString();
-                } else if (nextRide.departureTime.seconds) {
-                  departureTimeISO = new Date(nextRide.departureTime.seconds * 1000).toISOString();
-                } else {
-                  departureTimeISO = new Date(nextRide.departureTime).toISOString();
-                }
-              } else {
-                departureTimeISO = new Date(nextRide.departureTime).toISOString();
-              }
-            } catch (error) {
-              console.log('Error converting departure time to ISO:', error);
-              departureTimeISO = new Date().toISOString(); // Fallback to current time
-            }
-
-            const upcomingRideData: UpcomingRideData = {
-              rideId: nextRide.rideId,
-              departureTime: departureTimeISO,
-              from: nextRide.startLocation,
-              to: nextRide.endLocation,
-              userRole: 'driver',
-              passengerCount: Math.max(1, passengerCount), // Show at least 1 if no actual bookings yet
-            };
-
-            console.log('Setting upcoming ride data:', upcomingRideData);
-            setUpcomingRide(upcomingRideData);
-          } else {
-            console.log('No upcoming rides found for driver');
-            setUpcomingRide(null);
-          }
-
-        } else if (userRole === 'passenger') {
-          // For passengers: Get bookings and find the next upcoming one
-          const bookingsResponse = await axios.get(`${BASE_URL}/bookings`, {
-            headers: {
-              Authorization: `Bearer ${idToken}`,
-            },
-          });
-
-          const bookings = bookingsResponse.data;
-          console.log('Passenger bookings response:', bookings);
-          
-          // Filter for upcoming bookings
-          const now = new Date();
-          const upcomingBookings = bookings.filter((booking: any) => {
-            let departureTime: Date;
-            
-            try {
-              if (booking.date && typeof booking.date === 'object') {
-                if (booking.date._seconds) {
-                  departureTime = new Date(booking.date._seconds * 1000);
-                } else if (booking.date.seconds) {
-                  departureTime = new Date(booking.date.seconds * 1000);
-                } else {
-                  console.log('Unknown booking date format:', booking.bookingId, booking.date);
-                  return false;
-                }
-              } else if (booking.date) {
-                departureTime = new Date(booking.date);
-              } else {
-                console.log('No date for booking:', booking.bookingId);
-                return false;
-              }
-              
-              if (isNaN(departureTime.getTime())) {
-                console.log('Invalid date for booking:', booking.bookingId, departureTime);
-                return false;
-              }
-              
-            } catch (error) {
-              console.log('Error parsing booking date:', booking.bookingId, error);
-              return false;
-            }
-            
-            return (
-              ['pending', 'confirmed', 'ongoing'].includes(booking.status) &&
-              departureTime > now
-            );
-          });
-
-          console.log('Filtered upcoming bookings:', upcomingBookings.length);
-
-          if (upcomingBookings.length > 0) {
-            // Sort by departure time and get the next one
-            upcomingBookings.sort((a: any, b: any) => {
-              const getTime = (booking: any) => {
-                try {
-                  if (booking.date && typeof booking.date === 'object') {
-                    if (booking.date._seconds) {
-                      return booking.date._seconds * 1000;
-                    } else if (booking.date.seconds) {
-                      return booking.date.seconds * 1000;
-                    }
-                  }
-                  return new Date(booking.date).getTime();
-                } catch (error) {
-                  console.log('Error getting booking time for sorting:', booking.bookingId, error);
-                  return 0;
-                }
-              };
-              
-              return getTime(a) - getTime(b);
-            });
-
-            const nextBooking = upcomingBookings[0];
-            console.log('Next upcoming booking:', nextBooking);
-
-            // For passengers, we need vehicle data but don't have direct access
-            // Using placeholder data that would normally come from the backend
-            const vehiclePlaceholder = {
-              make: 'Toyota',
-              model: 'Camry',
-              color: 'White',
-              plateNumber: 'ABC123',
-            };
-
-            let departureTimeISO: string;
-            try {
-              if (nextBooking.date && typeof nextBooking.date === 'object') {
-                if (nextBooking.date._seconds) {
-                  departureTimeISO = new Date(nextBooking.date._seconds * 1000).toISOString();
-                } else if (nextBooking.date.seconds) {
-                  departureTimeISO = new Date(nextBooking.date.seconds * 1000).toISOString();
-                } else {
-                  departureTimeISO = new Date(nextBooking.date).toISOString();
-                }
-              } else {
-                departureTimeISO = new Date(nextBooking.date).toISOString();
-              }
-            } catch (error) {
-              console.log('Error converting booking date to ISO:', error);
-              departureTimeISO = new Date().toISOString(); // Fallback to current time
-            }
-
-            const upcomingRideData: UpcomingRideData = {
-              rideId: nextBooking.rideId || 'placeholder-ride-id',
-              departureTime: departureTimeISO,
-              from: nextBooking.pickupPoint,
-              to: nextBooking.dropOffPoint,
-              userRole: 'passenger',
-              vehicle: vehiclePlaceholder,
-            };
-
-            console.log('Setting upcoming booking data:', upcomingRideData);
-            setUpcomingRide(upcomingRideData);
-          } else {
-            console.log('No upcoming bookings found for passenger');
-            setUpcomingRide(null);
-          }
-        }
-
-      } catch (err: any) {
-        console.error('Error fetching upcoming ride:', err);
-        setError('Failed to fetch upcoming ride');
+      // If no upcoming data or user data, set to null
+      if (!upcomingData || upcomingData.length === 0 || !userData) {
+        console.log('📅 No upcoming data available');
         setUpcomingRide(null);
-      } finally {
         setLoading(false);
+        return;
       }
-    };
 
-    if (userRole) {
-      fetchUpcomingRide();
-    } else {
+      console.log('📅 Processing upcoming data for role:', userData.role, 'Items:', upcomingData.length);
+
+      // Get the first upcoming item (most relevant)
+      const upcomingItem = upcomingData[0];
+      console.log('📅 First upcoming item:', upcomingItem);
+
+      // Process based on user role
+      if (userData.role === 'driver') {
+        // Driver upcoming ride data - check if it has driver-specific fields
+        const driverRide = upcomingItem as any;
+        
+        if (driverRide.rideId && driverRide.startLocation && driverRide.endLocation) {
+          console.log('📅 Processing driver ride:', driverRide.rideId);
+          
+          // Handle Firestore timestamp conversion
+          let departureTimeISO: string;
+          try {
+            if (driverRide.departureTime) {
+              if (typeof driverRide.departureTime === 'object' && driverRide.departureTime._seconds) {
+                // Firestore timestamp with _seconds
+                departureTimeISO = new Date(driverRide.departureTime._seconds * 1000).toISOString();
+              } else if (typeof driverRide.departureTime === 'object' && driverRide.departureTime.seconds) {
+                // Firestore timestamp with seconds
+                departureTimeISO = new Date(driverRide.departureTime.seconds * 1000).toISOString();
+              } else if (typeof driverRide.departureTime.toDate === 'function') {
+                // Native Firestore timestamp
+                departureTimeISO = driverRide.departureTime.toDate().toISOString();
+              } else {
+                // Regular date string or timestamp
+                departureTimeISO = new Date(driverRide.departureTime).toISOString();
+              }
+            } else {
+              departureTimeISO = new Date().toISOString();
+            }
+          } catch (error) {
+            console.error('📅 Error parsing departure time:', error);
+            departureTimeISO = new Date().toISOString();
+          }
+
+          // Calculate passenger count from bookings
+          const passengerCount = driverRide.bookings ? 
+            driverRide.bookings.reduce((total: number, booking: any) => total + (booking.seatsBooked || 0), 0) : 0;
+
+          const ride: UpcomingRideData = {
+            rideId: driverRide.rideId,
+            departureTime: departureTimeISO,
+            from: driverRide.startLocation,
+            to: driverRide.endLocation,
+            userRole: 'driver',
+            passengerCount: Math.max(0, passengerCount) // Ensure non-negative
+          };
+          
+          console.log('📅 Setting driver ride:', ride);
+          setUpcomingRide(ride);
+        } else {
+          console.log('📅 Driver ride missing required fields');
+          setUpcomingRide(null);
+        }
+      } else {
+        // Passenger upcoming booking data - check if it has passenger-specific fields
+        const passengerBooking = upcomingItem as any;
+        
+        if (passengerBooking.bookingId && passengerBooking.pickupPoint && passengerBooking.dropOffPoint) {
+          console.log('📅 Processing passenger booking:', passengerBooking.bookingId);
+          
+          // Handle Firestore timestamp conversion for ride departure time
+          let departureTimeISO: string;
+          try {
+            const rideDepTime = passengerBooking.ride?.departureTime;
+            if (rideDepTime) {
+              if (typeof rideDepTime === 'object' && rideDepTime._seconds) {
+                departureTimeISO = new Date(rideDepTime._seconds * 1000).toISOString();
+              } else if (typeof rideDepTime === 'object' && rideDepTime.seconds) {
+                departureTimeISO = new Date(rideDepTime.seconds * 1000).toISOString();
+              } else if (typeof rideDepTime.toDate === 'function') {
+                departureTimeISO = rideDepTime.toDate().toISOString();
+              } else {
+                departureTimeISO = new Date(rideDepTime).toISOString();
+              }
+            } else {
+              departureTimeISO = new Date().toISOString();
+            }
+          } catch (error) {
+            console.error('📅 Error parsing booking departure time:', error);
+            departureTimeISO = new Date().toISOString();
+          }
+
+          const ride: UpcomingRideData = {
+            rideId: passengerBooking.bookingId, // Use bookingId as identifier for passengers
+            departureTime: departureTimeISO,
+            from: passengerBooking.pickupPoint,
+            to: passengerBooking.dropOffPoint,
+            userRole: 'passenger',
+            vehicle: passengerBooking.vehicle ? {
+              make: passengerBooking.vehicle.make,
+              model: passengerBooking.vehicle.model,
+              color: passengerBooking.vehicle.color,
+              plateNumber: passengerBooking.vehicle.plateNumber
+            } : undefined
+          };
+          
+          console.log('📅 Setting passenger ride:', ride);
+          setUpcomingRide(ride);
+        } else {
+          console.log('📅 Passenger booking missing required fields');
+          setUpcomingRide(null);
+        }
+      }
+
+    } catch (error) {
+      console.error('📅 Error processing upcoming ride data:', error);
+      setUpcomingRide(null);
+    } finally {
       setLoading(false);
     }
-  }, [userRole]);
+  }, [upcomingData, userData, homeDataLoading]);
 
-  return { upcomingRide, loading, error };
+  return { 
+    upcomingRide, 
+    loading: loading || homeDataLoading,
+    error 
+  };
 };
 
 export default useUpcomingRide;

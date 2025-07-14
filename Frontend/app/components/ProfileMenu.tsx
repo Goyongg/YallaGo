@@ -50,7 +50,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, r
                   </View>
                 </View>
                 <Text className="mt-3 text-xl font-bold font-[Afacad]">{userName}</Text>
-                <Text className="text-gray-400 font-[Afacad]">★ {rating.toFixed(2)}</Text>
+                <Text className="text-gray-400 font-[Afacad]">★ {(rating || 0).toFixed(2)}</Text>
               </View>
 
               {/* Menu Scrollable Section */}

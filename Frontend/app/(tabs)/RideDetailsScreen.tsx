@@ -139,7 +139,7 @@ const RideDetailsScreen = () => {
       // FIXED: Show success message and stay on the same page
       Alert.alert(
         'Booking Successful! 🎉', 
-        `Your ride has been booked successfully.\n\nBooking ID: ${result.bookingId || 'N/A'}\nSeats booked: ${passengerCount}\nTotal cost: ${(rideDetails.price * passengerCount).toFixed(1)} AED`,
+        `Your ride has been booked successfully.\n\nBooking ID: ${result.bookingId || 'N/A'}\nSeats booked: ${passengerCount}\nTotal cost: ${((rideDetails.price || 0) * passengerCount).toFixed(1)} AED`,
         [
           {
             text: 'OK',
@@ -439,7 +439,7 @@ const RideDetailsScreen = () => {
                   × {passengerCount} passenger{passengerCount !== 1 ? 's' : ''}:
                 </Text>
                 <Text className="text-sm font-[Afacad]">
-                  {(rideDetails.price * passengerCount).toFixed(1)} AED
+                  {((rideDetails.price || 0) * passengerCount).toFixed(1)} AED
                 </Text>
               </View>
               <View className="h-px bg-gray-200 my-2" />
@@ -448,7 +448,7 @@ const RideDetailsScreen = () => {
                   Total:
                 </Text>
                 <Text className="text-xl font-bold font-[Afacad] text-[#00BD5F]">
-                  {(rideDetails.price * passengerCount).toFixed(1)} AED
+                  {((rideDetails.price || 0) * passengerCount).toFixed(1)} AED
                 </Text>
               </View>
             </View>
@@ -473,7 +473,7 @@ const RideDetailsScreen = () => {
             </>
           ) : (
             <Text className="text-white text-lg font-[Afacad] font-semibold">
-              Book {passengerCount} seat{passengerCount !== 1 ? 's' : ''} for {(rideDetails.price * passengerCount).toFixed(1)} AED
+              Book {passengerCount} seat{passengerCount !== 1 ? 's' : ''} for {((rideDetails.price || 0) * passengerCount).toFixed(1)} AED
             </Text>
           )}
         </Pressable>

@@ -142,7 +142,7 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
               <View className="flex-row items-center ml-2">
                 <Ionicons name="star" size={12} color="#FFD700" />
                 <Text className="text-sm text-gray-500 font-[Afacad] ml-1">
-                  {driverRating.toFixed(1)}
+                  {(driverRating || 0).toFixed(1)}
                 </Text>
               </View>
             </View>
