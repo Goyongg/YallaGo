@@ -56,7 +56,10 @@ export class FirebaseDriverService {
 
         return rideSnapShot.docs.map(doc => ({
             rideId: doc.id,
-            ...doc.data()
+            ...(doc.data() as { 
+                status: string;
+                departureTime: FirebaseFirestore.Timestamp; 
+            })
         }));
     }
 

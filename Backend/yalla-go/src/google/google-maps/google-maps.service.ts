@@ -16,8 +16,10 @@ export class GoogleMapsService {
         endLat: number,
         endLng: number,
         date: string,
-        time: string
+        time: string,
+        waypoints: { lat: number; lng: number}[] = [] //default empty array
     ) {
+        // Fetch Google Maps API key from environment
         const apiKey = process.env.GOOGLE_MAPS_API_KEY;
         if (!apiKey) { // check if API key exist
             throw new InternalServerErrorException('Missing GOOGLE_MAPS_API_KEY');
@@ -29,27 +31,54 @@ export class GoogleMapsService {
             new Date(`${date}T${time}:00+04:00`).getTime() / 1000
         );
 
-        // call distance matrix API
-        const response = await this.client.distancematrix({
-            params: {
-                origins: [`${startLat},${startLng}`],
-                destinations: [`${endLat},${endLng}`],
-                mode: TravelMode.driving, // travel mode to driving
-                departure_time: departureTimestamp, // date in seconds
-                traffic_model: TrafficModel.best_guess, // buest guess model for traffic
-                key: apiKey,
-            },
-        });
+        // Prepare paramters for Directions API call
+        const params: any = {
+            origin: `${startLat},${startLng}`,
+            destination: `${endLat},${endLng}`,
+            mode: TravelMode.driving,
+            departure_time: departureTimestamp,
+            traffic_model: TrafficModel.best_guess,
+            key: apiKey,
+        };
 
-        const element = response.data.rows[0].elements[0];
-
-        if (element.status !== 'OK') { // check if the API call was successful
-            throw new ServiceUnavailableException(`Distance Matrix API error: ${element.status}`);
+        // If waypoints given, add waypoints into parameters
+        if (waypoints && waypoints.length > 0) {
+            // Filter out any invalid or incomplete waypoint objects
+            // and map them to the "lat,lng" format required by the Directions API
+            params.waypoints = waypoints
+                .filter((wp) => wp && typeof wp.lat === 'number' && typeof wp.lng === 'number')
+                .map((wp) => `${wp.lat},${wp.lng}`);
         }
 
-        return { // return distance and duration
-            distanceMeters: element.distance.value,
-            durationSeconds: element.duration.value
+        // Call Directions API with prepared parameters
+        const response = await this.client.directions({ params });
+
+        if (response.data.status !== 'OK') { // Return error if API status is not OK
+            throw new ServiceUnavailableException(`Directions API error: ${response.data.status}`);
+        }
+
+        // Get the first route returned by the API
+        const route = response.data.routes[0];
+        // Each leg represents a segment between origin, waypoints, and destination
+        const legs = route.legs;
+
+        let totalDistance = 0;
+        let totalDuration = 0;
+
+        // Sum distance and duration across all legs
+        for (const leg of legs) {
+            // Add distance for this leg
+            totalDistance += leg.distance.value;
+
+            // Add duration considering if traffic avaiable
+            // if not fallback to normal duration of leg
+            totalDuration += leg.duration_in_traffic?.value ?? leg.duration.value;
+        }
+
+        // Return accumulated distance and duration
+        return {
+            distanceMeters: totalDistance,
+            durationSeconds: totalDuration
         };
     }
 }

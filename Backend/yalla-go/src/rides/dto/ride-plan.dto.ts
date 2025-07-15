@@ -1,6 +1,7 @@
 import { Type } from "class-transformer";
-import { IsNotEmpty, IsString, ValidateNested } from "class-validator";
+import { IsArray, IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Coordinates } from "src/common/coordinates.dto";
+import { Waypoint } from "./waypoint.dto";
 
 export class RidePlanDto {
     @ValidateNested()
@@ -18,4 +19,10 @@ export class RidePlanDto {
     @IsNotEmpty()
     @IsString()
     time: string;
+
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true})
+    @Type(() => Waypoint)
+    waypoints?: Waypoint[];
 }
