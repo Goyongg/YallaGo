@@ -1,4 +1,4 @@
-// hooks/useHomeUserData.ts - Fixed to match backend changes
+// hooks/useHomeUserData.ts - Fixed to handle errors and empty responses properly
 import { useEffect, useState } from 'react';
 import auth from '@react-native-firebase/auth';
 import axios from 'axios';
@@ -98,8 +98,9 @@ const useHomeUserData = () => {
       const idToken = await user.getIdToken();
       
       console.log('🔍 Fetching homepage data from:', `${BASE_URL}/users/home`);
+      console.log('🔍 BASE_URL:', BASE_URL);
+      console.log('🔍 Platform:', Platform.OS);
 
-      // Updated endpoint from /users/home to /users/homepage
       const response = await axios.get<HomePageResponse>(`${BASE_URL}/users/home`, {
         headers: {
           Authorization: `Bearer ${idToken}`,
@@ -108,47 +109,89 @@ const useHomeUserData = () => {
       });
 
       console.log('🔍 Raw homepage response:', response.data);
+      console.log('🔍 Response type:', typeof response.data);
+      console.log('🔍 Response keys:', Object.keys(response.data || {}));
 
-      // Extract and transform user data to maintain backward compatibility
-      if (response.data.response) {
-        const backendUserData = response.data.response;
-        
-        // Transform to HomeUserData format for backward compatibility
+      // Handle case where backend might return unexpected structure
+      let userData: UserData | null = null;
+      let upcomingInfo: UpcomingData[] = [];
+
+      // Check if response has the expected structure
+      if (response.data && typeof response.data === 'object') {
+        // Case 1: Expected structure with response and upcomingInfo
+        if ('response' in response.data && response.data.response) {
+          userData = response.data.response;
+          upcomingInfo = Array.isArray(response.data.upcomingInfo) ? response.data.upcomingInfo : [];
+        }
+        // Case 2: Direct user data (fallback) - check if response.data has user properties
+        else if ('userId' in response.data || 'name' in response.data) {
+          // Type assertion with proper check
+          const responseAsAny = response.data as any;
+          if (responseAsAny.userId && responseAsAny.name && responseAsAny.role) {
+            userData = responseAsAny as UserData;
+            upcomingInfo = [];
+          } else {
+            console.warn('⚠️ Incomplete user data in direct response:', response.data);
+            setError('Incomplete user data from server');
+            return;
+          }
+        }
+        // Case 3: Empty response or unexpected structure
+        else {
+          console.warn('⚠️ Unexpected response structure:', response.data);
+          setError('Unexpected response format from server');
+          return;
+        }
+      } else {
+        console.error('❌ Invalid response data:', response.data);
+        setError('Invalid response data from server');
+        return;
+      }
+
+      // Transform user data to maintain backward compatibility
+      if (userData) {
         const compatibleUserData: HomeUserData = {
-          id: backendUserData.userId,
-          name: backendUserData.name,
-          role: backendUserData.role,
-          ecoPoints: backendUserData.ecoPoints || 0,
-          averageRating: backendUserData.averageRating || 0,
+          id: userData.userId,
+          name: userData.name,
+          role: userData.role,
+          ecoPoints: userData.ecoPoints || 0,
+          averageRating: userData.averageRating || 0,
         };
         
         setUserData(compatibleUserData);
         console.log('✅ User data set:', compatibleUserData);
       } else {
-        console.error('❌ No user data in response:', response.data);
-        setError('Invalid user data received from server');
+        console.error('❌ No valid user data found in response');
+        setError('No user data received from server');
+        return;
       }
 
-      // Extract upcoming info
-      if (response.data.upcomingInfo && Array.isArray(response.data.upcomingInfo)) {
-        setUpcomingData(response.data.upcomingInfo);
-        console.log('✅ Upcoming data set:', response.data.upcomingInfo.length, 'items');
-      } else {
-        console.log('ℹ️ No upcoming data or not an array:', response.data.upcomingInfo);
-        setUpcomingData([]);
-      }
+      // Set upcoming info (empty array is valid)
+      setUpcomingData(upcomingInfo);
+      console.log('✅ Upcoming data set:', upcomingInfo.length, 'items');
 
     } catch (err: any) {
       console.error('❌ Error fetching homepage data:', err);
+      console.error('❌ Error details:', {
+        message: err.message,
+        code: err.code,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        url: err.config?.url,
+        baseURL: err.config?.baseURL,
+      });
       
       let errorMessage = 'Failed to fetch user data';
       
       if (err.code === 'ECONNABORTED') {
         errorMessage = 'Request timed out. Please check your connection.';
+      } else if (err.code === 'ECONNREFUSED' || err.code === 'NETWORK_ERROR') {
+        errorMessage = `Cannot connect to server at ${BASE_URL}. Please ensure the backend server is running.`;
       } else if (err.response?.status === 401) {
         errorMessage = 'Authentication failed. Please log in again.';
       } else if (err.response?.status === 404) {
-        errorMessage = 'Homepage endpoint not found. Please update the app.';
+        errorMessage = `Homepage endpoint not found at ${BASE_URL}/users/home. Please check if the backend server is running and the endpoint exists.`;
       } else if (err.response?.status >= 500) {
         errorMessage = 'Server error. Please try again later.';
       } else if (err.response?.data?.message) {

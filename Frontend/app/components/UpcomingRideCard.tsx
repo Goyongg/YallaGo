@@ -113,16 +113,21 @@ const UpcomingRideCard: React.FC<UpcomingRideCardProps> = ({
         </View>
       </View>
 
-      {/* Route Details - More compact */}
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-1 mr-2">
-          <Text className="text-black text-base font-[Afacad] font-medium" numberOfLines={1}>
-            {truncateAddress(from)}
-          </Text>
+      {/* Route Details - Arrow follows starting address dynamically */}
+      <View className="flex-row items-center mb-3">
+        {/* Starting address - only takes space it needs */}
+        <Text className="text-black text-base font-[Afacad] font-medium" numberOfLines={1}>
+          {truncateAddress(from)}
+        </Text>
+        
+        {/* Arrow immediately after starting address */}
+        <View className="px-2 justify-center items-center">
+          <Ionicons name="arrow-forward" size={16} color="#666" />
         </View>
-        <Ionicons name="arrow-forward" size={16} color="#666" />
-        <View className="flex-1 ml-2">
-          <Text className="text-black text-base font-[Afacad] font-medium text-right" numberOfLines={1}>
+        
+        {/* Destination address - takes remaining space */}
+        <View className="flex-1">
+          <Text className="text-black text-base font-[Afacad] font-medium" numberOfLines={1}>
             {truncateAddress(to)}
           </Text>
         </View>

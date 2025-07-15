@@ -1,4 +1,4 @@
-// app/ride-details.tsx
+// app/ride-details.tsx - Updated to use real backend data
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -9,7 +9,8 @@ import {
   Alert,
   Linking,
   Platform,
-  Dimensions 
+  Dimensions,
+  ActivityIndicator 
 } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import auth from '@react-native-firebase/auth';
 import axios from 'axios';
 import ReviewModal from '../components/ReviewModal';
+import useHomeUserData from '../../hooks/useHomeUserData';
 
 const { width, height } = Dimensions.get('window');
 const BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
@@ -34,12 +36,36 @@ interface DriverInfo {
   photo?: string;
 }
 
+interface VehicleInfo {
+  make: string;
+  model: string;
+  color: string;
+  plateNumber: string;
+}
+
+interface RideData {
+  rideId: string;
+  from: string;
+  to: string;
+  departureTime: Date;
+  status: string;
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
+  endGeo?: {
+    latitude: number;
+    longitude: number;
+  };
+}
+
 const RideDetailsScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
   const mapRef = useRef<MapView>(null);
   
-  const { rideId, userRole, vehicle, passengerCount } = params;
+  const { rideId, userRole } = params;
+  const { userData, upcomingData, loading: homeLoading } = useHomeUserData();
   
   const [currentLocation, setCurrentLocation] = useState({
     latitude: 25.2048, // Default to Dubai
@@ -51,60 +77,218 @@ const RideDetailsScreen = () => {
     { latitude: 25.1972, longitude: 55.2744 }, // End point (placeholder)
   ]);
   
-  const [passengers, setPassengers] = useState<PassengerInfo[]>([
-    // Placeholder data - would normally come from backend
-    { name: 'Ahmed Al-Rashid', phone: '+971501234567', seatsBooked: 1 },
-    { name: 'Sara Mohammed', phone: '+971509876543', seatsBooked: 2 },
-  ]);
-  
-  const [driverInfo, setDriverInfo] = useState<DriverInfo>({
-    // Placeholder data - would normally come from backend
-    name: 'Mohammed Hassan',
-    phone: '+971501111222',
-    rating: 4.8,
-  });
-  
+  const [passengers, setPassengers] = useState<PassengerInfo[]>([]);
+  const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
+  const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo | null>(null);
+  const [rideData, setRideData] = useState<RideData | null>(null);
   const [rideStatus, setRideStatus] = useState<'in-progress' | 'departed' | 'completed'>('in-progress');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<{ name: string; id: string } | null>(null);
 
-  // Parse vehicle data if provided
-  const vehicleData = vehicle ? JSON.parse(vehicle as string) : null;
-  const totalPassengers = passengerCount ? parseInt(passengerCount as string) : passengers.length;
-
   useEffect(() => {
-    // Get current location
-    // In a real app, you'd use location services here
-    // For now, using placeholder location
-    setCurrentLocation({
-      latitude: 25.2048,
-      longitude: 55.2708,
-    });
-    
-    // Fetch ride details from backend
-    fetchRideDetails();
-  }, []);
+    if (!homeLoading && upcomingData && userData && rideId) {
+      loadRideDetails();
+    }
+  }, [homeLoading, upcomingData, userData, rideId]);
 
-  const fetchRideDetails = async () => {
+  const loadRideDetails = async () => {
     try {
       setLoading(true);
-      
-      // This would fetch real ride details including route coordinates
-      // For now using placeholder data
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In a real implementation, you'd fetch:
-      // - Route coordinates from Google Maps API or stored waypoints
-      // - Passenger/driver details from your backend
-      // - Current ride status
-      
-    } catch (error) {
-      console.error('Error fetching ride details:', error);
+      setError(null);
+
+      console.log('🚗 Loading ride details for ID:', rideId, 'Role:', userRole);
+      console.log('🚗 Available upcoming data:', upcomingData.length, 'items');
+
+      if (!userData) {
+        throw new Error('User data not available');
+      }
+
+      // Find the specific ride/booking in upcoming data
+      const targetItem = upcomingData.find((item: any) => {
+        if (userData.role === 'driver') {
+          return item.rideId === rideId;
+        } else {
+          return item.bookingId === rideId || item.rideId === rideId;
+        }
+      });
+
+      if (!targetItem) {
+        console.log('🚗 Ride not found in upcoming data, fetching from API...');
+        await fetchRideFromAPI();
+        return;
+      }
+
+      console.log('🚗 Found ride data:', targetItem);
+
+      if (userData.role === 'driver') {
+        await processDriverRideData(targetItem);
+      } else {
+        await processPassengerBookingData(targetItem);
+      }
+
+    } catch (err: any) {
+      console.error('🚗 Error loading ride details:', err);
+      setError(err.message || 'Failed to load ride details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const processDriverRideData = async (rideItem: any) => {
+    try {
+      // Parse departure time
+      let departureTime: Date;
+      if (rideItem.departureTime && typeof rideItem.departureTime === 'object') {
+        if (rideItem.departureTime._seconds) {
+          departureTime = new Date(rideItem.departureTime._seconds * 1000);
+        } else if (rideItem.departureTime.seconds) {
+          departureTime = new Date(rideItem.departureTime.seconds * 1000);
+        } else {
+          departureTime = new Date(rideItem.departureTime);
+        }
+      } else {
+        departureTime = new Date(rideItem.departureTime || Date.now());
+      }
+
+      // Set ride data
+      const ride: RideData = {
+        rideId: rideItem.rideId,
+        from: rideItem.startLocation,
+        to: rideItem.endLocation,
+        departureTime,
+        status: rideItem.status || 'in-progress',
+        coordinates: rideItem.coordinates,
+        endGeo: rideItem.endGeo,
+      };
+      setRideData(ride);
+
+      // Set route coordinates if available
+      if (rideItem.coordinates && rideItem.endGeo) {
+        const startCoords = {
+          latitude: rideItem.coordinates.latitude || rideItem.coordinates._latitude || 25.2048,
+          longitude: rideItem.coordinates.longitude || rideItem.coordinates._longitude || 55.2708,
+        };
+        const endCoords = {
+          latitude: rideItem.endGeo.latitude || rideItem.endGeo._latitude || 25.1972,
+          longitude: rideItem.endGeo.longitude || rideItem.endGeo._longitude || 55.2744,
+        };
+        setRouteCoordinates([startCoords, endCoords]);
+      }
+
+      // Set passengers from bookings
+      if (rideItem.bookings && Array.isArray(rideItem.bookings)) {
+        const passengerList: PassengerInfo[] = rideItem.bookings.map((booking: any) => ({
+          name: booking.passengerName,
+          phone: booking.phoneNumber,
+          seatsBooked: booking.seatsBooked,
+        }));
+        setPassengers(passengerList);
+      }
+
+      // Set ride status
+      setRideStatus(rideItem.status === 'departed' ? 'departed' : 'in-progress');
+
+      console.log('🚗 Driver ride data processed:', ride);
+      console.log('🚗 Passengers:', passengers.length);
+
+    } catch (err) {
+      console.error('🚗 Error processing driver ride data:', err);
+      throw err;
+    }
+  };
+
+  const processPassengerBookingData = async (bookingItem: any) => {
+    try {
+      // Parse departure time from ride data
+      let departureTime: Date;
+      const rideDepTime = bookingItem.ride?.departureTime;
+      if (rideDepTime && typeof rideDepTime === 'object') {
+        if (rideDepTime._seconds) {
+          departureTime = new Date(rideDepTime._seconds * 1000);
+        } else if (rideDepTime.seconds) {
+          departureTime = new Date(rideDepTime.seconds * 1000);
+        } else {
+          departureTime = new Date(rideDepTime);
+        }
+      } else {
+        departureTime = new Date(rideDepTime || Date.now());
+      }
+
+      // Set ride data
+      const ride: RideData = {
+        rideId: bookingItem.bookingId,
+        from: bookingItem.pickupPoint,
+        to: bookingItem.dropOffPoint,
+        departureTime,
+        status: bookingItem.status || 'confirmed',
+        coordinates: bookingItem.ride?.coordinates,
+        endGeo: bookingItem.ride?.endGeo,
+      };
+      setRideData(ride);
+
+      // Set route coordinates if available
+      if (bookingItem.bookingStart && bookingItem.bookingEnd) {
+        const startCoords = {
+          latitude: bookingItem.bookingStart.latitude || bookingItem.bookingStart._latitude || 25.2048,
+          longitude: bookingItem.bookingStart.longitude || bookingItem.bookingStart._longitude || 55.2708,
+        };
+        const endCoords = {
+          latitude: bookingItem.bookingEnd.latitude || bookingItem.bookingEnd._latitude || 25.1972,
+          longitude: bookingItem.bookingEnd.longitude || bookingItem.bookingEnd._longitude || 55.2744,
+        };
+        setRouteCoordinates([startCoords, endCoords]);
+      }
+
+      // Set driver info
+      if (bookingItem.driver) {
+        const driver: DriverInfo = {
+          name: bookingItem.driver.name,
+          phone: bookingItem.driver.phoneNumber,
+          rating: bookingItem.driver.averageRating || 0,
+        };
+        setDriverInfo(driver);
+      }
+
+      // Set vehicle info
+      if (bookingItem.vehicle) {
+        const vehicle: VehicleInfo = {
+          make: bookingItem.vehicle.make,
+          model: bookingItem.vehicle.model,
+          color: bookingItem.vehicle.color,
+          plateNumber: bookingItem.vehicle.plateNumber,
+        };
+        setVehicleInfo(vehicle);
+      }
+
+      // Set status based on booking status
+      if (bookingItem.status === 'ongoing') {
+        setRideStatus('departed');
+      } else if (bookingItem.status === 'completed') {
+        setRideStatus('completed');
+      } else {
+        setRideStatus('in-progress');
+      }
+
+      console.log('🚗 Passenger booking data processed:', ride);
+      console.log('🚗 Driver info:', driverInfo);
+      console.log('🚗 Vehicle info:', vehicleInfo);
+
+    } catch (err) {
+      console.error('🚗 Error processing passenger booking data:', err);
+      throw err;
+    }
+  };
+
+  const fetchRideFromAPI = async () => {
+    try {
+      // If ride not found in upcoming data, try to fetch from API
+      // This would require additional backend endpoints
+      console.log('🚗 Fetching ride from API not implemented yet');
+      throw new Error('Ride not found in upcoming data');
+    } catch (err) {
+      throw err;
     }
   };
 
@@ -128,6 +312,8 @@ const RideDetailsScreen = () => {
   };
 
   const handleStartRide = async () => {
+    if (!rideData) return;
+
     try {
       const user = auth().currentUser;
       if (!user) return;
@@ -146,7 +332,7 @@ const RideDetailsScreen = () => {
                 setLoading(true);
                 
                 const response = await axios.patch(
-                  `${BASE_URL}/rides/start-ride?rideId=${rideId}`,
+                  `${BASE_URL}/rides/start-ride?rideId=${rideData.rideId}`,
                   {},
                   {
                     headers: {
@@ -173,6 +359,8 @@ const RideDetailsScreen = () => {
   };
 
   const handleEndRide = async () => {
+    if (!rideData) return;
+
     try {
       const user = auth().currentUser;
       if (!user) return;
@@ -191,7 +379,7 @@ const RideDetailsScreen = () => {
                 setLoading(true);
                 
                 const response = await axios.patch(
-                  `${BASE_URL}/rides/end-ride?rideId=${rideId}`,
+                  `${BASE_URL}/rides/end-ride?rideId=${rideData.rideId}`,
                   {},
                   {
                     headers: {
@@ -205,8 +393,6 @@ const RideDetailsScreen = () => {
                 
                 // Show review modal for driver to review passengers
                 if (userRole === 'driver' && passengers.length > 0) {
-                  // For demo, we'll review the first passenger
-                  // In real implementation, you'd show review modal for each passenger who booked
                   setTimeout(() => {
                     setReviewTarget({ name: passengers[0].name, id: passengers[0].phone });
                     setShowReviewModal(true);
@@ -242,14 +428,7 @@ const RideDetailsScreen = () => {
           text: 'Call Emergency', 
           style: 'destructive',
           onPress: () => {
-            // In a real app, this would:
-            // 1. Call emergency services (999 in UAE)
-            // 2. Send location to emergency contacts
-            // 3. Notify the ride-sharing platform
-            
             Alert.alert('SOS Activated', 'Emergency services have been notified.');
-            
-            // For demo purposes, just show the emergency number
             const emergencyNumber = '999'; // UAE emergency number
             Linking.openURL(`tel:${emergencyNumber}`);
           }
@@ -261,19 +440,72 @@ const RideDetailsScreen = () => {
   const handleReviewComplete = () => {
     setShowReviewModal(false);
     setReviewTarget(null);
-    
-    // Navigate back to home after review
     setTimeout(() => {
       router.replace('/(tabs)/home');
     }, 1000);
   };
 
   const handleLeaveReview = () => {
-    if (userRole === 'passenger') {
+    if (userRole === 'passenger' && driverInfo) {
       setReviewTarget({ name: driverInfo.name, id: driverInfo.phone });
       setShowReviewModal(true);
     }
   };
+
+  // Loading state
+  if (loading || homeLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <View className="flex-row items-center justify-between px-4 py-3 bg-white shadow-sm pt-[60px]">
+          <Pressable onPress={() => router.back()} className="p-2">
+            <Ionicons name="arrow-back" size={24} color="black" />
+          </Pressable>
+          <Text className="text-xl font-bold font-[Afacad] text-black">
+            Ride Details
+          </Text>
+          <View className="w-8" />
+        </View>
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#00BD5F" />
+          <Text className="mt-4 text-lg font-[Afacad] text-gray-600">
+            Loading ride details...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <View className="flex-row items-center justify-between px-4 py-3 bg-white shadow-sm pt-[60px]">
+          <Pressable onPress={() => router.back()} className="p-2">
+            <Ionicons name="arrow-back" size={24} color="black" />
+          </Pressable>
+          <Text className="text-xl font-bold font-[Afacad] text-black">
+            Ride Details
+          </Text>
+          <View className="w-8" />
+        </View>
+        <View className="flex-1 justify-center items-center px-4">
+          <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+          <Text className="text-lg font-bold text-gray-800 mt-4 text-center font-[Afacad]">
+            Error Loading Ride
+          </Text>
+          <Text className="text-gray-600 mt-2 text-center font-[Afacad]">
+            {error}
+          </Text>
+          <Pressable 
+            onPress={() => router.back()}
+            className="bg-[#00BD5F] px-6 py-3 rounded-lg mt-6"
+          >
+            <Text className="text-white font-bold font-[Afacad]">Go Back</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const renderDriverView = () => (
     <>
@@ -281,31 +513,37 @@ const RideDetailsScreen = () => {
       <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
         <View className="p-4 border-b border-gray-200">
           <Text className="text-lg font-bold font-[Afacad] text-black">
-            Passengers ({totalPassengers})
+            Passengers ({passengers.length})
           </Text>
         </View>
         
-        <ScrollView className="max-h-48">
-          {passengers.map((passenger, index) => (
-            <View key={index} className="flex-row items-center justify-between p-4 border-b border-gray-100">
-              <View className="flex-1">
-                <Text className="text-base font-[Afacad] font-medium text-black">
-                  {passenger.name}
-                </Text>
-                <Text className="text-sm font-[Afacad] text-gray-600">
-                  {passenger.seatsBooked} seat{passenger.seatsBooked > 1 ? 's' : ''}
-                </Text>
+        {passengers.length > 0 ? (
+          <ScrollView className="max-h-48">
+            {passengers.map((passenger, index) => (
+              <View key={index} className="flex-row items-center justify-between p-4 border-b border-gray-100">
+                <View className="flex-1">
+                  <Text className="text-base font-[Afacad] font-medium text-black">
+                    {passenger.name}
+                  </Text>
+                  <Text className="text-sm font-[Afacad] text-gray-600">
+                    {passenger.seatsBooked} seat{passenger.seatsBooked > 1 ? 's' : ''}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => handleCallPress(passenger.phone, passenger.name)}
+                  className="bg-green-500 px-4 py-2 rounded-full flex-row items-center"
+                >
+                  <Ionicons name="call" size={16} color="white" />
+                  <Text className="text-white font-[Afacad] ml-2">Call</Text>
+                </Pressable>
               </View>
-              <Pressable
-                onPress={() => handleCallPress(passenger.phone, passenger.name)}
-                className="bg-green-500 px-4 py-2 rounded-full flex-row items-center"
-              >
-                <Ionicons name="call" size={16} color="white" />
-                <Text className="text-white font-[Afacad] ml-2">Call</Text>
-              </Pressable>
-            </View>
-          ))}
-        </ScrollView>
+            ))}
+          </ScrollView>
+        ) : (
+          <View className="p-4 items-center">
+            <Text className="text-gray-500 font-[Afacad]">No passengers yet</Text>
+          </View>
+        )}
       </View>
 
       {/* Driver Action Buttons */}
@@ -348,52 +586,54 @@ const RideDetailsScreen = () => {
   const renderPassengerView = () => (
     <>
       {/* Driver Info */}
-      <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
-        <View className="p-4 border-b border-gray-200">
-          <Text className="text-lg font-bold font-[Afacad] text-black">
-            Your Driver
-          </Text>
-        </View>
-        
-        <View className="p-4">
-          <View className="flex-row items-center mb-4">
-            <View className="w-16 h-16 bg-gray-200 rounded-full items-center justify-center">
-              <Ionicons name="person" size={32} color="#666" />
-            </View>
-            <View className="flex-1 ml-4">
-              <Text className="text-lg font-[Afacad] font-bold text-black">
-                {driverInfo.name}
-              </Text>
-              <View className="flex-row items-center">
-                <Ionicons name="star" size={16} color="#FFD700" />
-                <Text className="text-sm font-[Afacad] text-gray-600 ml-1">
-                  {driverInfo.rating.toFixed(1)}
-                </Text>
-              </View>
-            </View>
-            <Pressable
-              onPress={() => handleCallPress(driverInfo.phone, driverInfo.name)}
-              className="bg-green-500 px-4 py-2 rounded-full flex-row items-center"
-            >
-              <Ionicons name="call" size={16} color="white" />
-              <Text className="text-white font-[Afacad] ml-2">Call</Text>
-            </Pressable>
+      {driverInfo && (
+        <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
+          <View className="p-4 border-b border-gray-200">
+            <Text className="text-lg font-bold font-[Afacad] text-black">
+              Your Driver
+            </Text>
           </View>
           
-          {/* Vehicle Info */}
-          {vehicleData && (
-            <View className="bg-gray-50 rounded-lg p-3">
-              <Text className="text-sm font-[Afacad] text-gray-600 mb-2">Vehicle</Text>
-              <Text className="text-base font-[Afacad] font-medium text-black">
-                {vehicleData.make} {vehicleData.model} • {vehicleData.color}
-              </Text>
-              <Text className="text-lg font-[Afacad] font-bold text-black">
-                {vehicleData.plateNumber}
-              </Text>
+          <View className="p-4">
+            <View className="flex-row items-center mb-4">
+              <View className="w-16 h-16 bg-gray-200 rounded-full items-center justify-center">
+                <Ionicons name="person" size={32} color="#666" />
+              </View>
+              <View className="flex-1 ml-4">
+                <Text className="text-lg font-[Afacad] font-bold text-black">
+                  {driverInfo.name}
+                </Text>
+                <View className="flex-row items-center">
+                  <Ionicons name="star" size={16} color="#FFD700" />
+                  <Text className="text-sm font-[Afacad] text-gray-600 ml-1">
+                    {driverInfo.rating.toFixed(1)}
+                  </Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => handleCallPress(driverInfo.phone, driverInfo.name)}
+                className="bg-green-500 px-4 py-2 rounded-full flex-row items-center"
+              >
+                <Ionicons name="call" size={16} color="white" />
+                <Text className="text-white font-[Afacad] ml-2">Call</Text>
+              </Pressable>
             </View>
-          )}
+            
+            {/* Vehicle Info */}
+            {vehicleInfo && (
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-sm font-[Afacad] text-gray-600 mb-2">Vehicle</Text>
+                <Text className="text-base font-[Afacad] font-medium text-black">
+                  {vehicleInfo.make} {vehicleInfo.model} • {vehicleInfo.color}
+                </Text>
+                <Text className="text-lg font-[Afacad] font-bold text-black">
+                  {vehicleInfo.plateNumber}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* SOS Button */}
       <View className="mx-4 mb-4">
@@ -449,8 +689,8 @@ const RideDetailsScreen = () => {
             ref={mapRef}
             style={{ flex: 1 }}
             initialRegion={{
-              latitude: currentLocation.latitude,
-              longitude: currentLocation.longitude,
+              latitude: routeCoordinates[0].latitude,
+              longitude: routeCoordinates[0].longitude,
               latitudeDelta: 0.02,
               longitudeDelta: 0.02,
             }}
@@ -486,38 +726,45 @@ const RideDetailsScreen = () => {
         </View>
 
         {/* Ride Status */}
-        <View className="mx-4 mt-4 mb-4">
-          <View className="bg-white rounded-lg p-4 shadow-sm">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-lg font-bold font-[Afacad] text-black">
-                Ride Status
-              </Text>
-              <View className={`px-3 py-1 rounded-full ${
-                rideStatus === 'in-progress' ? 'bg-yellow-100' :
-                rideStatus === 'departed' ? 'bg-blue-100' : 'bg-green-100'
-              }`}>
-                <Text className={`text-sm font-[Afacad] font-medium ${
-                  rideStatus === 'in-progress' ? 'text-yellow-700' :
-                  rideStatus === 'departed' ? 'text-blue-700' : 'text-green-700'
+        {rideData && (
+          <View className="mx-4 mt-4 mb-4">
+            <View className="bg-white rounded-lg p-4 shadow-sm">
+              <View className="flex-row items-center justify-between">
+                <View>
+                  <Text className="text-lg font-bold font-[Afacad] text-black">
+                    {rideData.from} → {rideData.to}
+                  </Text>
+                  <Text className="text-sm font-[Afacad] text-gray-600">
+                    {rideData.departureTime.toLocaleDateString()} at {rideData.departureTime.toLocaleTimeString()}
+                  </Text>
+                </View>
+                <View className={`px-3 py-1 rounded-full ${
+                  rideStatus === 'in-progress' ? 'bg-yellow-100' :
+                  rideStatus === 'departed' ? 'bg-blue-100' : 'bg-green-100'
                 }`}>
-                  {rideStatus === 'in-progress' ? 'Ready to Start' :
-                   rideStatus === 'departed' ? 'In Progress' : 'Completed'}
-                </Text>
+                  <Text className={`text-sm font-[Afacad] font-medium ${
+                    rideStatus === 'in-progress' ? 'text-yellow-700' :
+                    rideStatus === 'departed' ? 'text-blue-700' : 'text-green-700'
+                  }`}>
+                    {rideStatus === 'in-progress' ? 'Ready to Start' :
+                     rideStatus === 'departed' ? 'In Progress' : 'Completed'}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
-        </View>
+        )}
 
         {/* Role-specific Content */}
         {userRole === 'driver' ? renderDriverView() : renderPassengerView()}
       </ScrollView>
       
       {/* Review Modal */}
-      {reviewTarget && (
+      {reviewTarget && rideData && (
         <ReviewModal
           visible={showReviewModal}
           onClose={handleReviewComplete}
-          rideId={rideId as string}
+          rideId={rideData.rideId}
           targetName={reviewTarget.name}
           userRole={userRole as 'driver' | 'passenger'}
         />
