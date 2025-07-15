@@ -2,11 +2,15 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreateRidePassengerDto } from './dto/create-ridepassenger.dto';
 import { BookingStatus } from './enums/booking-status.enum';
+import { FirebaseDriverService } from 'src/firebase/firebase-driver.service';
 
 @Injectable()
 export class RidePassengersService {
 
-    constructor(private readonly firebase: FirebaseService) {}
+    constructor(
+        private readonly firebase: FirebaseService,
+        private readonly firebaseDriverService: FirebaseDriverService
+    ) {}
 
     async createBooking(createRidePassengerDto: CreateRidePassengerDto, firebaseUid: string) {
         // Check if booked seats are less than or equal to available seats
@@ -113,5 +117,43 @@ export class RidePassengersService {
 
         // Return the compiled list of bookings
         return bookings;
+    }
+
+    async deleteBooking(bookingId: string) {
+        // Get a reference to the booking document in the "bookings" collection
+        const bookingRef = await this.firebase.firestore.collection('bookings').doc(bookingId);
+
+        // Fetch the document snapshot from Firestore
+        const bookingSnap = await bookingRef.get();
+
+        if(!bookingSnap.exists){
+            throw new NotFoundException('Booking not found')
+        }
+
+        // Extract the booking data from the snapshot
+        const bookingData = bookingSnap.data()!;
+
+        // If the booking is not in PENDING state, deny deletion
+        // This protects confirmed or ongoing bookings from being removed
+        if(bookingData.status !== BookingStatus.PENDING){
+            throw new ForbiddenException('Only pending bookings can be deleted')
+        }
+
+        // Fetch the current ride data using a service method
+        const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId);
+
+        // Recalculate the available seats by adding back the seats from the cancelled booking
+        const newSeats = bookingData.seatsBooked + rideData.availableSeats
+
+        // Get a reference to the ride associated with this booking
+        const rideRef = await this.firebase.firestore.collection('rides').doc(bookingData.rideId);
+        
+        // Update the ride document with the new available seat count
+        rideRef.update({ availableSeats: newSeats })
+
+        // Proceed to delete the booking document from Firestore
+        await bookingRef.delete();
+
+        return { message: 'Booking deleted successfully'}
     }
 }

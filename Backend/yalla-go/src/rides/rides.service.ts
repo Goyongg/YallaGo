@@ -436,7 +436,9 @@ export class RidesService {
         
         // Loop through each booking and update its status to ONGOING
         bookingsSnap.forEach(doc => {
-            batch.update(doc.ref, { status: BookingStatus.ONGOING})
+            if(doc.data().status === BookingStatus.CONFIRMED){
+                batch.update(doc.ref, { status: BookingStatus.ONGOING})
+            }
         })
 
         // Commit all booking status updates in a single batch operation
@@ -466,27 +468,29 @@ export class RidesService {
         // -Reward passenger with eco points
         for (const bookingDoc of bookingsSnap.docs) {
             const bookingData = bookingDoc.data();
-            const passengerId = bookingData.passengerId;
+            if (bookingData.status === BookingStatus.ONGOING){
+                const passengerId = bookingData.passengerId;
 
-            // Update booking status to COMPLETED
-            batch.update(bookingDoc.ref, { status: BookingStatus.COMPLETED });
+                // Update booking status to COMPLETED
+                batch.update(bookingDoc.ref, { status: BookingStatus.COMPLETED });
 
-            // Get user doc
-            const userRef = this.firebase.firestore.collection('users').doc(passengerId);
-            const userSnap = await userRef.get();
+                // Get user doc
+                const userRef = this.firebase.firestore.collection('users').doc(passengerId);
+                const userSnap = await userRef.get();
 
-            if(!userSnap.exists){
-                throw new NotFoundException('User doesnt exist');
+                if(!userSnap.exists){
+                    throw new NotFoundException('User doesnt exist');
+                }
+
+                // Get current ecoPoints of the user
+                const userData = userSnap.data()!;
+                const currentEcoPoints = userData.ecoPoints;
+
+                console.log(calculatedEcoPoints)
+
+                // Update user’s ecoPoints by adding newly earned points
+                batch.update(userRef, { ecoPoints: currentEcoPoints + calculatedEcoPoints });
             }
-
-            // Get current ecoPoints of the user
-            const userData = userSnap.data()!;
-            const currentEcoPoints = userData.ecoPoints;
-
-            console.log(calculatedEcoPoints)
-
-            // Update user’s ecoPoints by adding newly earned points
-            batch.update(userRef, { ecoPoints: currentEcoPoints + calculatedEcoPoints });
         }
 
         // Commit all updates in a single transaction
