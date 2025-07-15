@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { CreateDriverDto } from './dto/create-driver.dto';
@@ -79,15 +79,14 @@ export class UsersService {
 
                 // Convert Firestore Timestamp to JS Date
                 const departureTime = rideWithDeparture.departureTime.toDate();
-                // Check if departure is within the next hour
-                const matchesTimeWindow = departureTime >= now && departureTime <= oneHourFromNow;
-
-                // Check if status is DEPARTED
                 const status = rideWithDeparture.status;
-                const matchesStatus = status === RideStatus.DEPARTED;
+                // Check if departure is within the next hour and status is in-progress
+                const matchesTimeWindow = departureTime >= now && departureTime <= oneHourFromNow;
+                const isInProgressAndInTimeWindow = matchesTimeWindow && (status === RideStatus.IN_PROGRESS || status === RideStatus.BOOKED);
+                // Check if status is DEPARTED
+                const isDeparted = status === RideStatus.DEPARTED;
 
-                // If either condition is true, consider this an upcoming ride
-                if (matchesTimeWindow || matchesStatus) {
+                if (isInProgressAndInTimeWindow || isDeparted) {
                     upcomingRides.push(ride);
                 }
             }
@@ -110,19 +109,19 @@ export class UsersService {
 
                 // Loop through bookings to enrich each with passenger data
                 for (const bookingDoc of bookingsSnapshot.docs) {
-                const bookingData = bookingDoc.data() as {
-                    passengerId: string;
-                    seatsBooked: number;
-                };
+                    const bookingData = bookingDoc.data() as {
+                        passengerId: string;
+                        seatsBooked: number;
+                    };
 
-                // Fetch user data for the passenger
-                const userData = await this.firebaseUserService.fetchUserData(bookingData.passengerId);
+                    // Fetch user data for the passenger
+                    const userData = await this.firebaseUserService.fetchUserData(bookingData.passengerId);
 
-                bookings.push({
-                    passengerName: userData.name,
-                    seatsBooked: bookingData.seatsBooked,
-                    phoneNumber: userData.phoneNumber
-                });
+                    bookings.push({
+                        passengerName: userData.name,
+                        seatsBooked: bookingData.seatsBooked,
+                        phoneNumber: userData.phoneNumber
+                    });
                 }
 
                 // Add the enriched ride (with bookings) to the list
@@ -165,14 +164,16 @@ export class UsersService {
 
             // Convert departure time to JS Date
             const departureTime = rideData.departureTime.toDate();
-            console.log('Checking departure time:', departureTime.toISOString());
 
             // Define conditions
             const isWithinTimeWindow = departureTime >= now && departureTime <= oneHourFromNow;
+            const isConfirmed = bookingData.status === BookingStatus.CONFIRMED;
             const isOngoing = bookingData.status === BookingStatus.ONGOING;
 
-            // If neither applies, skip this booking
-            if (!isWithinTimeWindow && !isOngoing) {
+            // Proceed only if it's a confirmed booking within the time window, or if it's ongoing
+            const shouldInclude = (isWithinTimeWindow && isConfirmed) || isOngoing;
+
+            if (!shouldInclude) {
                 continue;
             }
 
@@ -295,4 +296,96 @@ export class UsersService {
 
         return { message: "User deleted successfully"}
     }
+
+    async getBookingRequests(firebaseUid: string) {
+        const rides = await this.firebaseDriverService.getRideByDriver(firebaseUid);
+
+        // Initialize an array to hold filtered and cleaned booking requests
+        const bookingRequests: any [] = [];
+
+        // Loop through each ride associated with this driver
+        for(const ride of rides){
+            // Query the bookings collection to find all bookings for the current ride
+            const bookings = await this.firebase.firestore
+                .collection('bookings')
+                .where('rideId', '==', ride.rideId)
+                .get();
+
+            // Loop through each booking document
+            for(const booking of bookings.docs)
+                // Check if the booking status is PENDING (i.e., awaiting driver action)
+                if (booking.data().status === BookingStatus.PENDING){
+                    // Fetch the user data of the passenger who made this booking
+                    const userData = await this.firebaseUserService.fetchUserData(booking.data().passengerId);
+                    // Select only the required user fields (name and average rating)
+                    const cleanUserData = pickFields(userData, ['name', 'averageRating'])
+                    // Exclude unnecessary booking fields
+                    const cleanBookingData = omitFields(booking.data(), ['passengerId', 'rideId', 'status'])
+
+                    // Merge the cleaned user and booking data into one object and store in the result array
+                    bookingRequests.push({ ...cleanUserData, ...cleanBookingData })
+                }
+        }
+        // Return the list of all pending booking requests
+        return { bookings: bookingRequests }
+    }
+
+    async acceptBookingRequest(bookingId: string) {
+        const bookingRef = await this.firebase.firestore.collection('bookings').doc(bookingId);
+        
+        // Retrieve the snapshot of the booking document
+        const bookingSnap = await bookingRef.get();
+
+        // If the booking doesn't exist, throw a 404 error
+        if(!bookingSnap.exists){
+            throw new NotFoundException('Booking not found')
+        }
+
+        // Extract the booking data from the document snapshot
+        const bookingData = bookingSnap.data()!;
+
+        // Update the status field of this booking to CONFIRMED
+        bookingRef.update({ status: BookingStatus.CONFIRMED })
+
+        const rideRef = await this.firebase.firestore.collection('rides').doc(bookingData.rideId);
+        const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId);
+        
+        // Update the ride's status to BOOKED
+        // This implies that at least one booking has been accepted for the ride
+        if(rideData.status === RideStatus.IN_PROGRESS){
+            rideRef.update({ status: RideStatus.BOOKED})
+        }
+        
+        return { message: "Booking confirmed" }
+    }
+
+    async declineBookingRequest(bookingId: string) {
+        const bookingRef = await this.firebase.firestore.collection('bookings').doc(bookingId);
+        const bookingSnap = await bookingRef.get();
+
+        // If the booking doesn't exist, throw a 404 error
+        if(!bookingSnap.exists){
+            throw new NotFoundException('Booking not found')
+        }
+
+        // Update the booking's status to CANCELLED in the database
+        bookingRef.update({ status: BookingStatus.CANCELLED })
+
+        // Extract the booking data from the snapshot
+        const bookingData = bookingSnap.data()!;
+
+        // Retrieve the corresponding ride details using the rideId from the booking
+        const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId);
+
+        // Calculate the new available seat count by adding back the cancelled seats
+        const newSeats = bookingData.seatsBooked + rideData.availableSeats;
+
+        // Get a reference to the ride document
+        const rideRef = await this.firebase.firestore.collection('rides').doc(bookingData.rideId);
+
+        // Update the ride document with the new available seat count
+        rideRef.update({ availableSeats: newSeats })
+
+        return { message: "Booking declined" }
+    }    
 }

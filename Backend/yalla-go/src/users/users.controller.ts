@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Patch, Post, Req, Res, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Patch, Post, Query, Req, Res, UseGuards, ValidationPipe } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserRole, CreateUserDto } from './dto/create-user.dto';
 import { CreateDriverDto } from './dto/create-driver.dto';
@@ -31,6 +31,15 @@ export class UsersController {
         return await this.userService.getUserProfile(firebaseUid);
     }
 
+    @UseGuards(FirebaseAuthGuard)
+    @Get('booking-requests')
+    async getBookingRequests(@Req() req) {
+        const firebaseUid = req.user.uid;
+        console.log(firebaseUid);
+
+        return await this.userService.getBookingRequests(firebaseUid)
+    }
+
     // POST /users/register
     @UseGuards(FirebaseAuthGuard)
     @Post('register')
@@ -60,7 +69,19 @@ export class UsersController {
         console.log(firebaseUid);
 
         return await this.userService.updateUser(patchUserDto, firebaseUid);
-    } 
+    }
+
+    @UseGuards(FirebaseAuthGuard)
+    @Patch('accept-booking')
+    async acceptBookingRequest(@Query('bookingId') bookingId: string) {
+        return this.userService.acceptBookingRequest(bookingId);
+    }
+
+    @UseGuards(FirebaseAuthGuard)
+    @Patch('decline-booking')
+    async declineBookingRequest(@Query('bookingId') bookingId: string) {
+        return this.userService.declineBookingRequest(bookingId)
+    }
 
     @UseGuards(FirebaseAuthGuard)
     @Delete()

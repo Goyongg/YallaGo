@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Query, Req, UseGuards, ValidationPipe } from '@nestjs/common';
 import { RidePassengersService } from './ride-passengers.service';
 import { FirebaseAuthGuard } from 'src/firebase/firebase-auth.guard';
 import { CreateRidePassengerDto } from './dto/create-ridepassenger.dto';
@@ -22,5 +22,11 @@ export class RidePassengersController {
         const firebaseUid = req.user.uid; // extract user id from the request
 
         return this.ridePassengerService.getBookings(firebaseUid);
+    }
+
+    @UseGuards(FirebaseAuthGuard)
+    @Delete()
+    async deleteBooking(@Query('bookingId') bookingId: string) {
+        return this.ridePassengerService.deleteBooking(bookingId)
     }
 }
