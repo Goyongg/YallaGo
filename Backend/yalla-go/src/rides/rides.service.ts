@@ -157,6 +157,43 @@ export class RidesService {
         )
     }
 
+    async checkRideConflict(date: string, time: string, firebaseUid: string) {
+        const rides = await this.firebaseDriverService.getRideByDriver(firebaseUid);
+
+        // Define the statuses considered for filtering
+        const relevantStatuses = [RideStatus.IN_PROGRESS, RideStatus.BOOKED, RideStatus.DEPARTED];
+
+        // Filter the rides active rides
+        const activeRides = rides.filter(ride =>
+            relevantStatuses.includes(ride.status as RideStatus)
+        )
+
+        // Convert incoming date/time to JS Date
+        const requestedTimestamp = this.parseUaeDateTime(date, time);
+        const requestedDateMs = requestedTimestamp.toDate().getTime();
+
+        // Conflict window
+        const conflictWindow = 10 * 60 * 1000; // 10 mins in milliseconds
+
+        // Check if active ride for conflict
+        for (const ride of activeRides) {
+            if (!ride.departureTime) continue;
+
+            const rideDateMs = ride.departureTime.toDate().getTime();
+
+            const diffMs = Math.abs(requestedDateMs - rideDateMs);
+
+            if (diffMs <= conflictWindow) {
+                throw new BadRequestException('Conflicting departure time with existing rides');
+            }
+        }
+
+        return {
+            ok: true,
+            message: "No conflicting departure times"
+        }
+    }
+
     // create ride service
     async createRide(createRideDto: CreateRideDto, firebaseUid: string) {
 
@@ -180,16 +217,32 @@ export class RidesService {
         // destructure to pull out date, time, start/end coordinates
         const {date, time, startPoint, endPoint, ...rest } = createRideDto;
         
-        // Get duration of the trip
-        const distanceData = await this.googleMaps.getDistanceAndDuration(
-            createRideDto.startPoint.lat,
-            createRideDto.startPoint.lng,
-            createRideDto.endPoint.lat,
-            createRideDto.endPoint.lng,
-            createRideDto.date,
-            createRideDto.time
-        )
+        let distanceData;
 
+        // Get distance and duration of ride
+        if (createRideDto.waypoints && createRideDto.waypoints.length > 0) {
+            // Call Directions API with waypoints
+            distanceData = await this.googleMaps.getDistanceAndDuration(
+                createRideDto.startPoint.lat,
+                createRideDto.startPoint.lng,
+                createRideDto.endPoint.lat,
+                createRideDto.endPoint.lng,
+                createRideDto.date,
+                createRideDto.time,
+                createRideDto.waypoints.map((w) => w.coordinates)
+            );
+        } 
+        else { // Call Directions API without waypoints
+            distanceData = await this.googleMaps.getDistanceAndDuration(
+                createRideDto.startPoint.lat,
+                createRideDto.startPoint.lng,
+                createRideDto.endPoint.lat,
+                createRideDto.endPoint.lng,
+                createRideDto.date,
+                createRideDto.time,
+            );
+        }
+        
         // create the ride doc reference
         const rideRef = this.firebase.firestore.collection('rides').doc();
 
@@ -226,22 +279,43 @@ export class RidesService {
     };
 
     // calculate recommended price per seat based on the start and end coordinates
-    async recommendPrice(ridePlantDto: RidePlanDto) {
+    async recommendPrice(ridePlanDto: RidePlanDto) {
 
-        // call distance matrix API to get distance and duration of the route
-        const { distanceMeters, durationSeconds } =
-            await this.googleMaps.getDistanceAndDuration(
-                ridePlantDto.startPoint.lat,
-                ridePlantDto.startPoint.lng,
-                ridePlantDto.endPoint.lat,
-                ridePlantDto.endPoint.lng,
-                ridePlantDto.date,
-                ridePlantDto.time
-            );
-            
+        let distanceMeters: number;
+        let durationSeconds: number;
+
+        // Get distance and duration of ride
+        if (ridePlanDto.waypoints && ridePlanDto.waypoints.length > 0) {
+            // console.log(ridePlanDto.waypoints);
+
+            // Call Directions API with waypoints
+            ({ distanceMeters, durationSeconds } = await this.googleMaps.getDistanceAndDuration(
+                ridePlanDto.startPoint.lat,
+                ridePlanDto.startPoint.lng,
+                ridePlanDto.endPoint.lat,
+                ridePlanDto.endPoint.lng,
+                ridePlanDto.date,
+                ridePlanDto.time,
+                ridePlanDto.waypoints.map((w) => w.coordinates),
+            ));
+        } 
+        else { // Call Directions API without waypoints
+            ({ distanceMeters, durationSeconds } = await this.googleMaps.getDistanceAndDuration(
+                ridePlanDto.startPoint.lat,
+                ridePlanDto.startPoint.lng,
+                ridePlanDto.endPoint.lat,
+                ridePlanDto.endPoint.lng,
+                ridePlanDto.date,
+                ridePlanDto.time
+            ));
+        }
+        
         // convert distance to KM and duratin to mins
         const distanceKm = distanceMeters / 1000;
         const durationMin = durationSeconds / 60;
+
+        console.log(`Distance: ${distanceKm}`);
+        console.log(`Duration: ${durationMin}`);
 
         // Price formula (AED) sample
         const baseFee = 5.5;
@@ -419,5 +493,30 @@ export class RidesService {
         await batch.commit();
 
         return { message: 'Ride ended, booking status for all bookings updated'}
+    }
+
+    // delete rides
+    async deleteRide(rideId: string) {
+        const rideRef = this.firebase.firestore.collection('rides').doc(rideId);
+        const rideSnap = await rideRef.get();
+
+        if(!rideSnap.exists) {
+            throw new NotFoundException('Ride doesnt exist');
+        }
+
+        const rideData = rideSnap.data();
+        if (!rideData) {
+            throw new NotFoundException('Ride data is undefined');
+        }
+
+        // don't allow deleting rides that are booked or completed
+        if (rideData.status !== RideStatus.IN_PROGRESS) {
+            throw new BadRequestException('Ride cannot be deleted because it has already been booked or deleted');
+        }
+
+        // delete ride doc
+        await rideRef.delete();
+
+        return { message: "Ride deleted successfully"};
     }
 }
