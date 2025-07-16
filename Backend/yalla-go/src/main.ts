@@ -36,7 +36,7 @@ if (process.env.NODE_ENV !== 'production') {
 export const api = https.onRequest(
   {
     // Reference the secret name directly
-    secrets: ['GOOGLE_MAPS_API_KEY'],
+    secrets: ['GOOGLE_MAPS_API_KEY', "STRIPE_SECRET_KEY"],
   },
   async (req, res) => {
     // Confirm the secret is available in process.env
