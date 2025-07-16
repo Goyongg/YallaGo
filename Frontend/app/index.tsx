@@ -24,10 +24,10 @@ export default function Index() {
           const email = user.email;
           const idToken = await user.getIdToken();
 
-          console.log('User is signed in');
-          console.log('UID:', uid);
-          console.log('Email:', email);
-          console.log('Token:', idToken);
+          // console.log('User is signed in');
+          // console.log('UID:', uid);
+          // console.log('Email:', email);
+          // console.log('Token:', idToken);
 
           router.replace('/(tabs)/home');
         } catch (error) {

@@ -7,8 +7,9 @@ import { Platform } from 'react-native';
 // This should be checked to match the current IP address
 // Uni: 10.45.49.69
 // Home: 10.128.24.33
-const BASE_URL =
-  Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+// const BASE_URL =
+//   Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+const BASE_URL = 'https://api-ro33x5lzbq-uc.a.run.app';
 
 // Updated interface to match new backend response structure
 interface UserData {
@@ -97,9 +98,9 @@ const useHomeUserData = () => {
 
       const idToken = await user.getIdToken();
       
-      console.log('🔍 Fetching homepage data from:', `${BASE_URL}/users/home`);
-      console.log('🔍 BASE_URL:', BASE_URL);
-      console.log('🔍 Platform:', Platform.OS);
+      // console.log('🔍 Fetching homepage data from:', `${BASE_URL}/users/home`);
+      // console.log('🔍 BASE_URL:', BASE_URL);
+      // console.log('🔍 Platform:', Platform.OS);
 
       const response = await axios.get<HomePageResponse>(`${BASE_URL}/users/home`, {
         headers: {
@@ -108,9 +109,9 @@ const useHomeUserData = () => {
         timeout: 10000, // 10 second timeout
       });
 
-      console.log('🔍 Raw homepage response:', response.data);
-      console.log('🔍 Response type:', typeof response.data);
-      console.log('🔍 Response keys:', Object.keys(response.data || {}));
+      // console.log('🔍 Raw homepage response:', response.data);
+      // console.log('🔍 Response type:', typeof response.data);
+      // console.log('🔍 Response keys:', Object.keys(response.data || {}));
 
       // Handle case where backend might return unexpected structure
       let userData: UserData | null = null;
@@ -159,7 +160,7 @@ const useHomeUserData = () => {
         };
         
         setUserData(compatibleUserData);
-        console.log('✅ User data set:', compatibleUserData);
+        // console.log('✅ User data set:', compatibleUserData);
       } else {
         console.error('❌ No valid user data found in response');
         setError('No user data received from server');
