@@ -192,7 +192,7 @@ const VehiclesPage = () => {
           <View>
             <View className="bg-white rounded-lg p-6 mb-6 border border-gray-200 shadow-sm">
               <View className="flex-row items-center mb-4">
-                <Ionicons name="car" size={24} color="#3b82f6" />
+                <Ionicons name="car" size={24} color="#00BD5F" />
                 <Text className="text-lg font-bold font-[Afacad] ml-2">Your Vehicle</Text>
               </View>
               
@@ -228,7 +228,7 @@ const VehiclesPage = () => {
             </View>
 
             {/* Action Buttons */}
-            <View className="space-y-3">
+            <View className="gap-3">
               <Pressable 
                 onPress={openEditModal}
                 className="bg-green-500 rounded-lg py-4 flex-row items-center justify-center"

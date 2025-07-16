@@ -11,7 +11,6 @@ const BASE_URL =
 
 interface Vehicle {
   vehicleId: string;
-  driverId: string;
   make: string;
   model: string;
   plateNumber: string;
@@ -65,43 +64,38 @@ const useVehicles = () => {
       
       const headers = await getAuthHeaders();
       
-      // Check if user has a vehicle by calling maxseats endpoint
+      // Try to get the full vehicle data using GET /vehicles endpoint
       try {
-        const response = await axios.get(`${BASE_URL}/vehicles/maxseats`, { headers });
+        const response = await axios.get(`${BASE_URL}/vehicles`, { headers });
         
         // If successful, user has a vehicle
-        if (response.data && response.data.maxSeats) {
-          setHasVehicle(true);
-          setMaxSeats(response.data.maxSeats);
-          
-          // Since backend doesn't return full vehicle details in maxseats,
-          // we'll create a placeholder. In a real app, you'd need a separate endpoint
-          // to get full vehicle details
+        if (response.data) {
           const vehicleData: Vehicle = {
-            vehicleId: 'current-vehicle',
-            driverId: auth().currentUser?.uid || '',
-            make: 'Vehicle', // Backend doesn't provide this in maxseats endpoint
-            model: 'Details',
-            plateNumber: 'Unknown',
-            color: undefined,
-            seats: response.data.maxSeats,
+            vehicleId: response.data.vehicleId,
+            make: response.data.make,
+            model: response.data.model,
+            plateNumber: response.data.plateNumber,
+            color: response.data.color,
+            seats: response.data.seats,
           };
           
+          setHasVehicle(true);
           setVehicles([vehicleData]);
+          setMaxSeats(vehicleData.seats);
         } else {
           setHasVehicle(false);
           setVehicles([]);
           setMaxSeats(null);
         }
-      } catch (maxSeatsError: any) {
+      } catch (vehicleError: any) {
         // If 404 or similar, user probably doesn't have a vehicle
-        if (maxSeatsError.response?.status === 404 || 
-            maxSeatsError.response?.status === 400) {
+        if (vehicleError.response?.status === 404 || 
+            vehicleError.response?.status === 400) {
           setHasVehicle(false);
           setVehicles([]);
           setMaxSeats(null);
         } else {
-          throw maxSeatsError;
+          throw vehicleError;
         }
       }
       
@@ -163,11 +157,8 @@ const useVehicles = () => {
         { headers }
       );
       
-      // Update the vehicle in state
-      setVehicles(prev => prev.map(vehicle => ({
-        ...vehicle,
-        color: updateData.color || vehicle.color
-      })));
+      // Refresh vehicles list after updating to get the latest data
+      await fetchVehicles();
       
       return response.data;
     } catch (error: any) {
