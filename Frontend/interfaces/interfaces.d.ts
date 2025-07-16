@@ -266,6 +266,13 @@ export interface DriverRideResponse {
   waypoints?: Waypoint[];
   comments?: string;
   status: 'in-progress' | 'departed' | 'completed' | 'cancelled';
+  // Add these fields that might come from backend
+  vehicleSeats?: number; // From vehicle data
+  bookings?: Array<{
+    passengerName: string;
+    seatsBooked: number;
+    phoneNumber: string;
+  }>;
 }
 
 // Processed ride data for frontend components
@@ -318,3 +325,14 @@ export const STATUS_DISPLAY_MAP = {
   'completed': 'Completed',
   'cancelled': 'Cancelled'
 } as const;
+
+// Add ride conflict check response
+export interface RideConflictResponse {
+  ok: boolean;
+  message: string;
+}
+
+// Add eco points calculation response  
+export interface EcoPointsResponse {
+  ecoPoints: number;
+}

@@ -45,7 +45,7 @@ const CreateRideForm: React.FC = () => {
   // Handle location data from location picker - only for create context
   useFocusEffect(
     useCallback(() => {
-      console.log('useFocusEffect triggered with params:', params);
+      // console.log('useFocusEffect triggered with params:', params);
       
       // Only process if the context is 'create' or undefined (for backward compatibility)
       if (params.context === 'search') return;
@@ -93,33 +93,19 @@ const CreateRideForm: React.FC = () => {
         console.log('Stopover data to set:', stopoverData);
         console.log('Current stopovers before update:', stopovers);
         
-        // Update the specific stopover
+        // Update the specific stopover - FIXED VERSION
         setStopovers(prev => {
+          // Create a new array to avoid mutation
           const updated = [...prev];
           console.log('Updating stopover at index:', stopoverIndex, 'in array of length:', updated.length);
           
-          // If the index is valid, update it
-          if (stopoverIndex >= 0 && stopoverIndex < updated.length) {
-            updated[stopoverIndex] = stopoverData;
-            console.log('Updated existing stopover at index:', stopoverIndex);
-          } 
-          // If the index equals the array length, it means we need to add a new stopover
-          else if (stopoverIndex === updated.length) {
-            updated.push(stopoverData);
-            console.log('Added new stopover at index:', stopoverIndex);
+          // Ensure the array is large enough for the index
+          while (updated.length <= stopoverIndex) {
+            updated.push({ name: '', coordinates: { lat: 0, lng: 0 } });
           }
-          // If we need to fill gaps, create empty stopovers up to the desired index
-          else if (stopoverIndex > updated.length) {
-            // Fill any gaps with empty stopovers
-            while (updated.length < stopoverIndex) {
-              updated.push({ name: '', coordinates: { lat: 0, lng: 0 } });
-            }
-            // Add the new stopover at the correct index
-            updated.push(stopoverData);
-            console.log('Created gaps and added stopover at index:', stopoverIndex);
-          } else {
-            console.log('Invalid stopover index:', stopoverIndex, 'for array length:', updated.length);
-          }
+          
+          // Update the specific stopover at the given index
+          updated[stopoverIndex] = stopoverData;
           
           console.log('Final updated stopovers array:', updated);
           return updated;
@@ -163,12 +149,16 @@ const CreateRideForm: React.FC = () => {
       });
     } else {
       console.log('Cannot add more stopovers. Maximum of 3 reached.');
+      Alert.alert('Maximum Reached', 'You can add up to 3 stopovers only.');
     }
   };
 
   const removeStopover = (index: number) => {
-    const updated = stopovers.filter((_, idx) => idx !== index);
-    setStopovers(updated);
+    setStopovers(prev => {
+      const updated = prev.filter((_, idx) => idx !== index);
+      console.log('Stopovers after removing index', index, ':', updated);
+      return updated;
+    });
   };
 
   const navigateToLocationPicker = (type: 'pickup' | 'dropoff' | 'stopover', stopoverIndex?: number) => {
@@ -255,6 +245,39 @@ const CreateRideForm: React.FC = () => {
     }
   }, [fromLocation, toLocation, dateTime]);
 
+  // Ride Conflict Check
+  const checkRideConflict = async (date: string, time: string) => {
+    try {
+      const token = await auth().currentUser?.getIdToken();
+      if (!token) return { hasConflict: false };
+
+      const response = await fetch(
+        `${BASE_URL}/rides/check-conflict?date=${date}&time=${time}`,
+        {
+          headers: { 
+            Authorization: `Bearer ${token}` 
+          }
+        }
+      );
+
+      if (!response.ok) {
+        // If there's an error, it might be a conflict
+        const errorData = await response.json();
+        if (response.status === 400) {
+          // Bad request usually means conflict
+          return { hasConflict: true, message: errorData.message };
+        }
+        return { hasConflict: false };
+      }
+
+      const result = await response.json();
+      return { hasConflict: false, message: result.message };
+    } catch (error) {
+      console.error('Error checking ride conflict:', error);
+      return { hasConflict: false }; // Don't block creation if check fails
+    }
+  };
+
   const handleCreate = async () => {
     if (!from || !to || !dateTime || !passengerCount || !price) {
       Alert.alert('Missing Info', 'Please fill all the fields');
@@ -285,36 +308,60 @@ const CreateRideForm: React.FC = () => {
     const dateStr = dateTime.toISOString().split('T')[0];
     const timeStr = dateTime.toTimeString().slice(0, 5);
 
-    // Prepare waypoints in the correct format for backend (Waypoint objects)
-    const waypoints = validStopovers.length > 0 ? validStopovers.map(stopover => ({
-      coordinates: {
-        lat: stopover.coordinates.lat,
-        lng: stopover.coordinates.lng
-      },
-      label: stopover.name
-    })) : undefined;
+    // NEW: Check for ride conflicts before creating
+    const conflictCheck = await checkRideConflict(dateStr, timeStr);
+    if (conflictCheck.hasConflict) {
+      Alert.alert(
+        'Schedule Conflict', 
+        conflictCheck.message || 'You have another ride scheduled around this time',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Create Anyway', 
+            style: 'destructive',
+            onPress: () => proceedWithRideCreation(dateStr, timeStr, validStopovers, token)
+          }
+        ]
+      );
+      return;
+    }
 
-    // Updated payload structure to match CreateRideDto from backend
-    const ridePayload = {
-      // From RidePlanDto
-      startPoint: { lat: fromLocation.lat, lng: fromLocation.lng },
-      endPoint: { lat: toLocation.lat, lng: toLocation.lng },
-      date: dateStr,
-      time: timeStr,
-      
-      // From CreateRideDto
-      startLocation: from,
-      endLocation: to,
-      pricePerSeat: Number(price),
-      availableSeats: Number(passengerCount),
-      femaleOnly: femaleOnly || undefined, // Only send if true
-      waypoints: waypoints,
-      comments: comment.trim() || undefined, // Backend expects 'comments' not 'comment'
-    };
+    // No conflict, proceed with creation
+    await proceedWithRideCreation(dateStr, timeStr, validStopovers, token);
+  };
 
-    console.log('Creating ride with payload:', ridePayload);
-
+  // Extract the actual ride creation logic into a separate function
+  const proceedWithRideCreation = async (dateStr: string, timeStr: string, validStopovers: any[], token: string) => {
     try {
+      // Prepare waypoints in the correct format for backend (Waypoint objects)
+      const waypoints = validStopovers.length > 0 ? validStopovers.map(stopover => ({
+        coordinates: {
+          lat: stopover.coordinates.lat,
+          lng: stopover.coordinates.lng
+        },
+        label: stopover.name
+      })) : undefined;
+
+      // Updated payload structure to match CreateRideDto from backend
+      const ridePayload = {
+        // From RidePlanDto
+        startPoint: { lat: fromLocation!.lat, lng: fromLocation!.lng },
+        endPoint: { lat: toLocation!.lat, lng: toLocation!.lng },
+        date: dateStr,
+        time: timeStr,
+        
+        // From CreateRideDto
+        startLocation: from,
+        endLocation: to,
+        pricePerSeat: Number(price),
+        availableSeats: Number(passengerCount),
+        femaleOnly: femaleOnly || undefined, // Only send if true
+        waypoints: waypoints,
+        comments: comment.trim() || undefined, // Backend expects 'comments' not 'comment'
+      };
+
+      console.log('Creating ride with payload:', ridePayload);
+
       const response = await fetch(`${BASE_URL}/rides`, {
         method: 'POST',
         headers: {

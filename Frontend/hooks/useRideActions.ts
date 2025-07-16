@@ -95,7 +95,7 @@ const useRideActions = (): UseRideActionsReturn => {
       // Since you mentioned not to change the backend, we'll use a generic endpoint
       // You may need to add a DELETE /rides/:rideId endpoint in your backend
       const response = await axios.delete<RideActionResponse>(
-        `${BASE_URL}/rides/${rideId}`,
+        `${BASE_URL}/rides?rideId=${rideId}`,
         {
           headers: {
             Authorization: `Bearer ${idToken}`,

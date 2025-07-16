@@ -87,9 +87,41 @@ const useDriverRides = (): UseDriverRidesReturn => {
   // Function to process raw ride data from backend
   const processRideData = (rawRides: DriverRideResponse[]): ProcessedDriverRide[] => {
     return rawRides.map(ride => {
-      // Calculate booking information
-      const totalSeats = ride.totalSeats || 4; // Default to 4 if not provided
-      const bookedSeats = totalSeats - ride.availableSeats;
+      // Calculate booking information more robustly
+      let totalSeats = 4; // Default fallback
+      let bookedSeats = 0;
+
+      // Try to get total seats from various possible sources
+      if (ride.totalSeats) {
+        totalSeats = ride.totalSeats;
+      } else if (ride.vehicleSeats) {
+        totalSeats = ride.vehicleSeats;
+      }
+
+      // Calculate booked seats
+      if (ride.bookings && Array.isArray(ride.bookings)) {
+        // If we have booking data, calculate from that
+        bookedSeats = ride.bookings.reduce((total, booking) => total + (booking.seatsBooked || 0), 0);
+        // Also update totalSeats if we can infer it
+        if (!ride.totalSeats && !ride.vehicleSeats) {
+          totalSeats = ride.availableSeats + bookedSeats;
+        }
+      } else {
+        // If no booking data, estimate from available seats
+        // This is a fallback calculation
+        if (ride.totalSeats || ride.vehicleSeats) {
+          bookedSeats = totalSeats - ride.availableSeats;
+        } else {
+          // Can't determine booked seats without more info
+          bookedSeats = 0;
+          totalSeats = ride.availableSeats; // At least we know available seats
+        }
+      }
+
+      // Ensure non-negative values
+      bookedSeats = Math.max(0, bookedSeats);
+      totalSeats = Math.max(ride.availableSeats, totalSeats);
+      
       const hasBookings = bookedSeats > 0;
 
       return {

@@ -89,11 +89,14 @@ const useVehicles = () => {
         }
       } catch (vehicleError: any) {
         // If 404 or similar, user probably doesn't have a vehicle
-        if (vehicleError.response?.status === 404 || 
-            vehicleError.response?.status === 400) {
+        if (vehicleError.response?.status === 404) {
+          // User doesn't have a vehicle
           setHasVehicle(false);
           setVehicles([]);
           setMaxSeats(null);
+        } else if (vehicleError.response?.status === 403) {
+          // Driver account not verified or no vehicle registered
+          setError('Driver account verification required');
         } else {
           throw vehicleError;
         }
