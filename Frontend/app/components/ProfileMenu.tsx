@@ -4,15 +4,24 @@ import { View, Text, Modal, Pressable, TouchableWithoutFeedback, ScrollView } fr
 import { Ionicons } from '@expo/vector-icons';
 import { ProfileMenuProps } from '../../interfaces/interfaces';
 
-const menuItems = [
+const allMenuItems = [
   { label: 'Manage Profile', route: '../profile/manage' },
+  { label: 'Driver Dashboard', route: '../profile/DriverDashboard', driverOnly: true }, // Added driverOnly flag
   { label: 'Gifts and discounts', sub: 'Enter promo code', route: '../profile/gifts' },
   { label: 'History', route: '../profile/history' },
   { label: 'Info', route: '../profile/info' },
 ];
 
-const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, rating }) => {
+const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, rating, userRole }) => {
   const router = useRouter();
+
+  // Filter menu items based on user role
+  const menuItems = allMenuItems.filter(item => {
+    if (item.driverOnly) {
+      return userRole === 'driver'; // Only show driver-only items to drivers
+    }
+    return true; // Show all other items to everyone
+  });
 
   const handleMenuPress = async (item: any) => {
     onClose();
@@ -41,7 +50,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, r
                   </View>
                 </View>
                 <Text className="mt-3 text-xl font-bold font-[Afacad]">{userName}</Text>
-                <Text className="text-gray-400 font-[Afacad]">★ {rating.toFixed(2)}</Text>
+                <Text className="text-gray-400 font-[Afacad]">★ {(rating || 0).toFixed(2)}</Text>
               </View>
 
               {/* Menu Scrollable Section */}
@@ -66,7 +75,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, r
                   </Pressable>
                 </View>
 
-                {/* List Items */}
+                {/* List Items - Now using filtered menuItems */}
                 {menuItems.map((item, index) => (
                   <Pressable
                     key={index}
