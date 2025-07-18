@@ -383,6 +383,7 @@ const LocationPicker = () => {
 
       {/* Map */}
       <MapView
+        provider={Platform.OS === 'android' ? 'google' : undefined}
         ref={mapRef}
         style={StyleSheet.absoluteFillObject}
         initialRegion={region}

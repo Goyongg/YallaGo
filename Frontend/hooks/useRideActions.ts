@@ -2,10 +2,7 @@ import { useState } from 'react';
 import auth from '@react-native-firebase/auth';
 import axios, { AxiosError } from 'axios';
 import { Platform } from 'react-native';
-
-// const BASE_URL =
-//   Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
-const BASE_URL = 'https://api-ro33x5lzbq-uc.a.run.app';
+import { BASE_URL } from '@/config';
 
 interface RideActionResponse {
   message: string;

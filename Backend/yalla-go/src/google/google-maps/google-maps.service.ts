@@ -31,6 +31,8 @@ export class GoogleMapsService {
             new Date(`${date}T${time}:00+04:00`).getTime() / 1000
         );
 
+        console.log(`Date: ${date}, Time: ${time}`);
+
         // Prepare paramters for Directions API call
         const params: any = {
             origin: `${startLat},${startLng}`,
@@ -51,7 +53,21 @@ export class GoogleMapsService {
         }
 
         // Call Directions API with prepared parameters
-        const response = await this.client.directions({ params });
+        let response;
+
+        try {
+        response = await this.client.directions({ params });
+        } catch (error: any) {
+        const message =
+            error?.response?.data?.error_message ||
+            error?.message ||
+            'Unknown error from Google Maps API';
+
+        console.error(`Google Maps API error: ${message}`);
+        console.error(`For request with Date: ${date}, Time: ${time}`);
+
+        throw new InternalServerErrorException(`Google Maps API failed: ${message}`);
+        }
 
         if (response.data.status !== 'OK') { // Return error if API status is not OK
             throw new ServiceUnavailableException(`Directions API error: ${response.data.status}`);

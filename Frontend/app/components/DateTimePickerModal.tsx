@@ -16,13 +16,21 @@ const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({
   const today = new Date();
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [selectedHour, setSelectedHour] = useState(today.getHours());
-  const [selectedMinute, setSelectedMinute] = useState(today.getMinutes());
+
+  // This rounds current minute to 5 (when picker opens), instead of always showing 00 when not divisible by 5
+  const roundToNearestFive = (minutes: number) => Math.round(minutes / 5) * 5;
+  const [selectedMinute, setSelectedMinute] = useState(roundToNearestFive(today.getMinutes()));
 
   const generateDays = () => {
     const days = [];
     for (let i = 0; i <= 30; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() + i);
+      // Create a base date set to today at 00:00 (midnight)
+      const baseDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      // Clone the base date and add `i` days to it
+      // This is to avoid modifying the baseDate in the loop
+      const date = new Date(baseDate);
+      date.setDate(date.getDate() + i);
       const label =
         i === 0
           ? 'Today'
@@ -37,13 +45,30 @@ const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({
   const dayOptions = generateDays();
 
   const handleDone = () => {
-    const selected = new Date(dayOptions[selectedDayIndex].date);
-    selected.setHours(selectedHour);
-    selected.setMinutes(selectedMinute);
-    selected.setSeconds(0);
+    // Get the selected base date from the day options
+    const baseDate = dayOptions[selectedDayIndex].date;
+
+    // Extract day, month, and year from the selected base date
+    let day = baseDate.getDate();
+    let month = baseDate.getMonth();
+    let year = baseDate.getFullYear();
+
+    // Fix for early morning bug:
+    // If time is between 00:00 and 03:55, adjust the date forward
+    if (selectedHour < 4) {
+      const correctedDate = new Date(baseDate);
+      correctedDate.setDate(correctedDate.getDate() + 1);
+      day = correctedDate.getDate();
+      month = correctedDate.getMonth();
+      year = correctedDate.getFullYear();
+    }
+
+    const selected = new Date(year, month, day, selectedHour, selectedMinute, 0);
+
     onConfirm(selected);
     onClose();
   };
+
 
   return (
     <Modal transparent visible={visible} animationType="slide">
