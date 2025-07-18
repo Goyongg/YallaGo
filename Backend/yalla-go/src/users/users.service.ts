@@ -9,7 +9,8 @@ import { PatchUserDto } from './dto/patch-user.dto';
 import { FirebaseDriverService } from 'src/firebase/firebase-driver.service';
 import { RideStatus } from 'src/rides/enums/ride-status.enum';
 import { BookingStatus } from 'src/ride-passengers/enums/booking-status.enum';
-import { GeoPoint } from 'firebase-admin/firestore';
+import { GeoPoint, Timestamp } from 'firebase-admin/firestore';
+import { FirebaseNotificationsService } from 'src/firebase/firebase-notifications.service';
 
 // clean any undefined fields for userData
 function cleanUserData(data: Record<string, any>) {
@@ -34,7 +35,8 @@ export class UsersService {
     constructor(
         private readonly firebase: FirebaseService,
         private readonly firebaseUserService: FirebaseUserService,
-        private readonly firebaseDriverService: FirebaseDriverService
+        private readonly firebaseDriverService: FirebaseDriverService,
+        private readonly FirebaseNotificationsService: FirebaseNotificationsService
     ) {}
 
     // fetch homepage user data based on role
@@ -46,6 +48,26 @@ export class UsersService {
         const response = pickFields(userData, homepageFields);
 
         const upcomingInfo = await this.getUpcomingInfo(userData, firebaseUid);
+
+        // 🔔 Send test notification on homepage fetch
+        const tokenSnapshot = await this.firebase.firestore.collection('device-tokens')
+            .where('userId', '==', firebaseUid)
+            .limit(1)
+            .get();
+
+        if (!tokenSnapshot.empty) {
+            const token = tokenSnapshot.docs[0].data().token;
+
+            await this.FirebaseNotificationsService.sendToDevice(
+                token,
+                '🔔 Test Notification',
+                'You have logged in successfully.',
+                {}
+            );
+        }
+        else {
+            console.warn(`No device token found for user: ${firebaseUid}`);
+        }
 
         // return user info
         return { response, upcomingInfo }; 
@@ -387,5 +409,19 @@ export class UsersService {
         rideRef.update({ availableSeats: newSeats })
 
         return { message: "Booking declined" }
-    }    
+    }
+    
+    async saveDeviceToken(firebaseUid: string, token: string) {
+        const tokenRef = this.firebase.firestore.collection('device-tokens').doc(token);
+
+        const tokenData = {
+            userId: firebaseUid,
+            token,
+            lastActive: Timestamp.now().toDate(),
+            createdAt: Timestamp.now().toDate(),
+        };
+
+        // Set with merge: true in case it already exists
+        await tokenRef.set(tokenData, { merge: true });
+    }
 }

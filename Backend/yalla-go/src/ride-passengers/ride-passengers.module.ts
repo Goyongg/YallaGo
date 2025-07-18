@@ -4,6 +4,6 @@ import { RidePassengersService } from './ride-passengers.service';
 
 @Module({
   controllers: [RidePassengersController],
-  providers: [RidePassengersService]
+  providers: [RidePassengersService],
 })
 export class RidePassengersModule {}

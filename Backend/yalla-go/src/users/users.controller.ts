@@ -13,10 +13,12 @@ export class UsersController {
 
     // GET /users/home
     @UseGuards(FirebaseAuthGuard)
-    @Get('home')
-    async getHomePageInfo(@Req() req) {
+    @Post('home')
+    async getHomePageInfo(@Req() req, @Body('fcmToken') fcmToken: string) {
         const firebaseUid = req.user.uid; // get uid from request
         console.log(firebaseUid);
+
+        await this.userService.saveDeviceToken(firebaseUid, fcmToken)
 
         return await this.userService.getHomePageInfo(firebaseUid);
     }
