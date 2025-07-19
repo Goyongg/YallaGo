@@ -3,13 +3,15 @@ import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreateRidePassengerDto } from './dto/create-ridepassenger.dto';
 import { BookingStatus } from './enums/booking-status.enum';
 import { FirebaseDriverService } from 'src/firebase/firebase-driver.service';
+import { FirebaseNotificationsService } from 'src/firebase/firebase-notifications.service';
 
 @Injectable()
 export class RidePassengersService {
 
     constructor(
         private readonly firebase: FirebaseService,
-        private readonly firebaseDriverService: FirebaseDriverService
+        private readonly firebaseDriverService: FirebaseDriverService,
+        private readonly FirebaseNotificationsService: FirebaseNotificationsService
     ) {}
 
     async createBooking(createRidePassengerDto: CreateRidePassengerDto, firebaseUid: string) {
@@ -42,6 +44,37 @@ export class RidePassengersService {
 
         // Reduce available seats for the ride being booked based on the number of seats booked
         await this.reduceRideSeats(createRidePassengerDto.rideId, createRidePassengerDto.seatsBooked)
+
+        const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId)
+        const driverId = rideData.driverId;
+
+        const tokenSnapshot = await this.firebase.firestore.collection('device-tokens')
+            .where('userId', '==', rideData.driverId)
+            .limit(1)
+            .get();
+
+        if (tokenSnapshot.empty) {
+            console.warn('⚠️ No FCM token found for driver:', driverId);
+        } 
+        else {
+            const tokenDoc = tokenSnapshot.docs[0];
+            const token = tokenDoc.data().token;
+            console.log(token)
+
+            // Send push notification to driver
+            await this.FirebaseNotificationsService.sendToDevice(
+                token,
+                '🚗 New Ride Booking',
+                `Pickup: ${bookingData.pickupPoint} → Dropoff: ${bookingData.dropOffPoint}`,
+                {
+                seats: createRidePassengerDto.seatsBooked.toString(),
+                }
+            ).then((response) => {
+                console.log('✅ FCM Response:', response);
+            }).catch((error) => {
+                console.error('❌ FCM Error:', error);
+            });
+        }
 
         // Store the booking data in Firestore
         await bookRef.set(bookingData);

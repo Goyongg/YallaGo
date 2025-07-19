@@ -63,7 +63,7 @@ const RideDetailsScreen = () => {
   const mapRef = useRef<MapView>(null);
   
   const { rideId, userRole } = params;
-  const { userData, upcomingData, loading: homeLoading } = useHomeUserData();
+  const { userData, upcomingData, loading: homeLoading, refetch } = useHomeUserData();
   
   const [currentLocation, setCurrentLocation] = useState({
     latitude: 25.2048, // Default to Dubai
@@ -84,6 +84,14 @@ const RideDetailsScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<{ name: string; id: string } | null>(null);
+
+  const hasFetchedRef = useRef(false);
+    useEffect(() => {
+    if (!hasFetchedRef.current) {
+      refetch();
+      hasFetchedRef.current = true;
+    }
+  }, []);
 
   useEffect(() => {
     if (!homeLoading && upcomingData && userData && rideId) {

@@ -1,5 +1,5 @@
 // Updated manage.tsx - Modified to include vehicle management for drivers
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import auth from '@react-native-firebase/auth';
@@ -8,8 +8,16 @@ import useHomeUserData from '@/hooks/useHomeUserData';
 
 const ManageProfile = () => {
   const router = useRouter();
-  const { userData, loading } = useHomeUserData();
+  const { userData, loading, refetch } = useHomeUserData();
   const [isDriver, setIsDriver] = useState(false);
+
+  const hasFetchedRef = useRef(false);
+      useEffect(() => {
+      if (!hasFetchedRef.current) {
+        refetch();
+        hasFetchedRef.current = true;
+      }
+    }, []);
 
   useEffect(() => {
     if (userData) {

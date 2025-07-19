@@ -1,5 +1,5 @@
 // app/(tabs)/home.tsx - Updated version
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { ScrollView, ImageBackground, KeyboardAvoidingView, Platform, View, Text } from 'react-native';
 import Header from '../components/Header';
 import GreetingCard from '../components/GreetingCard';
@@ -24,9 +24,17 @@ const Home = () => {
   const [isCreateMode, setIsCreateMode] = useState(false);
 
   const { recentSearches } = useRecentSearches();
-  const { userData, loading } = useHomeUserData();
+  const { userData, loading, refetch } = useHomeUserData();
   const { upcomingRide, loading: upcomingRideLoading } = useUpcomingRide(userData?.role || '');
   const params = useGlobalSearchParams();
+
+  const hasFetchedRef = useRef(false);
+    useEffect(() => {
+    if (!hasFetchedRef.current) {
+      refetch();
+      hasFetchedRef.current = true;
+    }
+  }, []);
 
   useEffect(() => {
     if (userData?.role === 'driver') {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Alert, ScrollView, TextInput, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,7 +7,7 @@ import useVehicles from '@/hooks/useVehicles';
 
 const VehiclesPage = () => {
   const router = useRouter();
-  const { userData } = useHomeUserData();
+  const { userData, refetch } = useHomeUserData();
   const { vehicles, loading, error, hasVehicle, addVehicle, updateVehicle, deleteVehicle } = useVehicles();
   
   const [showAddModal, setShowAddModal] = useState(false);
@@ -20,6 +20,14 @@ const VehiclesPage = () => {
     color: '',
     seats: ''
   });
+
+  const hasFetchedRef = useRef(false);
+      useEffect(() => {
+      if (!hasFetchedRef.current) {
+        refetch();
+        hasFetchedRef.current = true;
+      }
+    }, []);
 
   // Redirect if not a driver
   React.useEffect(() => {
