@@ -20,7 +20,7 @@ interface UpcomingRideData {
 const useUpcomingRide = (userRole: string) => {
   const [upcomingRide, setUpcomingRide] = useState<UpcomingRideData | null>(null);
   const [loading, setLoading] = useState(true);
-  const { userData, upcomingData, loading: homeDataLoading, error } = useHomeUserData();
+  const { userData, upcomingData, loading: homeDataLoading, error, refetch } = useHomeUserData();
 
   useEffect(() => {
     if (homeDataLoading) {

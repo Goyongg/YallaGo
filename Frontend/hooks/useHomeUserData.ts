@@ -1,9 +1,12 @@
 // hooks/useHomeUserData.ts - Fixed to handle errors and empty responses properly
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import auth from '@react-native-firebase/auth';
 import axios from 'axios';
 import { Platform } from 'react-native';
 import { BASE_URL } from '@/config';
+import { getDeviceToken } from '@/services/firebaseMessagingService';
+import messaging from '@react-native-firebase/messaging';
+import { Alert } from 'react-native';
 
 // Updated interface to match new backend response structure
 interface UserData {
@@ -83,7 +86,8 @@ const useHomeUserData = () => {
     try {
       setLoading(true);
       setError(null);
-
+      
+      // const fcmToken = await getDeviceToken();
       const user = auth().currentUser;
       if (!user) {
         setError('User not authenticated');
@@ -96,7 +100,8 @@ const useHomeUserData = () => {
       // console.log('🔍 BASE_URL:', BASE_URL);
       // console.log('🔍 Platform:', Platform.OS);
 
-      const response = await axios.get<HomePageResponse>(`${BASE_URL}/users/home`, {
+      const response = await axios.get<HomePageResponse>(`${BASE_URL}/users/home`,
+        {
         headers: {
           Authorization: `Bearer ${idToken}`,
         },
@@ -160,10 +165,11 @@ const useHomeUserData = () => {
         setError('No user data received from server');
         return;
       }
-
       // Set upcoming info (empty array is valid)
       setUpcomingData(upcomingInfo);
       console.log('✅ Upcoming data set:', upcomingInfo.length, 'items');
+      console.log('[fetchHomePageData] started');
+
 
     } catch (err: any) {
       console.error('❌ Error fetching homepage data:', err);
@@ -203,20 +209,21 @@ const useHomeUserData = () => {
     }
   };
 
-  const refetch = () => {
-    fetchHomePageData();
-  };
+  // const refetch = () => {
+  //   fetchHomePageData();
+  // };
 
-  useEffect(() => {
-    fetchHomePageData();
-  }, []);
+
+  // useEffect(() => {
+  //   refetch(); // ✅ now YOU control the fetch
+  // }, []);
 
   return { 
     userData, 
     upcomingData, 
     loading, 
     error,
-    refetch
+    refetch: fetchHomePageData,
   };
 };
 

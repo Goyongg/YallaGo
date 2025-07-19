@@ -49,25 +49,24 @@ export class UsersService {
 
         const upcomingInfo = await this.getUpcomingInfo(userData, firebaseUid);
 
-        // 🔔 Send test notification on homepage fetch
-        const tokenSnapshot = await this.firebase.firestore.collection('device-tokens')
-            .where('userId', '==', firebaseUid)
-            .limit(1)
-            .get();
+        // const tokenSnapshot = await this.firebase.firestore.collection('device-tokens')
+        //     .where('userId', '==', firebaseUid)
+        //     .get();
 
-        if (!tokenSnapshot.empty) {
-            const token = tokenSnapshot.docs[0].data().token;
+        // if (!tokenSnapshot.empty) {
+        //     const tokens = tokenSnapshot.docs.map(doc => doc.data().token);
 
-            await this.FirebaseNotificationsService.sendToDevice(
-                token,
-                '🔔 Test Notification',
-                'You have logged in successfully.',
-                {}
-            );
-        }
-        else {
-            console.warn(`No device token found for user: ${firebaseUid}`);
-        }
+        //     await Promise.all(
+        //         tokens.map(token =>
+        //             this.FirebaseNotificationsService.sendToDevice(
+        //                 token,
+        //                 '🔔 Test Notification',
+        //                 'You have logged in successfully.',
+        //                 {}
+        //             )
+        //         )
+        //     );
+        // }
 
         // return user info
         return { response, upcomingInfo }; 

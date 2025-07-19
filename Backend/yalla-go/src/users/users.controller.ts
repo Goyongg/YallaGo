@@ -13,14 +13,24 @@ export class UsersController {
 
     // GET /users/home
     @UseGuards(FirebaseAuthGuard)
-    @Post('home')
-    async getHomePageInfo(@Req() req, @Body('fcmToken') fcmToken: string) {
+    @Get('home')
+    async getHomePageInfo(@Req() req) {
         const firebaseUid = req.user.uid; // get uid from request
         console.log(firebaseUid);
 
-        await this.userService.saveDeviceToken(firebaseUid, fcmToken)
+        // await this.userService.saveDeviceToken(firebaseUid, fcmToken)
+        // console.log(`Device Token: ${fcmToken}`);
+        console.log(`[${new Date().toISOString()}] /users/home hit`);
 
         return await this.userService.getHomePageInfo(firebaseUid);
+    }
+
+    @UseGuards(FirebaseAuthGuard)
+    @Post('save-device-token')
+    async saveDeviceToken(@Req() req, @Body('fcmToken') fcmToken: string) {
+        const firebaseUid = req.user.uid;
+
+        return await this.userService.saveDeviceToken(firebaseUid, fcmToken)
     }
 
     // GET /users/profile
