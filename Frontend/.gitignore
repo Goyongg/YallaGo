@@ -24,6 +24,10 @@ android/app/build/
 ios/build/
 web-build/
 
+# Native folders
+android/
+ios/
+
 # Environment files
 .env
 .env*.local
