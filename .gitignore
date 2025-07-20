@@ -64,5 +64,3 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Heap dump files
 *.hprof
-
-/Frontend/android
