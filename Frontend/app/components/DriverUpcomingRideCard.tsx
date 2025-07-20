@@ -35,13 +35,12 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
   };
 
   const handleCardPress = () => {
+    // Navigate to the new driver-specific ride details page
     router.push({
-      pathname: '/ride-details',
+      pathname: '/(tabs)/driver-ride-details',
       params: {
         rideId: id,
-        userRole: 'driver',
-        passengerCount: bookedSeats.toString(),
-      }
+      },
     });
   };
 
@@ -211,36 +210,37 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
           )}
         </View>
 
-        {/* Tap to view details hint with delete button */}
+        {/* Tap to view details hint with action buttons */}
         {(shouldShowEndButton || shouldShowDeleteButton || bookedSeats > 0) && (
           <View className="pt-2 border-t border-gray-200 flex-row justify-between items-center">
             <Text className="text-xs text-gray-500 font-[Afacad] flex-1 text-center">
               Tap to view ride details
             </Text>
-            {shouldShowDeleteButton && (
-              <Pressable
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleDeleteRide();
-                }}
-                disabled={loading || actionLoading !== null}
-                className={`ml-2 px-2 py-1 rounded-lg flex-row items-center ${
-                  loading || actionLoading !== null 
-                    ? 'bg-gray-300' 
-                    : 'bg-red-500'
-                }`}
-              >
-                {actionLoading === 'delete' ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Ionicons name="trash-outline" size={18} color="white" />
-                )}
-              </Pressable>
-            )}
+            
+            {/* Action buttons container */}
+            <View className="flex-row items-center space-x-2">
+              {shouldShowDeleteButton && (
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleDeleteRide();
+                  }}
+                  disabled={loading || actionLoading !== null}
+                  className={`px-2 py-1 rounded-lg flex-row items-center ${
+                    loading || actionLoading !== null 
+                      ? 'bg-gray-300' 
+                      : 'bg-red-500'
+                  }`}
+                >
+                  {actionLoading === 'delete' ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={18} color="white" />
+                  )}
+                </Pressable>
+              )}
 
-            {/* End Ride Button Row (if departed) */}
-            {shouldShowEndButton && (
-              <View className="flex-row justify-end">
+              {shouldShowEndButton && (
                 <Pressable
                   onPress={(e) => {
                     e.stopPropagation();
@@ -264,8 +264,8 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
                     </>
                   )}
                 </Pressable>
-              </View>
-            )}
+              )}
+            </View>
           </View>
         )}
       </View>
