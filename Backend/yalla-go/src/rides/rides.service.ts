@@ -10,6 +10,7 @@ import { BookingStatus } from 'src/ride-passengers/enums/booking-status.enum';
 import { omitFields, pickFields } from 'src/common/helpers/object.helpers';
 import { FirebaseUserService } from 'src/firebase/firebase-user.service';
 import { FirebaseDriverService } from 'src/firebase/firebase-driver.service';
+import { FirebaseNotificationsService } from 'src/firebase/firebase-notifications.service';
 
 // clean any undefined fields for ride data
 function cleanRideData(data: Record<string, any>) {
@@ -46,7 +47,8 @@ export class RidesService {
         private readonly firebase: FirebaseService,
         private readonly firebaseUserService: FirebaseUserService,
         private readonly firebaseDriverService: FirebaseDriverService, 
-        private readonly googleMaps: GoogleMapsService
+        private readonly googleMaps: GoogleMapsService,
+        private readonly firebaseNotificationsService: FirebaseNotificationsService
     ) {}
 
     // Check if user role is driver, then check if kyc is verified and if vehicle exists for driver
@@ -123,8 +125,6 @@ export class RidesService {
 
         // Get the distance in meters from the ride data
         const distance = rideData.distanceMeters;
-
-        console.log(distance)
 
         // Calculate eco points using the formula:
         // 1 point per 1000 meters, rounded down using Math.floor
@@ -444,6 +444,14 @@ export class RidesService {
         // Commit all booking status updates in a single batch operation
         await batch.commit();
 
+        // Notify passengers
+        await this.notifyPassengers(
+            rideId,
+            [BookingStatus.ONGOING],
+            '🚗 Your Ride Has Started',
+            (booking) => `The ride you booked is now on the way. Please be ready.`
+        );
+
         return { message: 'Ride started, booking status for all bookings updated'}
     }
 
@@ -486,8 +494,6 @@ export class RidesService {
                 const userData = userSnap.data()!;
                 const currentEcoPoints = userData.ecoPoints;
 
-                console.log(calculatedEcoPoints)
-
                 // Update user’s ecoPoints by adding newly earned points
                 batch.update(userRef, { ecoPoints: currentEcoPoints + calculatedEcoPoints });
             }
@@ -496,7 +502,60 @@ export class RidesService {
         // Commit all updates in a single transaction
         await batch.commit();
 
+        // Notify passengers that the ride has ended
+        await this.notifyPassengers(
+            rideId,
+            [BookingStatus.COMPLETED],
+            '✅ Ride Completed',
+            (booking) => `Thanks for riding with us! You've earned ${calculatedEcoPoints} eco points 🎉`
+        );
+
         return { message: 'Ride ended, booking status for all bookings updated'}
+    }
+
+    async notifyPassengers(rideId: string, statusFilter: BookingStatus[], title: string, getMessage: (booking: any) => string) {
+        // Get all bookings for the ride with specified statuses (e.g., ONGOING or COMPLETED)
+        const bookingsSnap = await this.firebase.firestore.collection('bookings')
+            .where('rideId', '==', rideId)
+            .where('status', 'in', statusFilter)
+            .get();
+
+        // Exit early if no bookings match
+        if (bookingsSnap.empty) {
+            return;
+        }
+
+        // Iterate through each matching booking
+        for (const doc of bookingsSnap.docs) {
+            const booking = doc.data();
+            const passengerId = booking.passengerId;
+
+            // Fetch FCM device tokens for the passenger
+            const tokenSnap = await this.firebase.firestore.collection('device-tokens')
+                .where('userId', '==', passengerId)
+                .get();
+
+            if (tokenSnap.empty) {
+                console.warn(`⚠️ No FCM tokens found for passenger ${passengerId}`);
+                continue;
+            }
+
+            const tokens = tokenSnap.docs.map(doc => doc.data().token);
+
+            // Send the notification to each of the passenger's tokens
+            for (const token of tokens) {
+                try {
+                    await this.firebaseNotificationsService.sendToDevice(
+                        token,
+                        title,
+                        getMessage(booking)
+                    );
+                    console.log(`✅ Notified passenger ${passengerId}`);
+                } catch (error) {
+                    console.error(`❌ Error notifying passenger ${passengerId}`);
+                }
+            }
+        }
     }
 
     // delete rides
