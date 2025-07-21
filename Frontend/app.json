@@ -53,8 +53,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "e8ae0074-f7ca-448f-9155-fe7f95cd0933"
+        "projectId": "8a8dac78-9ee1-4135-8d2d-a040c0a17091"
       }
-    }
+    },
+    "owner": "nexoratech"
   }
 }
