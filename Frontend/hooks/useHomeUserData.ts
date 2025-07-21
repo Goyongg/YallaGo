@@ -87,7 +87,6 @@ const useHomeUserData = () => {
       setLoading(true);
       setError(null);
       
-      // const fcmToken = await getDeviceToken();
       const user = auth().currentUser;
       if (!user) {
         setError('User not authenticated');
@@ -96,21 +95,27 @@ const useHomeUserData = () => {
 
       const idToken = await user.getIdToken();
       
-      // console.log('🔍 Fetching homepage data from:', `${BASE_URL}/users/home`);
-      // console.log('🔍 BASE_URL:', BASE_URL);
-      // console.log('🔍 Platform:', Platform.OS);
+      console.log('🔍 Fetching homepage data from:', `${BASE_URL}/users/home`);
 
-      const response = await axios.get<HomePageResponse>(`${BASE_URL}/users/home`,
-        {
+      const response = await axios.get<HomePageResponse>(`${BASE_URL}/users/home`, {
         headers: {
           Authorization: `Bearer ${idToken}`,
         },
-        timeout: 10000, // 10 second timeout
+        timeout: 10000,
       });
 
-      // console.log('🔍 Raw homepage response:', response.data);
-      // console.log('🔍 Response type:', typeof response.data);
-      // console.log('🔍 Response keys:', Object.keys(response.data || {}));
+      console.log('🔍 Raw homepage response:', response.data);
+      console.log('🔍 Response type:', typeof response.data);
+      console.log('🔍 Response keys:', Object.keys(response.data || {}));
+      
+      // Add this debug log
+      console.log('🔍 Response data structure:', {
+        hasData: !!response.data,
+        hasResponse: !!response.data?.response,
+        hasUpcomingInfo: !!response.data?.upcomingInfo,
+        upcomingInfoLength: response.data?.upcomingInfo?.length,
+        upcomingInfoContent: response.data?.upcomingInfo
+      });
 
       // Handle case where backend might return unexpected structure
       let userData: UserData | null = null;
@@ -122,14 +127,21 @@ const useHomeUserData = () => {
         if ('response' in response.data && response.data.response) {
           userData = response.data.response;
           upcomingInfo = Array.isArray(response.data.upcomingInfo) ? response.data.upcomingInfo : [];
+          
+          // Add debug log here
+          console.log('🔍 Extracted from Case 1:', {
+            userData: userData,
+            upcomingInfoLength: upcomingInfo.length,
+            upcomingInfo: upcomingInfo
+          });
         }
         // Case 2: Direct user data (fallback) - check if response.data has user properties
         else if ('userId' in response.data || 'name' in response.data) {
-          // Type assertion with proper check
           const responseAsAny = response.data as any;
           if (responseAsAny.userId && responseAsAny.name && responseAsAny.role) {
             userData = responseAsAny as UserData;
             upcomingInfo = [];
+            console.log('🔍 Using Case 2 fallback - no upcomingInfo');
           } else {
             console.warn('⚠️ Incomplete user data in direct response:', response.data);
             setError('Incomplete user data from server');
@@ -158,18 +170,24 @@ const useHomeUserData = () => {
           averageRating: userData.averageRating || 0,
         };
         
+        console.log('🔍 About to set states with:', {
+          userData: compatibleUserData,
+          upcomingDataLength: upcomingInfo.length,
+          upcomingData: upcomingInfo
+        });
+        
         setUserData(compatibleUserData);
-        // console.log('✅ User data set:', compatibleUserData);
+        console.log('✅ User data set:', compatibleUserData);
       } else {
         console.error('❌ No valid user data found in response');
         setError('No user data received from server');
         return;
       }
+      
       // Set upcoming info (empty array is valid)
       setUpcomingData(upcomingInfo);
       console.log('✅ Upcoming data set:', upcomingInfo.length, 'items');
-      console.log('[fetchHomePageData] started');
-
+      console.log('✅ Upcoming data content:', upcomingInfo);
 
     } catch (err: any) {
       console.error('❌ Error fetching homepage data:', err);
@@ -208,15 +226,6 @@ const useHomeUserData = () => {
       setLoading(false);
     }
   };
-
-  // const refetch = () => {
-  //   fetchHomePageData();
-  // };
-
-
-  // useEffect(() => {
-  //   refetch(); // ✅ now YOU control the fetch
-  // }, []);
 
   return { 
     userData, 
