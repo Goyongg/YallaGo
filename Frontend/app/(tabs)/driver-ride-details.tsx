@@ -1,4 +1,4 @@
-// app/(tabs)/driver-ride-details.tsx - New page specifically for driver dashboard rides
+// app/(tabs)/driver-ride-details.tsx - FIXED version
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -39,6 +39,17 @@ interface DetailedRideInfo {
   }>;
   status: string;
 }
+
+// ADDED: Safety utility functions
+const safeString = (value: any): string => {
+  if (value === null || value === undefined) return '';
+  return String(value);
+};
+
+const safeNumber = (value: any): number => {
+  if (value === null || value === undefined || isNaN(Number(value))) return 0;
+  return Number(value);
+};
 
 const DriverRideDetailsScreen = () => {
   const router = useRouter();
@@ -177,9 +188,9 @@ const DriverRideDetailsScreen = () => {
     // Update passengers if available
     if (detailedInfo.bookings && Array.isArray(detailedInfo.bookings)) {
       const passengerList: PassengerInfo[] = detailedInfo.bookings.map((booking: any) => ({
-        name: booking.passengerName,
-        phone: booking.phoneNumber,
-        seatsBooked: booking.seatsBooked,
+        name: safeString(booking.passengerName) || 'Unknown Passenger',
+        phone: safeString(booking.phoneNumber) || '',
+        seatsBooked: safeNumber(booking.seatsBooked),
       }));
       setPassengers(passengerList);
       console.log('🚗 Updated passengers:', passengerList.length);
@@ -187,15 +198,24 @@ const DriverRideDetailsScreen = () => {
   };
 
   const handleCallPress = (phoneNumber: string, name: string) => {
+    // FIXED: Add safety checks
+    const safeName = safeString(name) || 'Passenger';
+    const safePhone = safeString(phoneNumber);
+    
+    if (!safePhone) {
+      Alert.alert('Error', 'No phone number available');
+      return;
+    }
+
     Alert.alert(
-      `Call ${name}`,
-      `Do you want to call ${phoneNumber}?`,
+      `Call ${safeName}`,
+      `Do you want to call ${safePhone}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Call', 
           onPress: () => {
-            const url = `tel:${phoneNumber}`;
+            const url = `tel:${safePhone}`;
             Linking.openURL(url).catch(err => 
               Alert.alert('Error', 'Unable to make phone call')
             );
@@ -266,34 +286,45 @@ const DriverRideDetailsScreen = () => {
     );
   };
 
-  // Format time from string
+  // Format time from string - FIXED with safety checks
   const formatTime = (timeString: string) => {
     try {
+      const safeTimeString = safeString(timeString);
+      if (!safeTimeString) return '00:00';
+      
       // If it's already in HH:MM format, return as is
-      if (/^\d{2}:\d{2}$/.test(timeString)) {
-        return timeString;
+      if (/^\d{2}:\d{2}$/.test(safeTimeString)) {
+        return safeTimeString;
       }
       
-      const date = new Date(timeString);
+      const date = new Date(safeTimeString);
+      if (isNaN(date.getTime())) return '00:00';
+      
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
     } catch {
-      return timeString;
+      return '00:00';
     }
   };
 
-  // Format date from ride data
+  // Format date from ride data - FIXED with safety checks
   const formatDate = (ride: any) => {
     try {
-      if (ride.date) {
-        const date = new Date(ride.date);
-        return date.toLocaleDateString('en-US', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        });
+      if (!ride || !ride.date) {
+        return 'Date not available';
       }
-      return 'Date not available';
+      
+      const safeDate = safeString(ride.date);
+      if (!safeDate) return 'Date not available';
+      
+      const date = new Date(safeDate);
+      if (isNaN(date.getTime())) return 'Date not available';
+      
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
     } catch {
       return 'Date not available';
     }
@@ -341,7 +372,7 @@ const DriverRideDetailsScreen = () => {
             Error Loading Ride
           </Text>
           <Text className="text-gray-600 mt-2 text-center font-[Afacad]">
-            {error}
+            {safeString(error)}
           </Text>
           <Pressable 
             onPress={() => router.back()}
@@ -437,38 +468,47 @@ const DriverRideDetailsScreen = () => {
           </MapView>
         </View>
 
-        {/* Ride Status */}
+        {/* Ride Status - FIXED with safety checks */}
         <View className="mx-4 mt-4 mb-4">
           <View className="bg-white rounded-lg p-4 shadow-sm">
             <View className="flex-row items-center justify-between">
               <View className="flex-1">
                 <Text className="text-lg font-bold font-[Afacad] text-black">
-                  {rideData.from} → {rideData.to}
+                  {safeString(rideData.from) || 'Unknown'} → {safeString(rideData.to) || 'Unknown'}
                 </Text>
                 <Text className="text-sm font-[Afacad] text-gray-600">
-                  {formatDate(rideData)} at {formatTime(rideData.departureTime)}
+                  {formatDate(rideData)} at {formatTime(safeString(rideData.departureTime))}
                 </Text>
                 <Text className="text-sm font-[Afacad] text-gray-600 mt-1">
-                  Duration: {rideData.duration} • Price: {rideData.price} AED per seat
+                  Duration: {safeString(rideData.duration) || 'N/A'} • Price: {safeString(rideData.price) || '0'} AED per seat
                 </Text>
               </View>
               <View className={`px-3 py-1 rounded-full ${
                 rideData.status === 'in-progress' ? 'bg-yellow-100' :
-                rideData.status === 'departed' ? 'bg-blue-100' : 'bg-green-100'
+                rideData.status === 'departed' ? 'bg-blue-100' : 
+                rideData.status === 'completed' ? 'bg-green-100' :
+                rideData.status === 'booked' ? 'bg-purple-100' :
+                'bg-gray-100' // Default for unknown statuses
               }`}>
                 <Text className={`text-sm font-[Afacad] font-medium ${
                   rideData.status === 'in-progress' ? 'text-yellow-700' :
-                  rideData.status === 'departed' ? 'text-blue-700' : 'text-green-700'
+                  rideData.status === 'departed' ? 'text-blue-700' : 
+                  rideData.status === 'completed' ? 'text-green-700' :
+                  rideData.status === 'booked' ? 'text-purple-700' :
+                  'text-gray-700' // Default for unknown statuses
                 }`}>
                   {rideData.status === 'in-progress' ? 'Ready to Start' :
-                   rideData.status === 'departed' ? 'In Progress' : 'Completed'}
+                  rideData.status === 'departed' ? 'In Progress' : 
+                  rideData.status === 'completed' ? 'Completed' :
+                  rideData.status === 'booked' ? 'Booked' :
+                  safeString(rideData.status) || 'Unknown Status'}
                 </Text>
               </View>
             </View>
           </View>
         </View>
 
-        {/* Seat Information */}
+        {/* Seat Information - FIXED with safety checks */}
         <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
           <View className="p-4 border-b border-gray-200">
             <Text className="text-lg font-bold font-[Afacad] text-black">
@@ -479,27 +519,27 @@ const DriverRideDetailsScreen = () => {
             <View className="flex-row justify-between items-center mb-2">
               <Text className="text-base font-[Afacad] text-gray-600">Available Seats:</Text>
               <Text className="text-base font-[Afacad] font-semibold text-black">
-                {rideData.availableSeats}
+                {safeNumber(rideData.availableSeats)}
               </Text>
             </View>
             <View className="flex-row justify-between items-center mb-2">
               <Text className="text-base font-[Afacad] text-gray-600">Booked Seats:</Text>
               <Text className="text-base font-[Afacad] font-semibold text-blue-600">
-                {rideData.bookedSeats || 0}
+                {safeNumber(rideData.bookedSeats)}
               </Text>
             </View>
-            {rideData.totalSeats && (
+            {/* {rideData.totalSeats && (
               <View className="flex-row justify-between items-center">
                 <Text className="text-base font-[Afacad] text-gray-600">Total Seats:</Text>
                 <Text className="text-base font-[Afacad] font-semibold text-black">
-                  {rideData.totalSeats}
+                  {safeNumber(rideData.totalSeats)}
                 </Text>
               </View>
-            )}
+            )} */}
           </View>
         </View>
 
-        {/* Passengers List */}
+        {/* Passengers List - FIXED with safety checks */}
         <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
           <View className="p-4 border-b border-gray-200">
             <Text className="text-lg font-bold font-[Afacad] text-black">
@@ -513,10 +553,10 @@ const DriverRideDetailsScreen = () => {
                 <View key={index} className="flex-row items-center justify-between p-4 border-b border-gray-100">
                   <View className="flex-1">
                     <Text className="text-base font-[Afacad] font-medium text-black">
-                      {passenger.name}
+                      {safeString(passenger.name) || 'Unknown Passenger'}
                     </Text>
                     <Text className="text-sm font-[Afacad] text-gray-600">
-                      {passenger.seatsBooked} seat{passenger.seatsBooked > 1 ? 's' : ''}
+                      {safeNumber(passenger.seatsBooked)} seat{safeNumber(passenger.seatsBooked) > 1 ? 's' : ''}
                     </Text>
                   </View>
                   <Pressable
@@ -541,7 +581,7 @@ const DriverRideDetailsScreen = () => {
 
         {/* Action Buttons */}
         <View className="mx-4 mb-4">
-          {rideData.status === 'in-progress' && (
+          {(rideData.status === 'in-progress' || rideData.status === 'booked') && (
             <Pressable
               onPress={handleStartRide}
               disabled={actionLoading}

@@ -207,13 +207,13 @@ const Home = () => {
           )}
 
           {/* Show message when no upcoming ride */}
-          {!upcomingRideLoading && !upcomingRide && (
+          {/* {!upcomingRideLoading && !upcomingRide && (
             <View className="mx-4 mb-4 p-3 bg-gray-100 rounded-lg">
               <Text className="text-center text-gray-600 font-[Afacad]">
                 No upcoming rides
               </Text>
             </View>
-          )}
+          )} */}
 
           {/* Show loading state for upcoming ride */}
           {upcomingRideLoading && (

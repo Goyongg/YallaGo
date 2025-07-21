@@ -97,7 +97,7 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
   };
 
   const handleDeleteRide = async () => {
-    if (hasBookings) {
+    if (hasBookings || bookedSeats > 0) {
       Alert.alert(
         'Cannot Delete',
         'This ride has passenger bookings and cannot be deleted. You can only delete rides with no bookings.',
@@ -142,8 +142,13 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
     }
   };
 
+  // 🔧 FIXED LOGIC: Show delete button for upcoming rides with no bookings
+  // Show end button for departed rides
   const shouldShowEndButton = status?.toLowerCase() === 'departed';
-  const shouldShowDeleteButton = status?.toLowerCase() === 'upcoming' && !hasBookings;
+  const shouldShowDeleteButton = status?.toLowerCase() === 'upcoming' && !hasBookings && bookedSeats === 0;
+  
+  // Show action buttons if there are any actions available OR if there are passengers
+  const shouldShowActionSection = shouldShowEndButton || shouldShowDeleteButton || bookedSeats > 0;
 
   return (
     <Pressable
@@ -210,15 +215,15 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
           )}
         </View>
 
-        {/* Tap to view details hint with action buttons */}
-        {(shouldShowEndButton || shouldShowDeleteButton || bookedSeats > 0) && (
+        {/* Tap to view details hint with action buttons - FIXED CONDITION */}
+        {shouldShowActionSection && (
           <View className="pt-2 border-t border-gray-200 flex-row justify-between items-center">
             <Text className="text-xs text-gray-500 font-[Afacad] flex-1 text-center">
               Tap to view ride details
             </Text>
             
             {/* Action buttons container */}
-            <View className="flex-row items-center space-x-2">
+            <View className="flex-row items-center" style={{ gap: 8 }}>
               {shouldShowDeleteButton && (
                 <Pressable
                   onPress={(e) => {

@@ -15,16 +15,32 @@ const DriverDashboard = () => {
 
   // Group history rides by date
   const groupRidesByDate = (rides: typeof historyRides) => {
+    if (!Array.isArray(rides)) {
+      console.error('🚗 Invalid rides for grouping:', rides);
+      return {};
+    }
+    
     return rides.reduce((groups: Record<string, typeof rides>, ride) => {
-      const date = new Date(ride.date).toLocaleDateString('en-US', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-      });
-      if (!groups[date]) {
-        groups[date] = [];
+      if (!ride || !ride.date) {
+        console.warn('🚗 Invalid ride for date grouping:', ride);
+        return groups;
       }
-      groups[date].push(ride);
+      
+      try {
+        const date = new Date(ride.date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        });
+        
+        if (!groups[date]) {
+          groups[date] = [];
+        }
+        groups[date].push(ride);
+      } catch (error) {
+        console.error('🚗 Error grouping ride by date:', error, ride);
+      }
+      
       return groups;
     }, {});
   };
@@ -149,25 +165,87 @@ const DriverDashboard = () => {
                 </Text>
               </View>
             ) : (
-              upcomingRides.map((ride) => (
-                <DriverUpcomingRideCard
-                  key={ride.id}
-                  id={ride.id}
-                  departureTime={ride.departureTime}
-                  arrivalTime={ride.arrivalTime}
-                  duration={ride.duration}
-                  from={ride.from}
-                  to={ride.to}
-                  price={ride.price}
-                  availableSeats={ride.availableSeats}
-                  status={ride.status === 'in-progress' ? 'Upcoming' : 'Departed'}
-                  bookedSeats={ride.bookedSeats}
-                  hasBookings={ride.hasBookings}
-                  onRideUpdated={refetch}
-                />
-              ))
+              (() => {
+                console.log('🚗 About to render upcoming rides:', upcomingRides.length);
+                
+                // Debug each ride before rendering
+                upcomingRides.forEach((ride, index) => {
+                  console.log(`🚗 Ride ${index} props:`, {
+                    id: ride.id,
+                    from: ride.from,
+                    to: ride.to,
+                    price: ride.price,
+                    status: ride.status,
+                    departureTime: ride.departureTime,
+                    arrivalTime: ride.arrivalTime,
+                    duration: ride.duration,
+                    availableSeats: ride.availableSeats,
+                    bookedSeats: ride.bookedSeats,
+                    hasBookings: ride.hasBookings
+                  });
+                });
+
+                return upcomingRides.map((ride, index) => {
+                  // CRITICAL: Add safety check for each individual ride
+                  if (!ride || typeof ride !== 'object') {
+                    console.error('🚗 Invalid ride object at render index', index, ride);
+                    return null;
+                  }
+
+                  // CRITICAL: Ensure all required props exist and are safe
+                  const safeRide = {
+                    id: ride.id || `fallback-${index}`,
+                    departureTime: ride.departureTime || '00:00',
+                    arrivalTime: ride.arrivalTime || '00:00',
+                    duration: ride.duration || '0m',
+                    from: ride.from || 'Unknown',
+                    to: ride.to || 'Unknown',
+                    price: ride.price || '0',
+                    availableSeats: typeof ride.availableSeats === 'number' ? ride.availableSeats : 0,
+                    bookedSeats: typeof ride.bookedSeats === 'number' ? ride.bookedSeats : 0,
+                    hasBookings: Boolean(ride.hasBookings),
+                    status: ride.status || 'unknown'
+                  };
+
+                  // Determine display status safely
+                  let displayStatus = 'Upcoming';
+                  if (safeRide.status === 'departed') {
+                    displayStatus = 'Departed';
+                  } else if (safeRide.status === 'booked') {
+                    displayStatus = 'Booked';
+                  } else if (safeRide.status === 'in-progress') {
+                    displayStatus = 'Upcoming';
+                  }
+
+                  console.log(`🚗 Rendering ride ${index} with safe props:`, safeRide);
+
+                  try {
+                    return (
+                      <DriverUpcomingRideCard
+                        key={safeRide.id}
+                        id={safeRide.id}
+                        departureTime={safeRide.departureTime}
+                        arrivalTime={safeRide.arrivalTime}
+                        duration={safeRide.duration}
+                        from={safeRide.from}
+                        to={safeRide.to}
+                        price={safeRide.price}
+                        availableSeats={safeRide.availableSeats}
+                        status={displayStatus}
+                        bookedSeats={safeRide.bookedSeats}
+                        hasBookings={safeRide.hasBookings}
+                        onRideUpdated={refetch}
+                      />
+                    );
+                  } catch (renderError) {
+                    console.error(`🚗 Error rendering ride ${index}:`, renderError);
+                    return null;
+                  }
+                }).filter(Boolean); // Remove any null entries
+              })()
             )
           ) : (
+            // History rides section remains the same...
             historyRides.length === 0 ? (
               <View className="flex-1 justify-center items-center mt-20">
                 <Ionicons name="time-outline" size={64} color="#9CA3AF" />
