@@ -45,36 +45,8 @@ export class RidePassengersService {
         // Reduce available seats for the ride being booked based on the number of seats booked
         await this.reduceRideSeats(createRidePassengerDto.rideId, createRidePassengerDto.seatsBooked)
 
-        const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId)
-        const driverId = rideData.driverId;
-
-        const tokenSnapshot = await this.firebase.firestore.collection('device-tokens')
-            .where('userId', '==', rideData.driverId)
-            .limit(1)
-            .get();
-
-        if (tokenSnapshot.empty) {
-            console.warn('⚠️ No FCM token found for driver:', driverId);
-        } 
-        else {
-            const tokenDoc = tokenSnapshot.docs[0];
-            const token = tokenDoc.data().token;
-            console.log(token)
-
-            // Send push notification to driver
-            await this.FirebaseNotificationsService.sendToDevice(
-                token,
-                '🚗 New Ride Booking',
-                `Pickup: ${bookingData.pickupPoint} → Dropoff: ${bookingData.dropOffPoint}`,
-                {
-                seats: createRidePassengerDto.seatsBooked.toString(),
-                }
-            ).then((response) => {
-                console.log('✅ FCM Response:', response);
-            }).catch((error) => {
-                console.error('❌ FCM Error:', error);
-            });
-        }
+        // Notify driver that a new booking has been made
+        await this.notifyDriver(bookingData)
 
         // Store the booking data in Firestore
         await bookRef.set(bookingData);
@@ -188,5 +160,41 @@ export class RidePassengersService {
         await bookingRef.delete();
 
         return { message: 'Booking deleted successfully'}
+    }
+
+    async notifyDriver(bookingData: any) {
+        // Retrieve the ride details using the rideId from bookingData
+        const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId);
+
+        // Query Firestore to find all device tokens registered for the driver
+        const tokenSnapshot = await this.firebase.firestore.collection('device-tokens')
+            .where('userId', '==', rideData.driverId)
+            .get();
+
+        // Handle case when no device tokens are found
+        if (tokenSnapshot.empty) {
+            console.warn('⚠️ No FCM tokens found for driver:', rideData.driverId);
+            return;
+        }
+
+        // Extract all device tokens from the snapshot documents
+        const tokens: string[] = tokenSnapshot.docs.map(doc => doc.data().token);
+        console.log('📱 Tokens:', tokens);
+
+        // Loop through each token and send a notification
+        for (const token of tokens) {
+            try {
+                // Attempt to send a push notification using Firebase Cloud Messaging
+                const response = await this.FirebaseNotificationsService.sendToDevice(
+                    token, // Target device token
+                    '🚗 New Ride Booking', // Notification title
+                    `Pickup: ${bookingData.pickupPoint} → Dropoff: ${bookingData.dropOffPoint}\nSeats Booked: ${bookingData.seatsBooked}` // Notification body
+                );
+                console.log(`✅ Sent to ${bookingData.passengerId}`);
+            } catch (error) {
+                // Catch and log any error during notification sending
+                console.error(`❌ Error sending notification`);
+            }
+        }
     }
 }
