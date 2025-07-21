@@ -44,14 +44,14 @@ const Greeting = () => {
           {loading ? (
             <ActivityIndicator color="#ffffff" />
           ) : (
-            <Text className="text-white font-semibold text-2xl">Next</Text>
+            <Text adjustsFontSizeToFit className="text-white font-semibold text-2xl">Next</Text>
           )}
         </Pressable>
 
         <View className="mt-6 flex-row justify-center items-center">
           <Text className="text-gray-600 text-base">Already have an account? </Text>
           <Pressable onPress={handleLogin}>
-            <Text className="text-brand font-semibold text-base underline">Log in</Text>
+            <Text adjustsFontSizeToFit className="text-brand font-semibold text-base underline">Log in</Text>
           </Pressable>
         </View>
       </View>
