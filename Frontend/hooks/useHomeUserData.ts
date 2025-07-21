@@ -1,4 +1,4 @@
-// hooks/useHomeUserData.ts - Fixed to handle errors and empty responses properly
+// hooks/useHomeUserData.ts - Added 404 handling to redirect to greeting page
 import { useEffect, useState, useRef } from 'react';
 import auth from '@react-native-firebase/auth';
 import axios from 'axios';
@@ -7,6 +7,7 @@ import { BASE_URL } from '@/config';
 import { getDeviceToken } from '@/services/firebaseMessagingService';
 import messaging from '@react-native-firebase/messaging';
 import { Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 
 // Updated interface to match new backend response structure
 interface UserData {
@@ -81,6 +82,7 @@ const useHomeUserData = () => {
   const [upcomingData, setUpcomingData] = useState<UpcomingData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const fetchHomePageData = async () => {
     try {
@@ -203,14 +205,31 @@ const useHomeUserData = () => {
       
       let errorMessage = 'Failed to fetch user data';
       
-      if (err.code === 'ECONNABORTED') {
+      // Handle specific error cases
+      if (err.response?.status === 404) {
+        // Check if it's specifically a "User profile not found" error
+        if (err.response?.data?.message === 'User profile not found' || 
+            err.response?.data?.error === 'Not Found') {
+          console.log('🔄 User profile not found, redirecting to greeting page...');
+          
+          // Clear any existing user data
+          setUserData(null);
+          setUpcomingData([]);
+          setError(null);
+          setLoading(false);
+          
+          // Redirect to greeting page to complete profile setup
+          router.replace('/onboarding/greeting');
+          return;
+        } else {
+          errorMessage = `Homepage endpoint not found at ${BASE_URL}/users/home. Please check if the backend server is running and the endpoint exists.`;
+        }
+      } else if (err.code === 'ECONNABORTED') {
         errorMessage = 'Request timed out. Please check your connection.';
       } else if (err.code === 'ECONNREFUSED' || err.code === 'NETWORK_ERROR') {
         errorMessage = `Cannot connect to server at ${BASE_URL}. Please ensure the backend server is running.`;
       } else if (err.response?.status === 401) {
         errorMessage = 'Authentication failed. Please log in again.';
-      } else if (err.response?.status === 404) {
-        errorMessage = `Homepage endpoint not found at ${BASE_URL}/users/home. Please check if the backend server is running and the endpoint exists.`;
       } else if (err.response?.status >= 500) {
         errorMessage = 'Server error. Please try again later.';
       } else if (err.response?.data?.message) {
