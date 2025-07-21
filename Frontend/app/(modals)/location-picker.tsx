@@ -4,7 +4,7 @@ import { View, Text, Pressable, Dimensions, Platform, StyleSheet, Alert, TextInp
 import MapView, { Region } from 'react-native-maps';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
+import * as Location from 'expo-location';
 
 const { width, height } = Dimensions.get('window');
 const LATITUDE_DELTA = 0.02;
@@ -55,20 +55,28 @@ const LocationPicker = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
 
+  // Used to save the user's current location
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
+  const reverseGeocodeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Enhanced UAE locations for quick selection
   const commonLocations = [
-    { name: 'Dubai Mall', latitude: 25.1972, longitude: 55.2744 },
-    { name: 'Dubai International Airport', latitude: 25.2532, longitude: 55.3657 },
+    { name: 'Dubai Mall', latitude: 25.197229052161752, longitude: 55.279746218387146 },
+    { name: 'Dubai International Airport', latitude: 25.25669375910554, longitude: 55.36431695106583 },
     { name: 'Burj Khalifa', latitude: 25.1972, longitude: 55.2744 },
-    { name: 'Dubai Marina', latitude: 25.0800, longitude: 55.1400 },
-    { name: 'Abu Dhabi International Airport', latitude: 24.4330, longitude: 54.6511 },
-    { name: 'Dubai Internet City', latitude: 25.0955, longitude: 55.1680 },
-    { name: 'Sharjah City Centre', latitude: 25.3463, longitude: 55.4209 },
-    { name: 'American University of Sharjah', latitude: 25.3129, longitude: 55.4814 },
-    { name: 'Ajman City Centre', latitude: 25.4052, longitude: 55.5136 },
-    { name: 'Dubai Knowledge Village', latitude: 25.1074, longitude: 55.1719 },
-    { name: 'Dubai Healthcare City', latitude: 25.2285, longitude: 55.3273 },
-    { name: 'Dubai Academic City', latitude: 25.1167, longitude: 55.4050 },
+    { name: 'University of Wollongong', latitude: 25.101878891709227, longitude: 55.162749699346655 },
+    { name: 'Mall of the Emirates', latitude: 25.119352791041592, longitude: 55.20004006102681 },
+    { name: 'Dubai Marina', latitude: 25.0760335533753, longitude: 55.141375456005335 },
+    { name: 'Zayed International Airport', latitude: 24.442563562296115, longitude: 54.649932738393545 },
+    { name: 'City Centre Sharjah', latitude: 25.32472595112466, longitude: 55.39344540939053 },
+    { name: 'American University of Sharjah', latitude: 25.31264142896412, longitude: 55.492693204432726 },
+    { name: 'City Centre Ajman', latitude: 25.399974455625422, longitude: 55.478719818841945 },
+    { name: 'Dubai Healthcare City', latitude: 25.23026024818211, longitude: 55.323349591344595 },
+    { name: 'Dubai Academic City', latitude: 25.11409905310048, longitude: 55.41183399036527 },
   ];
 
   // Google Places API search function
@@ -200,45 +208,58 @@ const LocationPicker = () => {
   const handleRegionChangeComplete = (newRegion: Region) => {
     setRegion(newRegion);
     
-    // Use reverse geocoding to get location name
-    reverseGeocode(newRegion.latitude, newRegion.longitude);
+    if (reverseGeocodeTimeout.current) {
+      clearTimeout(reverseGeocodeTimeout.current);
+    }
+
+    reverseGeocodeTimeout.current = setTimeout(() => {
+      reverseGeocode(newRegion.latitude, newRegion.longitude);
+    }, 500); // 500ms debounce
   };
 
-  // Reverse geocoding to get location name from coordinates
-  const reverseGeocode = async (latitude: number, longitude: number) => {
-    try {
-      if (GOOGLE_API_KEY) {
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_API_KEY}&language=en`
-        );
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.results && data.results.length > 0) {
-            const result = data.results[0];
-            const locationName = result.formatted_address.split(',')[0] || 
-                               result.address_components[0]?.long_name || 
-                               'Selected Location';
-            
-            setSelectedLocation({
-              latitude,
-              longitude,
-              name: locationName,
-            });
-            return;
-          }
-        }
-      }
-    } catch (error) {
-      console.log('Reverse geocoding failed:', error);
-    }
-    
-    // Fallback to coordinates if reverse geocoding fails
+  const setFallbackLocation = (latitude: number, longitude: number) => {
     setSelectedLocation({
       latitude,
       longitude,
       name: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
     });
+  };
+
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    try {
+      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=150&type=point_of_interest&key=${GOOGLE_API_KEY}&language=en`;
+      console.log('Reverse geocode URL:', url);
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      //console.log('Geocode API response:', JSON.stringify(data, null, 2));
+
+      if (data.status === 'OK' && data.results.length > 0) {
+        const topResult = data.results[0];
+
+        const placeName = topResult.name || topResult.vicinity || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+
+        setSelectedLocation({
+          latitude,
+          longitude,
+          name: placeName,
+        });
+
+      console.log(`🟢 Places API result: ${placeName}`);
+
+        console.log(`Lat:${latitude}, Lng: ${longitude}`);
+      } else {
+        console.warn('Reverse geocode: no results');
+        console.warn('Geocode status:', data.status);
+        console.warn('Geocode results:', data.results);
+        console.log(`${GOOGLE_API_KEY}`);
+        setFallbackLocation(latitude, longitude); // Use helper
+      }
+    } catch (error) {
+      console.error('Reverse geocode failed:', error);
+      setFallbackLocation(latitude, longitude); // Use helper
+    }
   };
 
   const handleConfirm = () => {
@@ -342,10 +363,82 @@ const LocationPicker = () => {
     };
   }, [searchTimeout]);
 
-  // Get current location on mount
+  // Get current location on mount, using expo location module
   useEffect(() => {
-    // Initialize with reverse geocoding for default location
-    reverseGeocode(DEFAULT_REGION.latitude, DEFAULT_REGION.longitude);
+    const getUserLocation = async () => {
+      try { // User the user for location service permission on the frontend
+        console.log('Getting user location');
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.warn('Permission to access location was denied');
+
+          // Fallback to default location (Dubai) if permission denied
+          reverseGeocode(DEFAULT_REGION.latitude, DEFAULT_REGION.longitude);
+          return;
+        }
+
+        // Race between location fetch and timeout
+        const location = await Promise.race([
+          Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.High,
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Location request timed out')), 7000)
+          ),
+        ]);
+
+        // If resolved, location will be available here
+        const coords = (location as Location.LocationObject).coords;
+        const userRegion = {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          latitudeDelta: LATITUDE_DELTA,
+          longitudeDelta: LONGITUDE_DELTA,
+        };
+
+        // Keep the users current location for recenter button
+        setUserLocation({ latitude: coords.latitude, longitude: coords.longitude });
+
+        // Set the map region to the user's current location
+        setRegion(userRegion);
+
+        // Animate the map view to the user's location
+        mapRef.current?.animateToRegion(userRegion, 1000);
+
+        // Use reverse geocoding to get a readable place name
+        reverseGeocode(userRegion.latitude, userRegion.longitude);
+      } catch (error) {
+        console.warn('getCurrentPositionAsync failed, falling back to watchPositionAsync...');
+
+        // Fallback using watchPositionAsync for one update
+        const subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 2000,
+            distanceInterval: 5,
+          },
+          (location) => {
+            const coords = location.coords;
+            const userRegion = {
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+              latitudeDelta: LATITUDE_DELTA,
+              longitudeDelta: LONGITUDE_DELTA,
+            };
+
+            setUserLocation({ latitude: coords.latitude, longitude: coords.longitude });
+            setRegion(userRegion);
+            mapRef.current?.animateToRegion(userRegion, 1000);
+            reverseGeocode(coords.latitude, coords.longitude);
+
+            // Stop watching after first successful update
+            subscription.remove();
+          }
+        );
+      }
+    };
+
+    getUserLocation();
   }, []);
 
   // Get the header title based on type
@@ -397,6 +490,38 @@ const LocationPicker = () => {
         loadingIndicatorColor="#00BD5F"
         loadingBackgroundColor="#ffffff"
       />
+      {userLocation && ( // recenter button for user location
+        <Pressable
+          onPress={() => {
+            const userRegion = {
+              latitude: userLocation.latitude,
+              longitude: userLocation.longitude,
+              latitudeDelta: LATITUDE_DELTA,
+              longitudeDelta: LONGITUDE_DELTA,
+            };
+
+            setRegion(userRegion);
+            mapRef.current?.animateToRegion(userRegion, 500);
+            reverseGeocode(userLocation.latitude, userLocation.longitude);
+          }}
+          style={{
+            position: 'absolute',
+            bottom: 325, // Adjust as needed to avoid overlap with bottom UI
+            right: 20,
+            backgroundColor: 'white',
+            padding: 12,
+            borderRadius: 50,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 2,
+            elevation: 5,
+            zIndex: 50,
+          }}
+        >
+          <Ionicons name="locate" size={24} color="#00BD5F" />
+        </Pressable>
+      )}
 
       {/* Center Pointer */}
       <View 
