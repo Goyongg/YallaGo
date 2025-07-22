@@ -49,26 +49,6 @@ export class UsersService {
 
         const upcomingInfo = await this.getUpcomingInfo(userData, firebaseUid);
 
-        // const tokenSnapshot = await this.firebase.firestore.collection('device-tokens')
-        //     .where('userId', '==', firebaseUid)
-        //     .get();
-
-        // if (!tokenSnapshot.empty) {
-        //     const tokens = tokenSnapshot.docs.map(doc => doc.data().token);
-
-        //     await Promise.all(
-        //         tokens.map(token =>
-        //             this.FirebaseNotificationsService.sendToDevice(
-        //                 token,
-        //                 '🔔 Test Notification',
-        //                 'You have logged in successfully.',
-        //                 {}
-        //             )
-        //         )
-        //     );
-        // }
-
-        // return user info
         return { response, upcomingInfo }; 
     }
 
@@ -368,6 +348,13 @@ export class UsersService {
         // Update the status field of this booking to CONFIRMED
         bookingRef.update({ status: BookingStatus.CONFIRMED })
 
+        // Notify passenger
+        await this.notifyPassenger(
+            bookingData.passengerId,
+            '✅ Booking Confirmed',
+            `Your ride booking from ${bookingData.pickupPoint} to ${bookingData.dropOffPoint} has been accepted by the driver.`
+        );
+
         const rideRef = await this.firebase.firestore.collection('rides').doc(bookingData.rideId);
         const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId);
         
@@ -389,11 +376,18 @@ export class UsersService {
             throw new NotFoundException('Booking not found')
         }
 
+        // Extract the booking data from the snapshot
+        const bookingData = bookingSnap.data()!;
+
         // Update the booking's status to CANCELLED in the database
         bookingRef.update({ status: BookingStatus.CANCELLED })
 
-        // Extract the booking data from the snapshot
-        const bookingData = bookingSnap.data()!;
+        // Notify passenger
+        await this.notifyPassenger(
+            bookingData.passengerId,
+            '❌ Booking Declined',
+            `Unfortunately, your booking request from ${bookingData.pickupPoint} to ${bookingData.dropOffPoint} was declined by the driver.`
+        );
 
         // Retrieve the corresponding ride details using the rideId from the booking
         const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId);
@@ -409,18 +403,51 @@ export class UsersService {
 
         return { message: "Booking declined" }
     }
+
+    async notifyPassenger(passengerId: string, title: string, body: string) {
+        // Query Firestore for all FCM tokens associated with this passenger
+        const tokenSnap = await this.firebase.firestore.collection('device-tokens')
+            .where('userId', '==', passengerId)
+            .get();
+
+        // If no tokens are found, log a warning and exit the function
+        if (tokenSnap.empty) {
+            console.warn(`⚠️ No FCM tokens found for passenger ${passengerId}`);
+            return;
+        }
+
+        // Extract the token strings from the Firestore documents
+        const tokens = tokenSnap.docs.map(doc => doc.data().token);
+        
+        // Loop through each token and send the notification individually
+        for (const token of tokens) {
+            try {
+                // Attempt to send the notification using FirebaseNotificationsService
+                await this.FirebaseNotificationsService.sendToDevice(token, title, body);
+                console.log(`✅ Notified passenger ${passengerId}`);
+            } catch (error) {
+                // Catch and log any error that occurs while sending the notification
+                console.error(`❌ Error notifying passenger ${passengerId}`);
+            }
+        }
+    }
     
     async saveDeviceToken(firebaseUid: string, token: string) {
         const tokenRef = this.firebase.firestore.collection('device-tokens').doc(token);
+        const existingDoc = await tokenRef.get();
 
-        const tokenData = {
+        const now = Timestamp.now().toDate();
+
+        const tokenData: any = {
             userId: firebaseUid,
             token,
-            lastActive: Timestamp.now().toDate(),
-            createdAt: Timestamp.now().toDate(),
+            lastActive: now,
         };
 
-        // Set with merge: true in case it already exists
+        if (!existingDoc.exists) {
+            tokenData.createdAt = now;
+        }
+
         await tokenRef.set(tokenData, { merge: true });
     }
 }
