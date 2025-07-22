@@ -20,7 +20,7 @@ interface StopoverData {
   };
 }
 
-const CreateRideForm: React.FC = () => {
+const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
   const params = useGlobalSearchParams();
   
   const [from, setFrom] = useState('');
@@ -36,6 +36,8 @@ const CreateRideForm: React.FC = () => {
   const [comment, setComment] = useState('');
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   const [recommendedPrice, setRecommendedPrice] = useState<number | null>(null);
+
+  const isFemale = userGender?.toLowerCase() === 'female';
 
   // Handle location data from location picker - only for create context
   useFocusEffect(
@@ -150,6 +152,12 @@ const CreateRideForm: React.FC = () => {
         dateTime.getHours(),
       ).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`
     : 'Select date & time';
+
+  useEffect(() => {
+    if (!isFemale && femaleOnly) {
+      setFemaleOnly(false);
+    }
+  }, [isFemale, femaleOnly]);
 
   const addStopover = () => {
     if (stopovers.length < 3) {
@@ -561,14 +569,23 @@ const CreateRideForm: React.FC = () => {
               </View>
             </View>
 
-            {/* Female-only toggle */}
+            {/* Female-only Toggle - Show but disable for non-female users */}
             <View className="flex-row justify-between items-center mt-4 mx-4">
-              <Text className="text-xl font-[Afacad] text-gray-700">Female-only</Text>
+              <View className="flex-1">
+                <Text className="text-xl font-[Afacad] text-gray-700">Female-only</Text>
+                {!isFemale && (
+                  <Text className="text-sm font-[Afacad] text-gray-500 mt-1">
+                    Only available for female users
+                  </Text>
+                )}
+              </View>
               <Switch
                 value={femaleOnly}
-                onValueChange={setFemaleOnly}
+                onValueChange={isFemale ? setFemaleOnly : undefined}
                 thumbColor={femaleOnly ? '#00BD5F' : '#f4f3f4'}
                 trackColor={{ false: '#ccc', true: '#A8E2C5' }}
+                disabled={!isFemale}
+                style={{ opacity: isFemale ? 1 : 0.5 }}
               />
             </View>
 

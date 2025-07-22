@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, TextInput, Switch, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useGlobalSearchParams, useFocusEffect } from 'expo-router';
@@ -19,6 +19,7 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
   setFemaleOnly,
   passengerCount,
   setPassengerCount,
+  userGender,
 }) => {
   const [dateTime, setDateTime] = useState<Date | null>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -28,6 +29,8 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
   const [to, setTo] = useState('');
   const [fromLocation, setFromLocation] = useState<LocationData | null>(null);
   const [toLocation, setToLocation] = useState<LocationData | null>(null);
+
+  const isFemale = userGender?.toLowerCase() === 'female';
   
   const router = useRouter();
   const params = useGlobalSearchParams();
@@ -83,6 +86,13 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
         dateTime.getHours(),
       ).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`
     : 'Select date & time';
+
+  // Add this useEffect to reset femaleOnly if user is not female
+  useEffect(() => {
+    if (!isFemale && femaleOnly) {
+      setFemaleOnly(false);
+    }
+  }, [isFemale, femaleOnly, setFemaleOnly]);
 
   const navigateToLocationPicker = (type: 'pickup' | 'dropoff') => {
     // Save current locations to global state before navigating
@@ -286,14 +296,23 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
             </View>
           </View>
 
-          {/* Female-only Toggle */}
+          {/* Female-only Toggle - Show but disable for non-female users */}
           <View className="flex-row justify-between items-center mt-4 mx-4">
-            <Text className="text-xl font-[Afacad] text-gray-700">Female-only</Text>
+            <View className="flex-1">
+              <Text className="text-xl font-[Afacad] text-gray-700">Female-only</Text>
+              {!isFemale && (
+                <Text className="text-sm font-[Afacad] text-gray-500 mt-1">
+                  Only available for female users
+                </Text>
+              )}
+            </View>
             <Switch
               value={femaleOnly}
-              onValueChange={setFemaleOnly}
+              onValueChange={isFemale ? setFemaleOnly : undefined}
               thumbColor={femaleOnly ? '#00BD5F' : '#f4f3f4'}
               trackColor={{ false: '#ccc', true: '#A8E2C5' }}
+              disabled={!isFemale}
+              style={{ opacity: isFemale ? 1 : 0.5 }}
             />
           </View>
 

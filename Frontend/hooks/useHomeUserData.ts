@@ -73,6 +73,7 @@ export interface HomeUserData {
   id: string;
   name: string;
   role: string;
+  gender: string;
   ecoPoints: number;
   averageRating: number;
 }
@@ -170,6 +171,7 @@ const useHomeUserData = () => {
           role: userData.role,
           ecoPoints: userData.ecoPoints || 0,
           averageRating: userData.averageRating || 0,
+          gender: userData.gender,
         };
         
         console.log('🔍 About to set states with:', {

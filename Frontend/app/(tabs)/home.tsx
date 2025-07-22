@@ -295,6 +295,7 @@ const Home = () => {
                 setPassengerCount={setPassengerCount}
                 date={date}
                 setDate={setDate}
+                userGender={userData.gender}
               />
               <RecentSearches recentSearches={recentSearches} />
             </>
