@@ -8,7 +8,7 @@ const allMenuItems = [
   { label: 'Manage Profile', route: '../profile/manage' },
   { label: 'Driver Dashboard', route: '../profile/DriverDashboard', driverOnly: true }, // Added driverOnly flag
   { label: 'Gifts and discounts', sub: 'Enter promo code', route: '../profile/gifts' },
-  { label: 'History', route: '../profile/history' },
+  { label: 'Booking History', route: '../profile/history' },
   { label: 'Info', route: '../profile/info' },
 ];
 

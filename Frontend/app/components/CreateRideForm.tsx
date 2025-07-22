@@ -39,6 +39,12 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
 
   const isFemale = userGender?.toLowerCase() === 'female';
 
+  console.log('🚗 CreateRideForm Debug:');
+  console.log('🚗 - userGender prop:', userGender);
+  console.log('🚗 - userGender type:', typeof userGender);
+  console.log('🚗 - userGender?.toLowerCase():', userGender?.toLowerCase());
+  console.log('🚗 - isFemale result:', isFemale);
+
   // Handle location data from location picker - only for create context
   useFocusEffect(
     useCallback(() => {

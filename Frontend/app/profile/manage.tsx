@@ -1,4 +1,4 @@
-// Enhanced manage.tsx - Individual field editing with original user info display
+// Enhanced manage.tsx - Individual field editing with verification feature
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
@@ -23,12 +23,13 @@ interface ProfileData {
   email: string;
   phoneNumber: string;
   gender: string;
+  kycStatus: string;
 }
 
 const GENDER_OPTIONS = [
   { label: 'Male', value: 'male' },
   { label: 'Female', value: 'female' },
-  // { label: 'Prefer not to say', value: "prefer_not_to_say" }
+  { label: 'Prefer not to say', value: 'prefer_not_to_say' }
 ];
 
 const ManageProfile = () => {
@@ -39,7 +40,8 @@ const ManageProfile = () => {
     name: '',
     email: '',
     phoneNumber: '',
-    gender: 'prefer_not_to_say'
+    gender: 'prefer_not_to_say',
+    kycStatus: 'pending'
   });
 
   // Individual editing states
@@ -81,7 +83,8 @@ const ManageProfile = () => {
         name: profile.name || '',
         email: profile.email || user.email || '',
         phoneNumber: profile.phoneNumber || '',
-        gender: profile.gender || 'prefer_not_to_say'
+        gender: profile.gender || 'prefer_not_to_say',
+        kycStatus: profile.kycStatus || 'pending'
       });
     } catch (error) {
       console.error('Error fetching profile data:', error);
@@ -90,7 +93,8 @@ const ManageProfile = () => {
           name: userData.name || '',
           email: auth().currentUser?.email || '',
           phoneNumber: '',
-          gender: 'prefer_not_to_say'
+          gender: 'prefer_not_to_say',
+          kycStatus: 'pending'
         });
       }
     }
@@ -198,6 +202,59 @@ const ManageProfile = () => {
     }
   };
 
+  const requestVerification = async () => {
+    try {
+      setIsSaving(true);
+      
+      const user = auth().currentUser;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const idToken = await user.getIdToken();
+      
+      const updateData = {
+        kycStatus: 'verified'
+      };
+
+      await axios.patch(
+        `${BASE_URL}/users`,
+        updateData,
+        {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      // Update local state
+      setProfileData(prev => ({
+        ...prev,
+        kycStatus: 'verified'
+      }));
+      
+      Alert.alert('Success', 'Verification request submitted successfully! Your account is now verified.');
+      
+      // Refresh user data
+      refetch();
+      
+    } catch (error: any) {
+      console.error('Error requesting verification:', error);
+      
+      let errorMessage = 'Failed to submit verification request';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await auth().signOut();
@@ -259,113 +316,133 @@ const ManageProfile = () => {
       const genderLabel = GENDER_OPTIONS.find(opt => opt.value === value)?.label || 'Not set';
       
       return (
-        <View className="flex-row items-center justify-between py-4 border-b border-gray-200">
+        <View className="mx-5 py-5 border-b border-gray-50">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center flex-1">
+              <View className="w-10 h-10 rounded-full bg-gray-100 justify-center items-center mr-4">
+                <Ionicons name={icon as any} size={18} color="#6B7280" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold font-[Afacad] text-gray-500 mb-1">{label}</Text>
+                {isEditing ? (
+                  <View className="mt-2">
+                    {showGenderPicker && (
+                      <View className="bg-gray-50 rounded-xl border border-gray-200 mb-3 overflow-hidden">
+                        {GENDER_OPTIONS.map((option, index) => (
+                          <Pressable
+                            key={option.value}
+                            className={`p-4 flex-row justify-between items-center ${
+                              index < GENDER_OPTIONS.length - 1 ? 'border-b border-gray-100' : ''
+                            }`}
+                            onPress={() => {
+                              setTempValue(option.value);
+                              setShowGenderPicker(false);
+                              saveField(field, option.value);
+                            }}
+                          >
+                            <Text className="font-[Afacad] text-gray-800 text-base">
+                              {option.label}
+                            </Text>
+                            {tempValue === option.value && (
+                              <View className="w-5 h-5 rounded-full bg-green-500 justify-center items-center">
+                                <Ionicons name="checkmark" size={12} color="white" />
+                              </View>
+                            )}
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
+                    <View className="flex-row gap-3">
+                      <Pressable
+                        className="px-4 py-2 bg-gray-100 rounded-lg"
+                        onPress={cancelEditing}
+                        disabled={isSaving}
+                      >
+                        <Text className="text-sm font-semibold font-[Afacad] text-gray-600">Cancel</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : (
+                  <Text className="text-base font-[Afacad] text-gray-800 capitalize">
+                    {genderLabel}
+                  </Text>
+                )}
+              </View>
+            </View>
+            
+            {!isEditing && (
+              <Pressable 
+                onPress={() => startEditing(field)} 
+                disabled={isSaving}
+                className="w-8 h-8 rounded-full bg-green-50 justify-center items-center"
+              >
+                <Ionicons name="create-outline" size={16} color="#00BD5F" />
+              </Pressable>
+            )}
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View className="mx-5 py-5 border-b border-gray-50">
+        <View className="flex-row items-center justify-between">
           <View className="flex-row items-center flex-1">
-            <Ionicons name={icon as any} size={20} color="black" />
-            <View className="ml-3 flex-1">
-              <Text className="text-sm font-[Afacad] text-gray-600">{label}</Text>
+            <View className="w-10 h-10 rounded-full bg-gray-100 justify-center items-center mr-4">
+              <Ionicons name={icon as any} size={18} color="#6B7280" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-semibold font-[Afacad] text-gray-500 mb-1">{label}</Text>
               {isEditing ? (
                 <View className="mt-2">
-                  {showGenderPicker && (
-                    <View className="bg-gray-50 rounded-lg border border-gray-200 mb-2">
-                      {GENDER_OPTIONS.map((option) => (
-                        <Pressable
-                          key={option.value}
-                          className="p-3 border-b border-gray-100 last:border-b-0 flex-row justify-between items-center"
-                          onPress={() => {
-                            setTempValue(option.value);
-                            setShowGenderPicker(false);
-                            saveField(field, option.value);
-                          }}
-                        >
-                          <Text className="font-[Afacad] text-gray-900">
-                            {option.label}
-                          </Text>
-                          {tempValue === option.value && (
-                            <Ionicons name="checkmark" size={16} color="#3B82F6" />
-                          )}
-                        </Pressable>
-                      ))}
-                    </View>
-                  )}
-                  <View className="flex-row gap-2">
+                  <TextInput
+                    className="bg-gray-50 p-3 rounded-xl border border-gray-200 font-[Afacad] text-base text-gray-800"
+                    value={tempValue}
+                    onChangeText={setTempValue}
+                    placeholder={`Enter ${label.toLowerCase()}`}
+                    keyboardType={keyboardType}
+                    autoCapitalize={field === 'name' ? 'words' : 'none'}
+                    autoFocus
+                  />
+                  <View className="flex-row gap-3 mt-3">
                     <Pressable
-                      className="px-3 py-1 bg-gray-200 rounded"
+                      className="px-4 py-2 bg-gray-100 rounded-lg"
                       onPress={cancelEditing}
                       disabled={isSaving}
                     >
-                      <Text className="text-xs font-[Afacad] text-gray-700">Cancel</Text>
+                      <Text className="text-sm font-semibold font-[Afacad] text-gray-600">Cancel</Text>
+                    </Pressable>
+                    <Pressable
+                      className="px-4 py-2 bg-green-500 rounded-lg flex-row items-center"
+                      onPress={() => saveField(field, tempValue)}
+                      disabled={isSaving || tempValue === value}
+                    >
+                      {isSaving ? (
+                        <ActivityIndicator size="small" color="white" />
+                      ) : (
+                        <Text className="text-sm font-semibold font-[Afacad] text-white">Save</Text>
+                      )}
                     </Pressable>
                   </View>
                 </View>
               ) : (
-                <Text className="text-base font-[Afacad] text-gray-900 mt-1 capitalize">
-                  {genderLabel}
+                <Text className="text-base font-[Afacad] text-gray-800">
+                  {displayValue}
                 </Text>
               )}
             </View>
           </View>
           
           {!isEditing && (
-            <Pressable onPress={() => startEditing(field)} disabled={isSaving}>
-              <Ionicons name="create-outline" size={20} color="#3B82F6" />
+            <Pressable 
+              onPress={() => startEditing(field)} 
+              disabled={isSaving}
+              className="w-8 h-8 rounded-full bg-green-50 justify-center items-center"
+            >
+              <Ionicons name="create-outline" size={16} color="#00BD5F" />
             </Pressable>
           )}
         </View>
-      );
-    }
-
-    return (
-      <View className="flex-row items-center justify-between py-4 border-b border-gray-200">
-        <View className="flex-row items-center flex-1">
-          <Ionicons name={icon as any} size={20} color="black" />
-          <View className="ml-3 flex-1">
-            <Text className="text-sm font-[Afacad] text-gray-600">{label}</Text>
-            {isEditing ? (
-              <View className="mt-2">
-                <TextInput
-                  className="bg-gray-50 p-2 rounded border border-gray-200 font-[Afacad] text-base"
-                  value={tempValue}
-                  onChangeText={setTempValue}
-                  placeholder={`Enter ${label.toLowerCase()}`}
-                  keyboardType={keyboardType}
-                  autoCapitalize={field === 'name' ? 'words' : 'none'}
-                  autoFocus
-                />
-                <View className="flex-row gap-2 mt-2">
-                  <Pressable
-                    className="px-3 py-1 bg-gray-200 rounded"
-                    onPress={cancelEditing}
-                    disabled={isSaving}
-                  >
-                    <Text className="text-xs font-[Afacad] text-gray-700">Cancel</Text>
-                  </Pressable>
-                  <Pressable
-                    className="px-3 py-1 bg-blue-600 rounded flex-row items-center"
-                    onPress={() => saveField(field, tempValue)}
-                    disabled={isSaving || tempValue === value}
-                  >
-                    {isSaving ? (
-                      <ActivityIndicator size="small" color="white" />
-                    ) : (
-                      <Text className="text-xs font-[Afacad] text-white">Save</Text>
-                    )}
-                  </Pressable>
-                </View>
-              </View>
-            ) : (
-              <Text className="text-base font-[Afacad] text-gray-900 mt-1">
-                {displayValue}
-              </Text>
-            )}
-          </View>
-        </View>
-        
-        {!isEditing && (
-          <Pressable onPress={() => startEditing(field)} disabled={isSaving}>
-            <Ionicons name="create-outline" size={20} color="#3B82F6" />
-          </Pressable>
-        )}
       </View>
     );
   };
@@ -412,59 +489,118 @@ const ManageProfile = () => {
         </View>
 
         {/* Editable Profile Fields */}
-        <View className="mb-6">
-          <Text className="text-lg font-bold font-[Afacad] mb-4">Profile Information</Text>
+        <View className="bg-white rounded-2xl p-1 mb-8 shadow-sm border border-gray-100">
+          <Text className="text-lg font-bold font-[Afacad] mb-6 px-5 pt-5 text-gray-800">Profile Information</Text>
           
           {renderField('name', 'Name', profileData.name, 'person-outline')}
           {renderField('email', 'Email', profileData.email, 'mail-outline', 'email-address')}
           {renderField('phoneNumber', 'Phone Number', profileData.phoneNumber, 'call-outline', 'phone-pad')}
-          {renderField('gender', 'Gender', profileData.gender, 'person-outline')}
+          {renderField('gender', 'Gender', profileData.gender, 'people-outline')}
+          
+          {/* Verification Section */}
+          <View className="mx-5 py-5">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center flex-1">
+                <View className="w-10 h-10 rounded-full bg-gray-100 justify-center items-center mr-4">
+                  <Ionicons name="shield-checkmark-outline" size={18} color="#6B7280" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold font-[Afacad] text-gray-500 mb-1">Verification Status</Text>
+                  <View className="flex-row items-center">
+                    <View className={`px-3 py-1 rounded-full ${
+                      profileData.kycStatus === 'verified' ? 'bg-green-100' : 'bg-yellow-100'
+                    }`}>
+                      <Text className={`text-sm font-semibold font-[Afacad] capitalize ${
+                        profileData.kycStatus === 'verified' ? 'text-green-700' : 'text-yellow-700'
+                      }`}>
+                        {profileData.kycStatus === 'verified' ? 'Verified' : 'Pending'}
+                      </Text>
+                    </View>
+                    {profileData.kycStatus === 'verified' && (
+                      <View className="ml-2">
+                        <Ionicons name="checkmark-circle" size={16} color="#00BD5F" />
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </View>
+              
+              {profileData.kycStatus !== 'verified' && (
+                <Pressable 
+                  onPress={requestVerification}
+                  disabled={isSaving}
+                  className="px-4 py-2 bg-green-500 rounded-lg flex-row items-center"
+                >
+                  {isSaving ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <>
+                      <Ionicons name="shield-checkmark" size={14} color="white" />
+                      <Text className="text-sm font-semibold font-[Afacad] text-white ml-1">
+                        Request Verification
+                      </Text>
+                    </>
+                  )}
+                </Pressable>
+              )}
+            </View>
+          </View>
         </View>
 
         {/* Management Options */}
-        <View>
-          <Text className="text-lg font-bold font-[Afacad] mb-4">Account Management</Text>
+        <View className="bg-white rounded-2xl p-1 shadow-sm border border-gray-100">
+          <Text className="text-lg font-bold font-[Afacad] mb-6 px-5 pt-5 text-gray-800">Account Management</Text>
           
           {/* Driver-specific options */}
           {isDriver && (
-            <Pressable 
-              onPress={handleManageVehicles} 
-              className="flex-row items-center justify-between py-4 border-b border-gray-200"
-            >
-              <View className="flex-row items-center">
-                <Ionicons name="car-outline" size={20} color="black" />
-                <Text className="text-base text-black font-[Afacad] ml-3">
+            <View className="mx-5 py-4 border-b border-gray-50">
+              <Pressable 
+                onPress={handleManageVehicles} 
+                className="flex-row items-center"
+              >
+                <View className="w-10 h-10 rounded-full bg-green-50 justify-center items-center mr-4">
+                  <Ionicons name="car-outline" size={18} color="#00BD5F" />
+                </View>
+                <Text className="text-base text-gray-800 font-semibold font-[Afacad] flex-1">
                   Manage Vehicles
                 </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="gray" />
-            </Pressable>
+                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              </Pressable>
+            </View>
           )}
 
           {/* Common options */}
-          <Pressable 
-            onPress={handleLogout} 
-            className="flex-row items-center py-4 border-b border-gray-200"
-          >
-            <Ionicons name="log-out-outline" size={20} color="black" />
-            <Text className="text-base text-black font-[Afacad] ml-3">
-              Log Out
-            </Text>
-          </Pressable>
+          <View className="mx-5 py-4 border-b border-gray-50">
+            <Pressable 
+              onPress={handleLogout} 
+              className="flex-row items-center"
+            >
+              <View className="w-10 h-10 rounded-full bg-gray-100 justify-center items-center mr-4">
+                <Ionicons name="log-out-outline" size={18} color="#6B7280" />
+              </View>
+              <Text className="text-base text-gray-800 font-semibold font-[Afacad] flex-1">
+                Log Out
+              </Text>
+            </Pressable>
+          </View>
 
-          <Pressable 
-            onPress={handleDeleteAccount} 
-            className="flex-row items-center py-4"
-          >
-            <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-            <Text className="text-base text-red-500 font-[Afacad] ml-3">
-              Delete Account
-            </Text>
-          </Pressable>
+          <View className="mx-5 py-4">
+            <Pressable 
+              onPress={handleDeleteAccount} 
+              className="flex-row items-center"
+            >
+              <View className="w-10 h-10 rounded-full bg-red-50 justify-center items-center mr-4">
+                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+              </View>
+              <Text className="text-base text-red-500 font-semibold font-[Afacad] flex-1">
+                Delete Account
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
-        {/* Bottom padding for keyboard */}
-        <View className="h-20" />
+        {/* Bottom padding for keyboard and screen edge */}
+        <View className="h-32" />
       </ScrollView>
     </KeyboardAvoidingView>
   );

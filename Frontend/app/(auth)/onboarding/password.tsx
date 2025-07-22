@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Activ
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useRegistration } from '@/context/RegistrationContext';
+import { isValidPassword } from '@/utils/validation';
 
 const Password = () => {
   const router = useRouter();
@@ -12,7 +13,7 @@ const Password = () => {
 
   const [loading, setLoading] = useState(false);
 
-  const isValid = password.trim().length > 0;
+  const isValid = isValidPassword(password);
 
   const handleNext = () => {
     setLoading(true);
@@ -53,7 +54,7 @@ const Password = () => {
 
         <TextInput
           className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-          placeholder="Enter your password"
+          placeholder="Enter your password (min 6 characters)"
           value={password}
           onChangeText={setPassword}
           secureTextEntry

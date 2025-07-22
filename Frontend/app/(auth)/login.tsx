@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Activ
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import auth from '@react-native-firebase/auth';
+import { isValidEmail, isValidPassword } from '@/utils/validation';
 
 
 export const loginUser = async (email: string, password: string) => {
@@ -20,7 +21,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const isValid = email.trim().length > 0 && password.trim().length > 0;
+  const isValid = isValidEmail(email) && isValidPassword(password);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -86,9 +87,9 @@ const Login = () => {
         </View>
 
         {/* Should be added in the future */}
-        <Pressable onPress={() => {}}> 
+        {/* <Pressable onPress={() => {}}> 
           <Text className="text-brand text-sm mt-2">Forgot password?</Text>
-        </Pressable>
+        </Pressable> */}
       </View>
 
       {/* Log In Button */}

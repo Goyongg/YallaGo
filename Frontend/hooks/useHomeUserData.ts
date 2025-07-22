@@ -1,4 +1,4 @@
-// hooks/useHomeUserData.ts - Added 404 handling to redirect to greeting page
+// Enhanced useHomeUserData.ts with comprehensive error handling for new drivers
 import { useEffect, useState, useRef } from 'react';
 import auth from '@react-native-firebase/auth';
 import axios from 'axios';
@@ -85,6 +85,66 @@ const useHomeUserData = () => {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  // Helper function to create fallback user data from Firebase Auth
+  const createFallbackUserData = (user: any, role: 'driver' | 'passenger' = 'driver'): HomeUserData => {
+    const userName = user.displayName || user.email?.split('@')[0] || 'User';
+    
+    return {
+      id: user.uid,
+      name: userName,
+      role: role,
+      ecoPoints: 0,
+      averageRating: 0,
+      gender: 'prefer_not_to_say',
+    };
+  };
+
+  // Enhanced function to fetch user profile as fallback
+  const fetchUserProfileFallback = async (user: any): Promise<HomeUserData | null> => {
+    try {
+      console.log('🔄 Attempting fallback: fetching user profile...');
+      
+      const idToken = await user.getIdToken();
+      const profileResponse = await axios.get(`${BASE_URL}/users/profile`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+        timeout: 10000,
+      });
+      
+      console.log('✅ Got user profile from fallback:', profileResponse.data);
+      
+      // Handle different response structures from /users/profile
+      let profileData = profileResponse.data;
+      
+      // If response has 'user' wrapper (based on your backend code)
+      if (profileData.user) {
+        profileData = profileData.user;
+      }
+      
+      // Transform the profile data to match our interface
+      if (profileData && profileData.userId) {
+        const compatibleUserData: HomeUserData = {
+          id: profileData.userId,
+          name: profileData.name,
+          role: profileData.role,
+          ecoPoints: profileData.ecoPoints || 0,
+          averageRating: profileData.averageRating || 0,
+          gender: profileData.gender || 'prefer_not_to_say',
+        };
+        
+        console.log('✅ Successfully created user profile from fallback:', compatibleUserData);
+        return compatibleUserData;
+      }
+      
+      return null;
+      
+    } catch (profileErr: any) {
+      console.log('⚠️ Profile fallback failed:', profileErr.response?.data || profileErr.message);
+      return null;
+    }
+  };
+
   const fetchHomePageData = async () => {
     try {
       setLoading(true);
@@ -108,62 +168,28 @@ const useHomeUserData = () => {
       });
 
       console.log('🔍 Raw homepage response:', response.data);
-      console.log('🔍 Response type:', typeof response.data);
-      console.log('🔍 Response keys:', Object.keys(response.data || {}));
       
-      // Add this debug log
-      console.log('🔍 Response data structure:', {
-        hasData: !!response.data,
-        hasResponse: !!response.data?.response,
-        hasUpcomingInfo: !!response.data?.upcomingInfo,
-        upcomingInfoLength: response.data?.upcomingInfo?.length,
-        upcomingInfoContent: response.data?.upcomingInfo
-      });
-
-      // Handle case where backend might return unexpected structure
+      // Handle successful response
       let userData: UserData | null = null;
       let upcomingInfo: UpcomingData[] = [];
 
-      // Check if response has the expected structure
       if (response.data && typeof response.data === 'object') {
-        // Case 1: Expected structure with response and upcomingInfo
         if ('response' in response.data && response.data.response) {
           userData = response.data.response;
           upcomingInfo = Array.isArray(response.data.upcomingInfo) ? response.data.upcomingInfo : [];
-          
-          // Add debug log here
-          console.log('🔍 Extracted from Case 1:', {
-            userData: userData,
-            upcomingInfoLength: upcomingInfo.length,
-            upcomingInfo: upcomingInfo
-          });
-        }
-        // Case 2: Direct user data (fallback) - check if response.data has user properties
-        else if ('userId' in response.data || 'name' in response.data) {
-          const responseAsAny = response.data as any;
-          if (responseAsAny.userId && responseAsAny.name && responseAsAny.role) {
-            userData = responseAsAny as UserData;
-            upcomingInfo = [];
-            console.log('🔍 Using Case 2 fallback - no upcomingInfo');
-          } else {
-            console.warn('⚠️ Incomplete user data in direct response:', response.data);
-            setError('Incomplete user data from server');
-            return;
-          }
-        }
-        // Case 3: Empty response or unexpected structure
-        else {
+        } else if ('userId' in response.data) {
+          // Cast to unknown first, then to UserData to avoid TypeScript error
+          userData = response.data as unknown as UserData;
+          upcomingInfo = [];
+        } else {
           console.warn('⚠️ Unexpected response structure:', response.data);
-          setError('Unexpected response format from server');
-          return;
+          throw new Error('Unexpected response format from server');
         }
       } else {
-        console.error('❌ Invalid response data:', response.data);
-        setError('Invalid response data from server');
-        return;
+        throw new Error('Invalid response data from server');
       }
 
-      // Transform user data to maintain backward compatibility
+      // Transform user data for compatibility
       if (userData) {
         const compatibleUserData: HomeUserData = {
           id: userData.userId,
@@ -174,75 +200,110 @@ const useHomeUserData = () => {
           gender: userData.gender,
         };
         
-        console.log('🔍 About to set states with:', {
-          userData: compatibleUserData,
-          upcomingDataLength: upcomingInfo.length,
-          upcomingData: upcomingInfo
-        });
-        
         setUserData(compatibleUserData);
-        console.log('✅ User data set:', compatibleUserData);
-      } else {
-        console.error('❌ No valid user data found in response');
-        setError('No user data received from server');
+        setUpcomingData(upcomingInfo);
+        console.log('✅ Successfully loaded homepage data');
         return;
+      } else {
+        throw new Error('No user data received from server');
       }
-      
-      // Set upcoming info (empty array is valid)
-      setUpcomingData(upcomingInfo);
-      console.log('✅ Upcoming data set:', upcomingInfo.length, 'items');
-      console.log('✅ Upcoming data content:', upcomingInfo);
 
     } catch (err: any) {
       console.error('❌ Error fetching homepage data:', err);
       console.error('❌ Error details:', {
         message: err.message,
-        code: err.code,
         status: err.response?.status,
-        statusText: err.response?.statusText,
         data: err.response?.data,
-        url: err.config?.url,
-        baseURL: err.config?.baseURL,
       });
       
-      let errorMessage = 'Failed to fetch user data';
-      
-      // Handle specific error cases
+      const user = auth().currentUser;
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+
+      // Enhanced error handling based on status codes and messages
       if (err.response?.status === 404) {
-        // Check if it's specifically a "User profile not found" error
-        if (err.response?.data?.message === 'User profile not found' || 
-            err.response?.data?.error === 'Not Found') {
-          console.log('🔄 User profile not found, redirecting to greeting page...');
+        const errorMessage = err.response?.data?.message || '';
+        
+        // Case 1: Driver with no rides (most common for new drivers)
+        if (errorMessage.includes('Rides not found for this driver') || 
+            errorMessage.includes('Rides not found')) {
           
-          // Clear any existing user data
+          console.log('🆕 New driver detected - no rides found, using fallback...');
+          
+          // Try to get complete user profile
+          const fallbackUserData = await fetchUserProfileFallback(user);
+          
+          if (fallbackUserData) {
+            setUserData(fallbackUserData);
+            setUpcomingData([]); // Empty upcoming rides for new driver
+            setError(null); // Clear error since we handled it
+            console.log('✅ Successfully handled new driver with no rides');
+            return;
+          } else {
+            // If profile fetch also fails, create minimal fallback
+            console.log('🔄 Profile fallback failed, creating minimal user data...');
+            const minimalUserData = createFallbackUserData(user, 'driver');
+            setUserData(minimalUserData);
+            setUpcomingData([]);
+            setError('Profile incomplete - some features may be limited');
+            console.log('⚠️ Using minimal fallback user data');
+            return;
+          }
+        }
+        
+        // Case 2: User profile not found (needs onboarding)
+        else if (errorMessage.includes('User profile not found') || 
+                 err.response?.data?.error === 'Not Found') {
+          
+          console.log('🔄 User profile not found, redirecting to onboarding...');
           setUserData(null);
           setUpcomingData([]);
           setError(null);
-          setLoading(false);
-          
-          // Redirect to greeting page to complete profile setup
           router.replace('/onboarding/greeting');
           return;
-        } else {
-          errorMessage = `Homepage endpoint not found at ${BASE_URL}/users/home. Please check if the backend server is running and the endpoint exists.`;
         }
-      } else if (err.code === 'ECONNABORTED') {
-        errorMessage = 'Request timed out. Please check your connection.';
-      } else if (err.code === 'ECONNREFUSED' || err.code === 'NETWORK_ERROR') {
-        errorMessage = `Cannot connect to server at ${BASE_URL}. Please ensure the backend server is running.`;
-      } else if (err.response?.status === 401) {
-        errorMessage = 'Authentication failed. Please log in again.';
-      } else if (err.response?.status >= 500) {
-        errorMessage = 'Server error. Please try again later.';
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
-      } else if (err.message) {
-        errorMessage = err.message;
+        
+        // Case 3: Generic 404 - endpoint or server issue
+        else {
+          setError(`Service unavailable. Please ensure the app is up to date.`);
+        }
       }
       
-      setError(errorMessage);
-      setUserData(null);
-      setUpcomingData([]);
+      // Handle other error types
+      else if (err.code === 'ECONNABORTED') {
+        setError('Request timed out. Please check your connection and try again.');
+      } else if (err.code === 'ECONNREFUSED' || err.code === 'NETWORK_ERROR') {
+        setError('Cannot connect to server. Please check your internet connection.');
+      } else if (err.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+      } else if (err.response?.status === 403) {
+        setError('Access denied. Please check your account permissions.');
+      } else if (err.response?.status >= 500) {
+        setError('Server error. Please try again later.');
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
+      
+      // For any unhandled errors, try to at least create basic user data
+      if (!userData) {
+        console.log('🔄 Creating emergency fallback user data...');
+        try {
+          const emergencyUserData = createFallbackUserData(user, 'driver');
+          setUserData(emergencyUserData);
+          setUpcomingData([]);
+          console.log('⚠️ Using emergency fallback - app will have limited functionality');
+        } catch (fallbackError) {
+          console.error('❌ Emergency fallback also failed:', fallbackError);
+          setUserData(null);
+          setUpcomingData([]);
+        }
+      }
     } finally {
       setLoading(false);
     }
