@@ -1,5 +1,6 @@
 import { Client, TrafficModel, TravelMode } from '@googlemaps/google-maps-services-js';
 import { Injectable, InternalServerErrorException, ServiceUnavailableException } from '@nestjs/common';
+import polyline from '@mapbox/polyline';
 
 @Injectable()
 export class GoogleMapsService {
@@ -91,10 +92,17 @@ export class GoogleMapsService {
             totalDuration += leg.duration_in_traffic?.value ?? leg.duration.value;
         }
 
+        const encodedPolyline = route.overview_polyline?.points;
+
+        const decodedPolyline = encodedPolyline
+        ? polyline.decode(encodedPolyline).map(([lat, lng]) => ({ latitude: lat, longitude: lng }))
+        : [];
+
         // Return accumulated distance and duration
         return {
             distanceMeters: totalDistance,
-            durationSeconds: totalDuration
+            durationSeconds: totalDuration,
+            polyline: JSON.stringify(decodedPolyline),
         };
     }
 }

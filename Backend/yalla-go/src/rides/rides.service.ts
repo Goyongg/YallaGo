@@ -148,6 +148,12 @@ export class RidesService {
             vehicle: omitFields(item.vehicle, ['vehicleId', 'driverId'])
         }));
     }
+    
+    async fetchRideById(rideId: string) {
+        const ride = await this.firebaseDriverService.getRideById(rideId);
+
+        return omitFields(ride, ['g', 'distanceMeters', 'driverId', 'vehicleId']);
+    }
 
     async fetchDriverRides(firebaseUid: string) {
         const rides = await this.firebaseDriverService.getRideByDriver(firebaseUid);
@@ -264,6 +270,7 @@ export class RidesService {
             departureTime: departureTime,
             durationSeconds: distanceData.durationSeconds, // duration of the trip in secs
             distanceMeters: distanceData.distanceMeters, //distance in meters
+            polyline: distanceData.polyline,
             vehicleId: vehicleId,
             ...rest, // spread out ride fields 
             status: RideStatus.IN_PROGRESS

@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@googlemaps/google-maps-services-js": "^3.4.2",
+    "@mapbox/polyline": "^1.2.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",

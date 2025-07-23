@@ -23,7 +23,7 @@ export const createNestServer = async (expressInstance) => {
 };
 
 // Check if running in development mode
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV === 'development') {
   // Local dev: start HTTP server
   createNestServer(server).then(app => {
     app.listen(3000, () => {
@@ -33,8 +33,9 @@ if (process.env.NODE_ENV !== 'production') {
 } 
 
 // Production: Firebase v2 Function
-export const api = https.onRequest(
+export const yallago = https.onRequest(
   {
+    region: 'asia-south1', // set server location to mumbai
     // Reference the secret name directly
     secrets: ['GOOGLE_MAPS_API_KEY'],
   },

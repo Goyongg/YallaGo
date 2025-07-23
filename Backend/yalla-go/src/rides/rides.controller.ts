@@ -13,8 +13,15 @@ export class RidesController {
     @Get()
     async fetchDriverRides(@Req() req) {
         const firebaseUid = req.user.uid; // extract user id from the request
-
+        console.log(`[${new Date().toISOString()}] GET /rides hit`)
         return this.rideService.fetchDriverRides(firebaseUid);
+    }
+
+    @UseGuards(FirebaseAuthGuard)
+    @Get()
+    async fetchRideById(@Query('rideId') rideId: string) {
+        console.log(`/rides?rideId=rideId hit`)
+        return this.rideService.fetchRideById(rideId);
     }
     
     @UseGuards(FirebaseAuthGuard)
