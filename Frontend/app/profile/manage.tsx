@@ -1,4 +1,4 @@
-// Enhanced manage.tsx - Individual field editing with verification feature
+// Enhanced manage.tsx - Individual field editing with country code phone input
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import useHomeUserData from '@/hooks/useHomeUserData';
 import axios from 'axios';
 import { BASE_URL } from '@/config';
+import { validatePhoneNumber, COUNTRY_CODES, formatPhoneWithCountryCode, CountryCode } from '@/utils/validation';
 
 interface ProfileData {
   name: string;
@@ -31,6 +32,91 @@ const GENDER_OPTIONS = [
   { label: 'Female', value: 'female' },
   { label: 'Prefer not to say', value: 'prefer_not_to_say' }
 ];
+
+// Reusable Phone Input Component for Manage Profile
+const PhoneInputForProfile = ({ 
+  phone, 
+  onPhoneChange, 
+  onValidate, 
+  phoneError, 
+  selectedCountryCode, 
+  onCountryChange
+}: {
+  phone: string;
+  onPhoneChange: (value: string) => void;
+  onValidate: () => boolean;
+  phoneError: string;
+  selectedCountryCode: CountryCode;
+  onCountryChange: (country: CountryCode) => void;
+}) => {
+  const [countryDropdownVisible, setCountryDropdownVisible] = useState(false);
+
+  return (
+    <View className="relative">
+      {/* Phone Input Container */}
+      <View className={`flex-row border rounded-xl overflow-hidden ${
+        phoneError ? 'border-red-300' : 'border-gray-200'
+      }`}>
+        {/* Country Code Selector */}
+        <Pressable
+          onPress={() => setCountryDropdownVisible(!countryDropdownVisible)}
+          className="flex-row items-center px-3 py-3 bg-gray-50 border-r border-gray-200"
+        >
+          <Text className="text-base mr-1">{selectedCountryCode.flag}</Text>
+          <Text className="text-sm text-gray-700 mr-1">{selectedCountryCode.dialCode}</Text>
+          <Ionicons name="chevron-down" size={14} color="#6B7280" />
+        </Pressable>
+        
+        {/* Phone Number Input */}
+        <TextInput
+          className="flex-1 px-3 py-3 text-base text-gray-800"
+          placeholder="Enter phone number"
+          value={phone}
+          onChangeText={onPhoneChange}
+          onBlur={onValidate}
+          keyboardType="phone-pad"
+          placeholderTextColor="#A0AEC0"
+          returnKeyType="done"
+        />
+      </View>
+
+      {/* Country Dropdown */}
+      {countryDropdownVisible && (
+        <View className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 z-50">
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {COUNTRY_CODES.map((country) => (
+              <Pressable
+                key={country.code}
+                className="flex-row items-center px-4 py-3 border-b border-gray-100"
+                onPress={() => {
+                  onCountryChange(country);
+                  setCountryDropdownVisible(false);
+                }}
+              >
+                <Text className="text-base mr-3">{country.flag}</Text>
+                <View className="flex-1">
+                  <Text className="text-sm font-medium text-gray-800">{country.country}</Text>
+                  <Text className="text-xs text-gray-500">{country.dialCode}</Text>
+                </View>
+                {selectedCountryCode.code === country.code && (
+                  <Ionicons name="checkmark" size={16} color="#00BD5F" />
+                )}
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Close dropdown when tapping outside */}
+      {countryDropdownVisible && (
+        <Pressable 
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}
+          onPress={() => setCountryDropdownVisible(false)}
+        />
+      )}
+    </View>
+  );
+};
 
 const ManageProfile = () => {
   const router = useRouter();
@@ -49,6 +135,12 @@ const ManageProfile = () => {
   const [tempValue, setTempValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showGenderPicker, setShowGenderPicker] = useState(false);
+
+  // Phone-specific states
+  const [phoneError, setPhoneError] = useState('');
+  const [selectedCountryCode, setSelectedCountryCode] = useState<CountryCode>(
+    COUNTRY_CODES.find(country => country.code === 'AE') || COUNTRY_CODES[0]
+  );
 
   const hasFetchedRef = useRef(false);
 
@@ -86,6 +178,17 @@ const ManageProfile = () => {
         gender: profile.gender || 'prefer_not_to_say',
         kycStatus: profile.kycStatus || 'pending'
       });
+
+      // Parse existing phone number to extract country code
+      if (profile.phoneNumber) {
+        const existingPhone = profile.phoneNumber;
+        const matchedCountry = COUNTRY_CODES.find(country => 
+          existingPhone.startsWith(country.dialCode)
+        );
+        if (matchedCountry) {
+          setSelectedCountryCode(matchedCountry);
+        }
+      }
     } catch (error) {
       console.error('Error fetching profile data:', error);
       if (userData) {
@@ -102,7 +205,18 @@ const ManageProfile = () => {
 
   const startEditing = (field: keyof ProfileData) => {
     setEditingField(field);
-    setTempValue(profileData[field]);
+    if (field === 'phoneNumber') {
+      // Extract local number without country code for editing
+      const currentPhone = profileData[field];
+      if (currentPhone.startsWith(selectedCountryCode.dialCode)) {
+        setTempValue(currentPhone.replace(selectedCountryCode.dialCode, ''));
+      } else {
+        setTempValue(currentPhone);
+      }
+      setPhoneError('');
+    } else {
+      setTempValue(profileData[field]);
+    }
     if (field === 'gender') {
       setShowGenderPicker(true);
     }
@@ -112,6 +226,24 @@ const ManageProfile = () => {
     setEditingField(null);
     setTempValue('');
     setShowGenderPicker(false);
+    setPhoneError('');
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setTempValue(value);
+    if (phoneError) {
+      setPhoneError('');
+    }
+  };
+
+  const validatePhone = (): boolean => {
+    const validation = validatePhoneNumber(tempValue);
+    if (!validation.isValid) {
+      setPhoneError(validation.error || 'Invalid phone number');
+      return false;
+    }
+    setPhoneError('');
+    return true;
   };
 
   const validateField = (field: keyof ProfileData, value: string): boolean => {
@@ -134,11 +266,7 @@ const ManageProfile = () => {
         }
         break;
       case 'phoneNumber':
-        if (!value.trim()) {
-          Alert.alert('Validation Error', 'Phone number cannot be empty');
-          return false;
-        }
-        break;
+        return validatePhone();
     }
     return true;
   };
@@ -156,8 +284,14 @@ const ManageProfile = () => {
 
       const idToken = await user.getIdToken();
       
+      let finalValue = value;
+      if (field === 'phoneNumber') {
+        // Format phone with country code
+        finalValue = formatPhoneWithCountryCode(selectedCountryCode.dialCode, value.trim());
+      }
+
       const updateData = {
-        [field]: field === 'gender' ? value : value.trim()
+        [field]: field === 'gender' ? value : finalValue
       };
 
       await axios.patch(
@@ -174,12 +308,13 @@ const ManageProfile = () => {
       // Update local state
       setProfileData(prev => ({
         ...prev,
-        [field]: field === 'gender' ? value : value.trim()
+        [field]: finalValue
       }));
 
       setEditingField(null);
       setTempValue('');
       setShowGenderPicker(false);
+      setPhoneError('');
       
       Alert.alert('Success', `${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully`);
       
@@ -311,6 +446,74 @@ const ManageProfile = () => {
   ) => {
     const isEditing = editingField === field;
     const displayValue = value || 'Not set';
+
+    if (field === 'phoneNumber') {
+      return (
+        <View className="mx-5 py-5 border-b border-gray-50">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center flex-1">
+              <View className="w-10 h-10 rounded-full bg-gray-100 justify-center items-center mr-4">
+                <Ionicons name={icon as any} size={18} color="#6B7280" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold font-[Afacad] text-gray-500 mb-1">{label}</Text>
+                {isEditing ? (
+                  <View className="mt-2">
+                    <PhoneInputForProfile
+                      phone={tempValue}
+                      onPhoneChange={handlePhoneChange}
+                      onValidate={validatePhone}
+                      phoneError={phoneError}
+                      selectedCountryCode={selectedCountryCode}
+                      onCountryChange={setSelectedCountryCode}
+                    />
+                    {phoneError && (
+                      <Text className="text-red-500 text-sm mt-1">{phoneError}</Text>
+                    )}
+                    <View className="flex-row gap-3 mt-3">
+                      <Pressable
+                        className="px-4 py-2 bg-gray-100 rounded-lg"
+                        onPress={cancelEditing}
+                        disabled={isSaving}
+                      >
+                        <Text className="text-sm font-semibold font-[Afacad] text-gray-600">Cancel</Text>
+                      </Pressable>
+                      <Pressable
+                        className={`px-4 py-2 rounded-lg flex-row items-center ${
+                          !phoneError && tempValue.trim() ? 'bg-green-500' : 'bg-gray-300'
+                        }`}
+                        onPress={() => saveField(field, tempValue)}
+                        disabled={isSaving || !!phoneError || !tempValue.trim()}
+                      >
+                        {isSaving ? (
+                          <ActivityIndicator size="small" color="white" />
+                        ) : (
+                          <Text className="text-sm font-semibold font-[Afacad] text-white">Save</Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : (
+                  <Text className="text-base font-[Afacad] text-gray-800">
+                    {displayValue}
+                  </Text>
+                )}
+              </View>
+            </View>
+            
+            {!isEditing && (
+              <Pressable 
+                onPress={() => startEditing(field)} 
+                disabled={isSaving}
+                className="w-8 h-8 rounded-full bg-green-50 justify-center items-center"
+              >
+                <Ionicons name="create-outline" size={16} color="#00BD5F" />
+              </Pressable>
+            )}
+          </View>
+        </View>
+      );
+    }
 
     if (field === 'gender') {
       const genderLabel = GENDER_OPTIONS.find(opt => opt.value === value)?.label || 'Not set';
