@@ -104,7 +104,7 @@ export class ReviewsService {
 
         // Read the user's current average rating and total number of ratings
         const currentRating = userData.averageRating;
-        const currentRatingCount = userData.ratingcount;
+        const currentRatingCount = userData.ratingCount;
 
         // Compute the updated total rating count
         const updatedRatingCount = currentRatingCount + 1;
