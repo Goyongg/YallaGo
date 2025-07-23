@@ -1,9 +1,97 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, Modal, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Pressable, Modal, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, ActivityIndicator, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { isValidEmail } from '@/utils/validation';
+import { isValidEmail, validatePhoneNumber, COUNTRY_CODES, formatPhoneWithCountryCode, CountryCode } from '@/utils/validation';
 import { Ionicons } from '@expo/vector-icons';
 import { RegistrationData, useRegistration } from '@/context/RegistrationContext';
+
+// Export the phone input component for reuse
+export const PhoneInputWithCountryCode = ({ 
+  phone, 
+  onPhoneChange, 
+  onValidate, 
+  phoneError, 
+  selectedCountryCode, 
+  onCountryChange,
+  placeholder = "551234567"
+}: {
+  phone: string;
+  onPhoneChange: (value: string) => void;
+  onValidate: () => boolean;
+  phoneError: string;
+  selectedCountryCode: CountryCode;
+  onCountryChange: (country: CountryCode) => void;
+  placeholder?: string;
+}) => {
+  const [countryDropdownVisible, setCountryDropdownVisible] = useState(false);
+
+  return (
+    <View className="relative">
+      {/* Phone Input Container */}
+      <View className={`flex-row border rounded-lg overflow-hidden ${
+        phoneError ? 'border-red-500' : 'border-gray-300'
+      }`}>
+        {/* Country Code Selector */}
+        <Pressable
+          onPress={() => setCountryDropdownVisible(!countryDropdownVisible)}
+          className="flex-row items-center px-3 py-3 bg-gray-50 border-r border-gray-200"
+        >
+          <Text className="text-lg mr-1">{selectedCountryCode.flag}</Text>
+          <Text className="text-base text-gray-700 mr-1">{selectedCountryCode.dialCode}</Text>
+          <Ionicons name="chevron-down" size={16} color="#6B7280" />
+        </Pressable>
+        
+        {/* Phone Number Input */}
+        <TextInput
+          className="flex-1 px-3 py-3 text-base"
+          placeholder={placeholder}
+          value={phone}
+          onChangeText={onPhoneChange}
+          onBlur={onValidate}
+          keyboardType="phone-pad"
+          placeholderTextColor="#A0AEC0"
+          returnKeyType="done"
+          onSubmitEditing={Keyboard.dismiss}
+        />
+      </View>
+
+      {/* Country Dropdown */}
+      {countryDropdownVisible && (
+        <View className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 z-50">
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {COUNTRY_CODES.map((country) => (
+              <Pressable
+                key={country.code}
+                className="flex-row items-center px-4 py-3 border-b border-gray-100"
+                onPress={() => {
+                  onCountryChange(country);
+                  setCountryDropdownVisible(false);
+                }}
+              >
+                <Text className="text-lg mr-3">{country.flag}</Text>
+                <View className="flex-1">
+                  <Text className="text-sm font-medium text-gray-800">{country.country}</Text>
+                  <Text className="text-xs text-gray-500">{country.dialCode}</Text>
+                </View>
+                {selectedCountryCode.code === country.code && (
+                  <Ionicons name="checkmark" size={16} color="#00BD5F" />
+                )}
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Close dropdown when tapping outside */}
+      {countryDropdownVisible && (
+        <Pressable 
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}
+          onPress={() => setCountryDropdownVisible(false)}
+        />
+      )}
+    </View>
+  );
+};
 
 const NameAndContact = () => {
   const router = useRouter();
@@ -13,24 +101,56 @@ const NameAndContact = () => {
   const [gender, setGender] = useState(registrationData.gender);
   const [email, setEmail] = useState(registrationData.email);
   const [phone, setPhone] = useState(registrationData.phone);
+  const [selectedCountryCode, setSelectedCountryCode] = useState<CountryCode>(
+    COUNTRY_CODES.find(country => country.code === 'AE') || COUNTRY_CODES[0]
+  ); // Default to UAE
   const [modalVisible, setModalVisible] = useState(false);
+  const [countryDropdownVisible, setCountryDropdownVisible] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
+
+  const handlePhoneChange = (value: string) => {
+    setPhone(value);
+    
+    // Clear error when user starts typing
+    if (phoneError) {
+      setPhoneError('');
+    }
+  };
+
+  const validatePhone = () => {
+    const validation = validatePhoneNumber(phone);
+    if (!validation.isValid) {
+      setPhoneError(validation.error || 'Invalid phone number');
+      return false;
+    }
+    setPhoneError('');
+    return true;
+  };
 
   const isFormValid =
     name.trim().length > 0 &&
     isValidEmail(email) &&
-    phone.trim().length > 0;
+    validatePhoneNumber(phone).isValid;
 
   const handleNext = () => {
+    // Validate phone before proceeding
+    if (!validatePhone()) {
+      return;
+    }
+
     setLoading(true);
+
+    // Format the final phone number with country code
+    const finalPhoneNumber = formatPhoneWithCountryCode(selectedCountryCode.dialCode, phone);
 
     setRegistrationData((prev: RegistrationData) => ({
       ...prev,
       name,
       gender,
       email,
-      phone,
+      phone: finalPhoneNumber,
     }));
 
     // slight delay to show spinner before routing
@@ -131,18 +251,27 @@ const NameAndContact = () => {
         </View>
 
         {/* Phone Input */}
-        <View className="mb-6">
+        <View className="mb-6 relative">
           <Text className="text-base font-semibold mb-1 text-gray-700">Phone Number</Text>
-          <TextInput
-            className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-            placeholder="Enter your phone number"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            placeholderTextColor="#A0AEC0"
-            returnKeyType="done"
-            onSubmitEditing={Keyboard.dismiss}
+          
+          <PhoneInputWithCountryCode
+            phone={phone}
+            onPhoneChange={handlePhoneChange}
+            onValidate={validatePhone}
+            phoneError={phoneError}
+            selectedCountryCode={selectedCountryCode}
+            onCountryChange={setSelectedCountryCode}
           />
+          
+          {/* Format Helper */}
+          <Text className="text-gray-500 text-xs mt-1">
+            Supports various formats: 971551234567, +971551234567, 0551234567, 551234567
+          </Text>
+          
+          {/* Phone validation feedback */}
+          {phoneError && (
+            <Text className="text-red-500 text-sm mt-1">{phoneError}</Text>
+          )}
         </View>
       </View>
 
@@ -172,7 +301,7 @@ const NameAndContact = () => {
           <View className="bg-white p-6 rounded-xl w-full max-w-md">
             <Text className="text-lg font-bold mb-2">Why we need this info</Text>
             <Text className="text-gray-600 mb-4">
-              We ask for your gender to enable “female-only” ride options.
+              We ask for your gender to enable "female-only" ride options.
               Further ID confirmation may be required later.
             </Text>
             <Pressable

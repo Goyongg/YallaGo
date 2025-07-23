@@ -6,6 +6,7 @@ export interface HomeUserData {
   role: string;
   ecoPoints: number;
   averageRating: number;
+  gender: string;
 }
 
 export interface RideResultCardProps {
@@ -73,6 +74,7 @@ export interface RideSearchFormProps {
   setPassengerCount: (value: string) => void;
   date: string;
   setDate: (value: string) => void;
+  userGender?: string;
 }
 
 export interface GreetingCardProps {

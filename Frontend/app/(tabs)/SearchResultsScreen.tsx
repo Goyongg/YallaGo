@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import RideResultCard from '../components/RideResultCard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import useHomeUserData from '../../hooks/useHomeUserData';
 
 // Updated interface to match backend response structure
 interface EnrichedRideResult {
@@ -43,6 +44,9 @@ const SearchResultsScreen = () => {
   
   const [rides, setRides] = useState<EnrichedRideResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Get user data to access gender
+  const { userData } = useHomeUserData();
   
   // Extract search parameters
   const searchParams = {
@@ -159,6 +163,8 @@ const SearchResultsScreen = () => {
 
   const { weekday, monthDay, year } = formatDate(searchParams.date);
 
+  console.log('🔍 SearchResultsScreen - User gender:', userData?.gender);
+
   if (isLoading) {
     return (
       <View className="flex-1 bg-white pt-[70px] items-center justify-center">
@@ -272,6 +278,7 @@ const SearchResultsScreen = () => {
                   vehicleModel={vehicle?.model}
                   vehicleColor={vehicle?.color}
                   vehiclePlateNumber={vehicle?.plateNumber}
+                  userGender={userData?.gender}
                 />
               );
             })

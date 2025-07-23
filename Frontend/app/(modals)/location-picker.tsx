@@ -33,7 +33,8 @@ const LocationPicker = () => {
     currentPickupName?: string;
     currentDropoffName?: string;
     context?: string;
-    stopoverIndex?: string; // Add stopover index parameter
+    stopoverIndex?: string;
+    currentStopovers?: string;
   }>();
   
   const { type, index, context, stopoverIndex } = params;
@@ -285,7 +286,12 @@ const LocationPicker = () => {
       navigationParams.dropoffLat = dropoff.lat.toString();
       navigationParams.dropoffLng = dropoff.lng.toString();
     }
-    
+
+    // Preserve currentStopovers param!
+    if (params.currentStopovers) {
+      navigationParams.currentStopovers = params.currentStopovers;
+    }
+
     // Add new location
     if (type === 'pickup') {
       navigationParams.pickupName = selectedLocation.name;
@@ -296,19 +302,16 @@ const LocationPicker = () => {
       navigationParams.dropoffLat = selectedLocation.latitude.toFixed(6);
       navigationParams.dropoffLng = selectedLocation.longitude.toFixed(6);
     } else if (type === 'stopover' && stopoverIndex) {
-      // Handle stopover location
       navigationParams.stopoverName = selectedLocation.name;
       navigationParams.stopoverLat = selectedLocation.latitude.toFixed(6);
       navigationParams.stopoverLng = selectedLocation.longitude.toFixed(6);
       navigationParams.stopoverIndex = stopoverIndex;
     }
 
-    // Add context to maintain form separation
     if (context) {
       navigationParams.context = context;
     }
 
-    // Navigate back with all params
     router.push({
       pathname: '/(tabs)/home',
       params: navigationParams

@@ -16,6 +16,10 @@ const RideDetailsScreen = () => {
   const [isBooking, setIsBooking] = useState(false);
   const [vehicleInfo, setVehicleInfo] = useState<any>(null);
 
+  // Extract user gender from params
+  const userGender = params.userGender as string;
+  const isFemale = userGender?.toLowerCase() === 'female';
+
   // Extract parameters with better type safety
   const rideDetails = {
     rideId: params.rideId as string,
@@ -40,6 +44,9 @@ const RideDetailsScreen = () => {
     vehicleColor: params.vehicleColor as string,
     vehiclePlateNumber: params.vehiclePlateNumber as string,
   };
+
+  // Check if user can book this ride
+  const canBookRide = !rideDetails.femaleOnly || isFemale;
 
   // Set vehicle info if available
   useEffect(() => {
@@ -77,8 +84,18 @@ const RideDetailsScreen = () => {
     return `${days[today.getDay()]}, ${today.getDate()} ${months[today.getMonth()]}`;
   };
 
-  // Book ride function that calls the backend - FIXED
+  // Book ride function that calls the backend
   const handleBookRide = async () => {
+    // Check gender restriction first
+    if (!canBookRide) {
+      Alert.alert(
+        'Booking Restricted', 
+        'This is a female-only ride. Only female users can book this ride.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     if (!rideDetails.rideId) {
       Alert.alert('Error', 'Invalid ride information');
       return;
@@ -451,27 +468,41 @@ const RideDetailsScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Bottom Book Button */}
+      {/* Bottom Book Button - Enhanced with gender restriction */}
       <View className="bg-white px-4 py-4 border-t border-gray-200">
-        <Pressable 
-          onPress={handleBookRide}
-          className="bg-[#00BD5F] py-4 rounded-xl items-center flex-row justify-center"
-          disabled={isBooking}
-          style={{ opacity: isBooking ? 0.7 : 1 }}
-        >
-          {isBooking ? (
-            <>
-              <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+        {canBookRide ? (
+          <Pressable 
+            onPress={handleBookRide}
+            className="bg-[#00BD5F] py-4 rounded-xl items-center flex-row justify-center"
+            disabled={isBooking}
+            style={{ opacity: isBooking ? 0.7 : 1 }}
+          >
+            {isBooking ? (
+              <>
+                <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+                <Text className="text-white text-lg font-[Afacad] font-semibold">
+                  Booking...
+                </Text>
+              </>
+            ) : (
               <Text className="text-white text-lg font-[Afacad] font-semibold">
-                Booking...
+                Book {passengerCount} seat{passengerCount !== 1 ? 's' : ''} for {((rideDetails.price || 0) * passengerCount).toFixed(1)} AED
               </Text>
-            </>
-          ) : (
-            <Text className="text-white text-lg font-[Afacad] font-semibold">
-              Book {passengerCount} seat{passengerCount !== 1 ? 's' : ''} for {((rideDetails.price || 0) * passengerCount).toFixed(1)} AED
+            )}
+          </Pressable>
+        ) : (
+          <View className="bg-gray-300 py-4 rounded-xl items-center">
+            <View className="flex-row items-center">
+              <Ionicons name="woman" size={20} color="#666" style={{ marginRight: 8 }} />
+              <Text className="text-gray-600 text-lg font-[Afacad] font-semibold">
+                Female-Only Ride - Booking Not Available
+              </Text>
+            </View>
+            <Text className="text-gray-500 text-sm font-[Afacad] mt-1">
+              This ride is restricted to female passengers only
             </Text>
-          )}
-        </Pressable>
+          </View>
+        )}
       </View>
     </View>
   );

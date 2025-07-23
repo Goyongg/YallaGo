@@ -20,7 +20,7 @@ interface StopoverData {
   };
 }
 
-const CreateRideForm: React.FC = () => {
+const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
   const params = useGlobalSearchParams();
   
   const [from, setFrom] = useState('');
@@ -37,19 +37,49 @@ const CreateRideForm: React.FC = () => {
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   const [recommendedPrice, setRecommendedPrice] = useState<number | null>(null);
 
+  const isFemale = userGender?.toLowerCase() === 'female';
+
+  console.log('🚗 CreateRideForm Debug:');
+  console.log('🚗 - userGender prop:', userGender);
+  console.log('🚗 - userGender type:', typeof userGender);
+  console.log('🚗 - userGender?.toLowerCase():', userGender?.toLowerCase());
+  console.log('🚗 - isFemale result:', isFemale);
+
   // Handle location data from location picker - only for create context
   useFocusEffect(
     useCallback(() => {
-      // console.log('useFocusEffect triggered with params:', params);
-      
+      // If all location params are undefined, do nothing
+      if (
+        !params.pickupName &&
+        !params.dropoffName &&
+        !params.stopoverName &&
+        !params.currentStopovers
+      ) {
+        return;
+      }
+      console.log('useFocusEffect triggered with params:', params);
+
       // Only process if the context is 'create' or undefined (for backward compatibility)
       if (params.context === 'search') return;
 
       let shouldClearParams = false;
 
+      // Restore stopovers from params if present
+      let latestStopovers: StopoverData[] = stopovers;
+      if (params.currentStopovers) {
+        try {
+          const parsed = JSON.parse(params.currentStopovers as string);
+          if (Array.isArray(parsed)) {
+            latestStopovers = parsed;
+            setStopovers(parsed);
+          }
+        } catch (e) {
+          console.warn('Failed to parse currentStopovers', e);
+        }
+      }
+
       // Handle pickup location
       if (params.pickupName && params.pickupLat && params.pickupLng) {
-        console.log('Processing pickup location:', params.pickupName);
         const locationData: LocationData = {
           name: params.pickupName as string,
           lat: parseFloat(params.pickupLat as string),
@@ -62,7 +92,6 @@ const CreateRideForm: React.FC = () => {
 
       // Handle dropoff location
       if (params.dropoffName && params.dropoffLat && params.dropoffLng) {
-        console.log('Processing dropoff location:', params.dropoffName);
         const locationData: LocationData = {
           name: params.dropoffName as string,
           lat: parseFloat(params.dropoffLat as string),
@@ -74,43 +103,39 @@ const CreateRideForm: React.FC = () => {
       }
 
       // Handle stopover location
-      if (params.stopoverName && params.stopoverLat && params.stopoverLng && params.stopoverIndex) {
-        console.log('Processing stopover location:', params.stopoverName, 'at index:', params.stopoverIndex);
-        const stopoverIndex = parseInt(params.stopoverIndex as string);
+      if (
+        params.stopoverName &&
+        params.stopoverLat &&
+        params.stopoverLng &&
+        params.stopoverIndex
+      ) {
+        const stopoverIndex = parseInt(params.stopoverIndex as string, 10);
         const stopoverData: StopoverData = {
           name: params.stopoverName as string,
           coordinates: {
             lat: parseFloat(params.stopoverLat as string),
             lng: parseFloat(params.stopoverLng as string),
-          }
+          },
         };
-        
-        console.log('Stopover data to set:', stopoverData);
-        console.log('Current stopovers before update:', stopovers);
-        
-        // Update the specific stopover - FIXED VERSION
+
+        // Use latestStopovers array from params (if any)
         setStopovers(prev => {
-          // Create a new array to avoid mutation
-          const updated = [...prev];
-          console.log('Updating stopover at index:', stopoverIndex, 'in array of length:', updated.length);
-          
-          // Ensure the array is large enough for the index
-          while (updated.length <= stopoverIndex) {
-            updated.push({ name: '', coordinates: { lat: 0, lng: 0 } });
+          const arr = Array.isArray(latestStopovers) ? [...latestStopovers] : [...prev];
+          if (stopoverIndex < arr.length) {
+            arr[stopoverIndex] = stopoverData;
+          } else if (stopoverIndex === arr.length) {
+            arr.push(stopoverData);
+          } else {
+            console.warn("Trying to set a stopover at a too high index");
+            return prev;
           }
-          
-          // Update the specific stopover at the given index
-          updated[stopoverIndex] = stopoverData;
-          
-          console.log('Final updated stopovers array:', updated);
-          return updated;
+          return arr;
         });
         shouldClearParams = true;
       }
 
       // Clear all location params at once to prevent re-processing
       if (shouldClearParams) {
-        console.log('Clearing location parameters');
         router.setParams({
           pickupName: undefined,
           pickupLat: undefined,
@@ -122,6 +147,7 @@ const CreateRideForm: React.FC = () => {
           stopoverLat: undefined,
           stopoverLng: undefined,
           stopoverIndex: undefined,
+          currentStopovers: undefined,
         });
       }
     }, [params])
@@ -132,6 +158,12 @@ const CreateRideForm: React.FC = () => {
         dateTime.getHours(),
       ).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`
     : 'Select date & time';
+
+  useEffect(() => {
+    if (!isFemale && femaleOnly) {
+      setFemaleOnly(false);
+    }
+  }, [isFemale, femaleOnly]);
 
   const addStopover = () => {
     if (stopovers.length < 3) {
@@ -164,6 +196,7 @@ const CreateRideForm: React.FC = () => {
       currentPickupName: from,
       currentDropoffName: to,
       context: 'create', // Add context to differentiate from search form
+      currentStopovers: JSON.stringify(stopovers),
     };
 
     // Add stopover index if it's a stopover selection
@@ -542,14 +575,23 @@ const CreateRideForm: React.FC = () => {
               </View>
             </View>
 
-            {/* Female-only toggle */}
+            {/* Female-only Toggle - Show but disable for non-female users */}
             <View className="flex-row justify-between items-center mt-4 mx-4">
-              <Text className="text-xl font-[Afacad] text-gray-700">Female-only</Text>
+              <View className="flex-1">
+                <Text className="text-xl font-[Afacad] text-gray-700">Female-only</Text>
+                {!isFemale && (
+                  <Text className="text-sm font-[Afacad] text-gray-500 mt-1">
+                    Only available for female users
+                  </Text>
+                )}
+              </View>
               <Switch
                 value={femaleOnly}
-                onValueChange={setFemaleOnly}
+                onValueChange={isFemale ? setFemaleOnly : undefined}
                 thumbColor={femaleOnly ? '#00BD5F' : '#f4f3f4'}
                 trackColor={{ false: '#ccc', true: '#A8E2C5' }}
+                disabled={!isFemale}
+                style={{ opacity: isFemale ? 1 : 0.5 }}
               />
             </View>
 

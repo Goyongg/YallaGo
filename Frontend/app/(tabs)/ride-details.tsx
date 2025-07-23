@@ -86,7 +86,7 @@ const RideDetailsScreen = () => {
   const [reviewTarget, setReviewTarget] = useState<{ name: string; id: string } | null>(null);
 
   const hasFetchedRef = useRef(false);
-    useEffect(() => {
+  useEffect(() => {
     if (!hasFetchedRef.current) {
       refetch();
       hasFetchedRef.current = true;

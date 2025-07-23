@@ -35,13 +35,12 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
   };
 
   const handleCardPress = () => {
+    // Navigate to the new driver-specific ride details page
     router.push({
-      pathname: '/ride-details',
+      pathname: '/(tabs)/driver-ride-details',
       params: {
         rideId: id,
-        userRole: 'driver',
-        passengerCount: bookedSeats.toString(),
-      }
+      },
     });
   };
 
@@ -98,7 +97,7 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
   };
 
   const handleDeleteRide = async () => {
-    if (hasBookings) {
+    if (hasBookings || bookedSeats > 0) {
       Alert.alert(
         'Cannot Delete',
         'This ride has passenger bookings and cannot be deleted. You can only delete rides with no bookings.',
@@ -143,8 +142,13 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
     }
   };
 
+  // 🔧 FIXED LOGIC: Show delete button for upcoming rides with no bookings
+  // Show end button for departed rides
   const shouldShowEndButton = status?.toLowerCase() === 'departed';
-  const shouldShowDeleteButton = status?.toLowerCase() === 'upcoming' && !hasBookings;
+  const shouldShowDeleteButton = status?.toLowerCase() === 'upcoming' && !hasBookings && bookedSeats === 0;
+  
+  // Show action buttons if there are any actions available OR if there are passengers
+  const shouldShowActionSection = shouldShowEndButton || shouldShowDeleteButton || bookedSeats > 0;
 
   return (
     <Pressable
@@ -216,36 +220,37 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
           )}
         </View>
 
-        {/* Tap to view details hint with delete button */}
-        {(shouldShowEndButton || shouldShowDeleteButton || bookedSeats > 0) && (
+        {/* Tap to view details hint with action buttons - FIXED CONDITION */}
+        {shouldShowActionSection && (
           <View className="pt-2 border-t border-gray-200 flex-row justify-between items-center">
             <Text className="text-xs text-gray-500 font-[Afacad] flex-1 text-center">
               Tap to view ride details
             </Text>
-            {shouldShowDeleteButton && (
-              <Pressable
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleDeleteRide();
-                }}
-                disabled={loading || actionLoading !== null}
-                className={`ml-2 px-2 py-1 rounded-lg flex-row items-center ${
-                  loading || actionLoading !== null 
-                    ? 'bg-gray-300' 
-                    : 'bg-red-500'
-                }`}
-              >
-                {actionLoading === 'delete' ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Ionicons name="trash-outline" size={18} color="white" />
-                )}
-              </Pressable>
-            )}
+            
+            {/* Action buttons container */}
+            <View className="flex-row items-center" style={{ gap: 8 }}>
+              {shouldShowDeleteButton && (
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleDeleteRide();
+                  }}
+                  disabled={loading || actionLoading !== null}
+                  className={`px-2 py-1 rounded-lg flex-row items-center ${
+                    loading || actionLoading !== null 
+                      ? 'bg-gray-300' 
+                      : 'bg-red-500'
+                  }`}
+                >
+                  {actionLoading === 'delete' ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={18} color="white" />
+                  )}
+                </Pressable>
+              )}
 
-            {/* End Ride Button Row (if departed) */}
-            {shouldShowEndButton && (
-              <View className="flex-row justify-end">
+              {shouldShowEndButton && (
                 <Pressable
                   onPress={(e) => {
                     e.stopPropagation();
@@ -269,8 +274,8 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
                     </>
                   )}
                 </Pressable>
-              </View>
-            )}
+              )}
+            </View>
           </View>
         )}
       </View>

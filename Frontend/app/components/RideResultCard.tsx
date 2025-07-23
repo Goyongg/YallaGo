@@ -21,6 +21,7 @@ interface RideResultCardProps {
   vehicleModel?: string;
   vehicleColor?: string;
   vehiclePlateNumber?: string;
+  userGender?: string;
 }
 
 const RideResultCard: React.FC<RideResultCardProps> = ({
@@ -40,8 +41,12 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
   vehicleModel,
   vehicleColor,
   vehiclePlateNumber,
+  userGender,
 }) => {
   const router = useRouter();
+
+  const isFemale = userGender?.toLowerCase() === 'female';
+  const canBookRide = !femaleOnly || isFemale;
 
   const handleCardPress = () => {
     if (rideId) {
@@ -65,8 +70,15 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
           vehicleModel: vehicleModel || '',
           vehicleColor: vehicleColor || '',
           vehiclePlateNumber: vehiclePlateNumber || '',
+          userGender: userGender || 'prefer_not_to_say',
         }
       });
+    }
+  };
+
+  const handleBookPress = () => {
+    if (canBookRide) {
+      handleCardPress();
     }
   };
 
@@ -122,13 +134,18 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
       </View>
 
       {/* Badges Row */}
-      {femaleOnly && (
-        <View className="flex-row mb-2">
-          <View className="bg-pink-100 px-2 py-1 rounded-full">
+      <View className="flex-row mb-2 flex-wrap">
+        {femaleOnly && (
+          <View className="bg-pink-100 px-2 py-1 rounded-full mr-2 mb-1">
             <Text className="text-xs text-pink-600 font-[Afacad] font-medium">Female-only</Text>
           </View>
-        </View>
-      )}
+        )}
+        {femaleOnly && !isFemale && (
+          <View className="bg-gray-100 px-2 py-1 rounded-full mb-1">
+            <Text className="text-xs text-gray-600 font-[Afacad]">Not available for your gender</Text>
+          </View>
+        )}
+      </View>
 
       {/* Bottom Row: Driver Info */}
       <View className="border-t border-gray-300 mt-2 pt-4 pl-4 flex-row items-center justify-between">
@@ -152,15 +169,23 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
           </View>
         </View>
 
-        {/* Book Now Button */}
-        <Pressable 
-          onPress={handleCardPress}
-          className="bg-[#00BD5F] px-4 py-2 rounded-xl"
-        >
-          <Text className="text-white font-[Afacad] text-sm font-semibold">
-            Book Now
-          </Text>
-        </Pressable>
+        {/* Conditional Book Now Button */}
+        {canBookRide ? (
+          <Pressable 
+            onPress={handleBookPress}
+            className="bg-[#00BD5F] px-4 py-2 rounded-xl"
+          >
+            <Text className="text-white font-[Afacad] text-sm font-semibold">
+              Book Now
+            </Text>
+          </Pressable>
+        ) : (
+          <View className="bg-gray-300 px-4 py-2 rounded-xl">
+            <Text className="text-gray-600 font-[Afacad] text-sm font-semibold">
+              Female Only
+            </Text>
+          </View>
+        )}
       </View>
     </Pressable>
   );
