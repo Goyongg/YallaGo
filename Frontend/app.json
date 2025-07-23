@@ -16,7 +16,7 @@
       }
     },
     "android": {
-      "googleServicesFile": "./android/app/google-services.json",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -45,7 +45,8 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "react-native-edge-to-edge"
     ],
     "experiments": {
       "typedRoutes": true
@@ -53,8 +54,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "e8ae0074-f7ca-448f-9155-fe7f95cd0933"
+        "projectId": "8a8dac78-9ee1-4135-8d2d-a040c0a17091"
       }
-    }
+    },
+    "owner": "nexoratech"
   }
 }
