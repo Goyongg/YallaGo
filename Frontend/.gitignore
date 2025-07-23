@@ -55,6 +55,9 @@ android/.externalNativeBuild/
 *.jks
 *.keystore
 android/app/build/
+android/app/build/generated/
+android/.cxx/
+android/app/.cxx/
 *.apk
 *.ap_
 *.so
