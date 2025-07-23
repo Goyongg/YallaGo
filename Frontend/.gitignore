@@ -58,6 +58,8 @@ android/app/build/
 android/app/build/generated/
 android/.cxx/
 android/app/.cxx/
+android/app/build/generated/
+node_modules/*/android/build/generated/
 *.apk
 *.ap_
 *.so
