@@ -209,9 +209,14 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
             )}
           </View>
           {status && (
-            <Text className={`text-sm text-white px-3 py-1 rounded-full font-semibold ${getStatusColor(status)}`}>
+            <View className="flex-grow items-end">
+            <Text
+              className={`text-center text-sm text-white px-3 py-1 rounded-full font-semibold ${getStatusColor(status)}`}
+              style={{ minWidth: 85 }}
+            >
               {status}
             </Text>
+          </View>
           )}
         </View>
 

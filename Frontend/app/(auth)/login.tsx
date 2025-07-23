@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, PixelRatio } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import auth from '@react-native-firebase/auth';
 import { isValidEmail, isValidPassword } from '@/utils/validation';
-
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export const loginUser = async (email: string, password: string) => {
   const userCredential = await auth().signInWithEmailAndPassword(email, password);
@@ -83,6 +83,7 @@ const Login = () => {
             onChangeText={setPassword}
             placeholderTextColor="#A0AEC0"
             secureTextEntry
+            autoCapitalize="none"
           />
         </View>
 
@@ -103,7 +104,7 @@ const Login = () => {
         {loading ? (
           <ActivityIndicator color="#ffffff" />
         ) : (
-          <Text className="text-white font-semibold text-2xl">Log in</Text>
+          <Text adjustsFontSizeToFit className="text-white font-semibold text-2xl">Log in</Text>
         )}
       </Pressable>
     </KeyboardAvoidingView>
