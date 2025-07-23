@@ -357,15 +357,6 @@ const useDriverRides = (): UseDriverRidesReturn => {
     }
   };
 
-  // Refetch function for manual refresh
-  const refetch = () => {
-    fetchDriverRides();
-  };
-
-  useEffect(() => {
-    fetchDriverRides();
-  }, []);
-
   // FIXED FILTERING LOGIC - Include 'booked' status as upcoming
   const upcomingRides = rides.filter(ride => {
     const isUpcoming = ride.status === 'in-progress' || 
@@ -393,7 +384,7 @@ const useDriverRides = (): UseDriverRidesReturn => {
     historyRides,
     loading,
     error,
-    refetch
+    refetch: fetchDriverRides,
   };
 };
 

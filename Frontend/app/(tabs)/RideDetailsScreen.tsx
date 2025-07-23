@@ -43,7 +43,20 @@ const RideDetailsScreen = () => {
     vehicleModel: params.vehicleModel as string,
     vehicleColor: params.vehicleColor as string,
     vehiclePlateNumber: params.vehiclePlateNumber as string,
+
+    // Parse polyline back from stringyfied version after getting passed from router
+    polyline: (() => {
+      try {
+        return params.polyline ? JSON.parse(params.polyline as string) : [];
+      } catch (err) {
+        console.warn('Failed to parse polyline:', err);
+        return [];
+      }
+    })(),
   };
+  
+  console.log('FROM:', rideDetails.fromLat, rideDetails.fromLng);
+  console.log('TO:', rideDetails.toLat, rideDetails.toLng);
 
   // Check if user can book this ride
   const canBookRide = !rideDetails.femaleOnly || isFemale;
@@ -245,7 +258,7 @@ const RideDetailsScreen = () => {
             {/* Route Polyline */}
             {routeCoordinates.length > 1 && (
               <Polyline
-                coordinates={routeCoordinates}
+                coordinates={rideDetails.polyline}
                 strokeColor="#00BD5F"
                 strokeWidth={4}
                 lineDashPattern={[1]}

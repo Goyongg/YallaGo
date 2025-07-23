@@ -32,6 +32,7 @@ interface DetailedRideInfo {
   departureTime: any; // Firestore Timestamp
   coordinates?: any; // More flexible to handle both standard and Firestore GeoPoint formats
   endGeo?: any; // More flexible to handle both standard and Firestore GeoPoint formats
+  polyline?: string;
   bookings?: Array<{
     passengerName: string;
     phoneNumber: string;
@@ -60,21 +61,23 @@ const DriverRideDetailsScreen = () => {
   const { rides, loading: ridesLoading, refetch } = useDriverRides();
   const { startRide, endRide, loading: actionLoading } = useRideActions();
   
-  const [currentLocation, setCurrentLocation] = useState({
-    latitude: 25.2048, // Default to Dubai
-    longitude: 55.2708,
-  });
-  
-  const [routeCoordinates, setRouteCoordinates] = useState([
-    { latitude: 25.2048, longitude: 55.2708 }, // Start point (placeholder)
-    { latitude: 25.1972, longitude: 55.2744 }, // End point (placeholder)
-  ]);
+  const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
+  const [polylineCoords, setPolylineCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   
   const [passengers, setPassengers] = useState<PassengerInfo[]>([]);
   const [rideData, setRideData] = useState<any>(null);
   const [detailedRideInfo, setDetailedRideInfo] = useState<DetailedRideInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Fetch driver rides
+  const hasFetchedRef = useRef(false);
+    useEffect(() => {
+    if (!hasFetchedRef.current) {
+      refetch();
+      hasFetchedRef.current = true;
+    }
+  }, []);
 
   useEffect(() => {
     if (!ridesLoading && rides.length > 0 && rideId) {
@@ -133,6 +136,10 @@ const DriverRideDetailsScreen = () => {
         });
 
         const detailedInfo: DetailedRideInfo = response.data;
+
+        console.log("Coordinates:", detailedInfo.coordinates);
+        console.log("EndGeo:", detailedInfo.endGeo);
+
         console.log('🚗 Fetched detailed ride info:', detailedInfo);
         setDetailedRideInfo(detailedInfo);
         processDetailedRideInfo(detailedInfo);
@@ -172,17 +179,30 @@ const DriverRideDetailsScreen = () => {
   };
 
   const processDetailedRideInfo = (detailedInfo: DetailedRideInfo) => {
-    // Update coordinates if available
+    // Process ride start and end coordinates
     if (detailedInfo.coordinates && detailedInfo.endGeo) {
       const startCoords = {
-        latitude: detailedInfo.coordinates.latitude || detailedInfo.coordinates._latitude || 25.2048,
-        longitude: detailedInfo.coordinates.longitude || detailedInfo.coordinates._longitude || 55.2708,
+        latitude: detailedInfo.coordinates._latitude || 25.2048,
+        longitude: detailedInfo.coordinates._longitude || 55.2708,
       };
       const endCoords = {
-        latitude: detailedInfo.endGeo.latitude || detailedInfo.endGeo._latitude || 25.1972,
-        longitude: detailedInfo.endGeo.longitude || detailedInfo.endGeo._longitude || 55.2744,
+        latitude: detailedInfo.endGeo._latitude || 25.1972,
+        longitude: detailedInfo.endGeo._longitude || 55.2744,
       };
+      console.log('📍 Route coordinates set:', [startCoords, endCoords]);
       setRouteCoordinates([startCoords, endCoords]);
+    }
+    
+    // Parse polyline
+    if (detailedInfo.polyline) {  
+      try {
+        const parsed = JSON.parse(detailedInfo.polyline);
+        if (Array.isArray(parsed)) {
+          setPolylineCoords(parsed);
+        }
+      } catch (err) {
+        console.warn('Failed to parse polyline from string:', err);
+      }
     }
 
     // Update passengers if available
@@ -440,20 +460,14 @@ const DriverRideDetailsScreen = () => {
             showsUserLocation={true}
             showsMyLocationButton={false}
           >
-            {/* Current Location Marker */}
-            <Marker
-              coordinate={currentLocation}
-              title="Your Location"
-              pinColor="blue"
-            />
             
             {/* Route Markers */}
-            <Marker
+            <Marker // start marker
               coordinate={routeCoordinates[0]}
               title="Start"
               pinColor="green"
             />
-            <Marker
+            <Marker // end marker
               coordinate={routeCoordinates[routeCoordinates.length - 1]}
               title="End"
               pinColor="red"
@@ -461,7 +475,7 @@ const DriverRideDetailsScreen = () => {
             
             {/* Route Polyline */}
             <Polyline
-              coordinates={routeCoordinates}
+              coordinates={polylineCoords}
               strokeColor="#00BD5F"
               strokeWidth={3}
             />

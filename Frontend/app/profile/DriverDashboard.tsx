@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,15 @@ const DriverDashboard = () => {
   const router = useRouter();
   
   const { upcomingRides, historyRides, loading, error, refetch } = useDriverRides();
+  
+  // Fetch driver rides
+  const hasFetchedRef = useRef(false);
+    useEffect(() => {
+    if (!hasFetchedRef.current) {
+      refetch();
+      hasFetchedRef.current = true;
+    }
+  }, []);
 
   // Group history rides by date
   const groupRidesByDate = (rides: typeof historyRides) => {

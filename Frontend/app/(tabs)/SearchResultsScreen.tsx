@@ -12,12 +12,12 @@ interface EnrichedRideResult {
     startLocation: string;
     endLocation: string;
     coordinates: {
-      latitude: number;
-      longitude: number;
+      _latitude: number;
+      _longitude: number;
     };
     endGeo: {
-      latitude: number;
-      longitude: number;
+      _latitude: number;
+      _longitude: number;
     };
     departureTime: any; // Firestore Timestamp
     durationSeconds: number;
@@ -25,6 +25,7 @@ interface EnrichedRideResult {
     availableSeats: number;
     femaleOnly?: boolean;
     waypoints?: any[];
+    polyline?: string;
   };
   driver: {
     name: string;
@@ -39,6 +40,7 @@ interface EnrichedRideResult {
 }
 
 const SearchResultsScreen = () => {
+
   const router = useRouter();
   const params = useLocalSearchParams();
   
@@ -243,6 +245,8 @@ const SearchResultsScreen = () => {
             /* Ride Results - Updated to handle enriched data structure */
             rides.map((enrichedRide, index) => {
               const { ride, driver, vehicle } = enrichedRide;
+              console.log('Ride coordinates:', ride.coordinates);
+              console.log('Ride endGeo:', ride.endGeo);
               
               if (!ride) {
                 console.warn('Missing ride data for index:', index);
@@ -265,8 +269,13 @@ const SearchResultsScreen = () => {
                   arrivalTime={arrTime}
                   duration={duration}
                   from={ride.startLocation}
+                  fromLat={ride.coordinates._latitude.toString()}
+                  fromLng={ride.coordinates._longitude.toString()}
                   to={ride.endLocation}
+                  toLat={ride.endGeo._latitude.toString()}
+                  toLng={ride.endGeo._longitude.toString()}
                   price={ride.pricePerSeat.toString()}
+                  polyline={ride.polyline} // send polyline
                   driverName={driverName}
                   driverRating={driverRating}
                   driverImage=""

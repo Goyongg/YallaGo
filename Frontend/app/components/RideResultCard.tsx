@@ -8,7 +8,11 @@ interface RideResultCardProps {
   arrivalTime: string;
   duration: string;
   from: string;
+  fromLat: string;
+  fromLng: string;
   to: string;
+  toLat: string;
+  toLng: string;
   price: string;
   driverName: string;
   driverRating: number;
@@ -22,6 +26,7 @@ interface RideResultCardProps {
   vehicleColor?: string;
   vehiclePlateNumber?: string;
   userGender?: string;
+  polyline?: string;
 }
 
 const RideResultCard: React.FC<RideResultCardProps> = ({
@@ -29,7 +34,11 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
   arrivalTime,
   duration,
   from,
+  fromLat,
+  fromLng,
   to,
+  toLat,
+  toLng,
   price,
   driverName,
   driverRating,
@@ -42,6 +51,7 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
   vehicleColor,
   vehiclePlateNumber,
   userGender,
+  polyline,
 }) => {
   const router = useRouter();
 
@@ -59,8 +69,13 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
           arrivalTime,
           duration,
           from,
+          fromLat,
+          fromLng,
           to,
+          toLat,
+          toLng,
           price,
+          polyline, // send polyline as string
           driverName,
           driverRating: driverRating.toString(),
           availableSeats: availableSeats?.toString(),
