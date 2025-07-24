@@ -240,11 +240,11 @@ const RideDetailsScreen = () => {
         status: safeString(bookingItem.status) || 'confirmed',
         coordinates: bookingItem.ride?.coordinates,
         endGeo: bookingItem.ride?.endGeo,
-        polyline: bookingItem.ride?.polyline, // 🔧 FIX: Ensure this is preserved
+        polyline: bookingItem.ride?.polyline,
       };
       setRideData(ride);
 
-      // 🔧 FIX: Use the main ride data for polyline, not booking-specific coordinates
+      // Use the main ride data for polyline, not booking-specific coordinates
       console.log('🗺️ Passenger booking - checking for polyline data:', {
         hasRide: !!bookingItem.ride,
         hasPolyline: !!bookingItem.ride?.polyline,
