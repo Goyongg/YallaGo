@@ -1,4 +1,4 @@
-// COMPLETE REPLACEMENT for useDriverRides.ts
+// useDriverRides.ts
 import { useEffect, useState } from 'react';
 import auth from '@react-native-firebase/auth';
 import axios, { AxiosError } from 'axios';
