@@ -4,6 +4,8 @@ import { CreateRidePassengerDto } from './dto/create-ridepassenger.dto';
 import { BookingStatus } from './enums/booking-status.enum';
 import { FirebaseDriverService } from 'src/firebase/firebase-driver.service';
 import { FirebaseNotificationsService } from 'src/firebase/firebase-notifications.service';
+import { omitFields, pickFields } from 'src/common/helpers/object.helpers';
+import { FirebaseUserService } from 'src/firebase/firebase-user.service';
 
 @Injectable()
 export class RidePassengersService {
@@ -11,13 +13,13 @@ export class RidePassengersService {
     constructor(
         private readonly firebase: FirebaseService,
         private readonly firebaseDriverService: FirebaseDriverService,
-        private readonly FirebaseNotificationsService: FirebaseNotificationsService
+        private readonly firebaseNotificationsService: FirebaseNotificationsService,
+        private readonly firebaseUserService: FirebaseUserService 
     ) {}
 
     async createBooking(createRidePassengerDto: CreateRidePassengerDto, firebaseUid: string) {
         // Check if booked seats are less than or equal to available seats
         await this.validateSeats(createRidePassengerDto.rideId, createRidePassengerDto.seatsBooked);
-        // Destructure to pull out startpoint and endpoint
         
         const bookRef = this.firebase.firestore.collection('bookings').doc();
         // Construct the booking data object
@@ -96,15 +98,39 @@ export class RidePassengersService {
             // Get the ride data
             const rideData = rideDoc.data()!;
 
-            // Push details of each booking into the array
-            bookings.push({
-                pickupPoint: data.pickupPoint,
-                dropOffPoint: data.dropOffPoint,
-                startGeo: data.startGeo,
-                endGeo: data.endGeo,
-                status: data.status,
-                date: rideData.departureTime,
-            });
+            if(data.status === BookingStatus.PENDING || data.status === BookingStatus.CONFIRMED || data.status === BookingStatus.ONGOING) {
+                // Fetch the ride document associated with this booking
+                const rideData = await this.firebaseDriverService.getRideById(data.rideId);
+                const redactedRideData = omitFields(rideData, ['distance', 'driverId', 'g', 'rideId', 'vehicleId', 'availableSeats', 'bookedSeats']);
+                
+                const driverData = await this.firebaseUserService.fetchUserData(rideData.driverId);
+                const redactedDriverData = pickFields(driverData, ['name', 'phoneNumber', 'averageRating']);
+
+                const vehicleData = await this.firebaseDriverService.fetchVehicleData(driverData.vehicleId);
+                const redactedVehicleData = omitFields(vehicleData, ['driverId', 'seats', 'vehicleId'])
+
+                // Push details of each booking into the array
+                bookings.push({
+                    ...redactedRideData,
+                    seatsBooked: data.seatsBooked,
+                    bookingPrice: data.bookingPrice,
+                    status: data.status,
+                    ...redactedDriverData,
+                    ...redactedVehicleData
+                });
+            }
+
+            if(data.status === BookingStatus.COMPLETED || data.status === BookingStatus.NO_SHOW || data.status === BookingStatus.CANCELLED) {
+                // Fetch the ride document associated with this booking
+                const rideData = await this.firebaseDriverService.getRideById(data.rideId);
+                const redactedRideData = pickFields(rideData, ['departureTime', 'durationSeconds', 'startLocation', 'endLocation', 'pricePerSeat']);
+                bookings.push({
+                    ...redactedRideData,
+                    seatsBooked: data.seatsBooked,
+                    bookingPrice: data.bookingPrice,
+                    status: data.status
+                })
+            }
         }
 
         // Return the compiled list of bookings
@@ -172,7 +198,7 @@ export class RidePassengersService {
         for (const token of tokens) {
             try {
                 // Attempt to send a push notification using Firebase Cloud Messaging
-                const response = await this.FirebaseNotificationsService.sendToDevice(
+                const response = await this.firebaseNotificationsService.sendToDevice(
                     token, // Target device token
                     '🚗 New Ride Booking', // Notification title
                     `Pickup: ${bookingData.pickupPoint} → Dropoff: ${bookingData.dropOffPoint}\nSeats Booked: ${bookingData.seatsBooked}` // Notification body

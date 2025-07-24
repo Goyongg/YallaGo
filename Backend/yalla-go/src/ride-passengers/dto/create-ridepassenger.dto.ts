@@ -10,4 +10,8 @@ export class CreateRidePassengerDto {
     @IsNotEmpty()
     @IsNumber()
     seatsBooked: number;
+
+    @IsNotEmpty()
+    @IsNumber()
+    bookingPrice: number;
 }
