@@ -18,6 +18,7 @@ import axios from 'axios';
 import useDriverRides from '../../hooks/useDriverRides';
 import useRideActions from '../../hooks/useRideActions';
 import { BASE_URL } from '@/config';
+import { ProcessedDriverRide } from '@/interfaces/interfaces';
 
 interface PassengerInfo {
   name: string;
@@ -25,20 +26,27 @@ interface PassengerInfo {
   seatsBooked: number;
 }
 
-interface DetailedRideInfo {
-  rideId: string;
-  startLocation: string;
-  endLocation: string;
-  departureTime: any; // Firestore Timestamp
-  coordinates?: any; // More flexible to handle both standard and Firestore GeoPoint formats
-  endGeo?: any; // More flexible to handle both standard and Firestore GeoPoint formats
+// Extended interface that might have additional fields from backend
+interface ExtendedRideData extends ProcessedDriverRide {
+  // Additional fields that might be available from the backend
+  coordinates?: {
+    latitude?: number;
+    longitude?: number;
+    _latitude?: number; // Firestore format
+    _longitude?: number; // Firestore format
+  };
+  endGeo?: {
+    latitude?: number;
+    longitude?: number;
+    _latitude?: number; // Firestore format
+    _longitude?: number; // Firestore format
+  };
   polyline?: string;
   bookings?: Array<{
     passengerName: string;
     phoneNumber: string;
     seatsBooked: number;
   }>;
-  status: string;
 }
 
 // ADDED: Safety utility functions
@@ -66,13 +74,18 @@ const DriverRideDetailsScreen = () => {
   
   const [passengers, setPassengers] = useState<PassengerInfo[]>([]);
   const [rideData, setRideData] = useState<any>(null);
-  const [detailedRideInfo, setDetailedRideInfo] = useState<DetailedRideInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Default coordinates for Dubai area
+  const defaultCoordinates = [
+    { latitude: 25.2048, longitude: 55.2708 }, // Start
+    { latitude: 25.1972, longitude: 55.2744 }  // End
+  ];
   
   // Fetch driver rides
   const hasFetchedRef = useRef(false);
-    useEffect(() => {
+  useEffect(() => {
     if (!hasFetchedRef.current) {
       refetch();
       hasFetchedRef.current = true;
@@ -94,17 +107,20 @@ const DriverRideDetailsScreen = () => {
       console.log('🚗 Available rides:', rides.length);
 
       // Find the ride in the driver rides data
-      const ride = rides.find((r: any) => r.id === rideId);
+      const ride = rides.find((r: ProcessedDriverRide) => r.id === rideId);
       
       if (!ride) {
         throw new Error('Ride not found in driver dashboard data');
       }
 
       console.log('🚗 Found ride:', ride);
-      setRideData(ride);
+      
+      // Cast to extended type for additional fields that might be available
+      const extendedRide = ride as ExtendedRideData;
+      setRideData(extendedRide);
 
-      // Try to fetch detailed information from the API
-      await fetchDetailedRideInfo(ride.id);
+      // Process the ride information
+      processRideInfo(extendedRide);
 
     } catch (err: any) {
       console.error('🚗 Error loading driver ride details:', err);
@@ -114,91 +130,49 @@ const DriverRideDetailsScreen = () => {
     }
   };
 
-  const fetchDetailedRideInfo = async (rideId: string) => {
-    try {
-      const user = auth().currentUser;
-      if (!user) {
-        console.log('🚗 No authenticated user');
-        return;
-      }
-
-      const idToken = await user.getIdToken();
+  const processRideInfo = (rideInfo: ExtendedRideData) => {
+    console.log('🗺️ Processing ride info for coordinates:', rideInfo);
+    
+    // Process ride start and end coordinates if available
+    if (rideInfo.coordinates && rideInfo.endGeo) {
+      // Extract coordinates with proper type checking
+      const startLat = rideInfo.coordinates._latitude || rideInfo.coordinates.latitude;
+      const startLng = rideInfo.coordinates._longitude || rideInfo.coordinates.longitude;
+      const endLat = rideInfo.endGeo._latitude || rideInfo.endGeo.latitude;
+      const endLng = rideInfo.endGeo._longitude || rideInfo.endGeo.longitude;
       
-      console.log('🚗 Fetching detailed ride info from API...');
-      
-      // Option 1: Try the specific ride endpoint (if it exists)
-      try {
-        const response = await axios.get(`${BASE_URL}/rides/${rideId}`, {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-          timeout: 10000,
-        });
-
-        const detailedInfo: DetailedRideInfo = response.data;
-
-        console.log("Coordinates:", detailedInfo.coordinates);
-        console.log("EndGeo:", detailedInfo.endGeo);
-
-        console.log('🚗 Fetched detailed ride info:', detailedInfo);
-        setDetailedRideInfo(detailedInfo);
-        processDetailedRideInfo(detailedInfo);
-        return;
-      } catch (specificError: any) {
-        console.log('🚗 Specific ride endpoint not available, trying alternative...');
-      }
-
-      // Option 2: Fallback to fetching all rides and finding the specific one
-      try {
-        const allRidesResponse = await axios.get(`${BASE_URL}/rides`, {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-          timeout: 10000,
-        });
-
-        const allRides = allRidesResponse.data;
-        const specificRide = allRides.find((ride: any) => ride.rideId === rideId);
+      // Only proceed if we have all required coordinates as numbers
+      if (typeof startLat === 'number' && typeof startLng === 'number' && 
+          typeof endLat === 'number' && typeof endLng === 'number') {
         
-        if (specificRide) {
-          console.log('🚗 Found ride in all rides data:', specificRide);
-          setDetailedRideInfo(specificRide);
-          processDetailedRideInfo(specificRide);
-        } else {
-          console.log('🚗 Ride not found in all rides data');
+        const startCoords = { latitude: startLat, longitude: startLng };
+        const endCoords = { latitude: endLat, longitude: endLng };
+        
+        console.log('📍 Route coordinates set from ride data:', [startCoords, endCoords]);
+        setRouteCoordinates([startCoords, endCoords]);
+        
+        // If no polyline, use these coordinates for the line
+        if (!rideInfo.polyline) {
+          setPolylineCoords([startCoords, endCoords]);
         }
-      } catch (allRidesError: any) {
-        console.error('🚗 Error fetching all rides:', allRidesError);
+      } else {
+        console.warn('🗺️ Invalid coordinates found, using defaults');
+        setRouteCoordinates(defaultCoordinates);
+        setPolylineCoords(defaultCoordinates);
       }
-
-    } catch (error: any) {
-      console.error('🚗 Error fetching detailed ride info:', error);
-      // Don't throw error here, just log it
-      console.log('🚗 Using basic ride data only');
-    }
-  };
-
-  const processDetailedRideInfo = (detailedInfo: DetailedRideInfo) => {
-    // Process ride start and end coordinates
-    if (detailedInfo.coordinates && detailedInfo.endGeo) {
-      const startCoords = {
-        latitude: detailedInfo.coordinates._latitude || 25.2048,
-        longitude: detailedInfo.coordinates._longitude || 55.2708,
-      };
-      const endCoords = {
-        latitude: detailedInfo.endGeo._latitude || 25.1972,
-        longitude: detailedInfo.endGeo._longitude || 55.2744,
-      };
-      console.log('📍 Route coordinates set:', [startCoords, endCoords]);
-      setRouteCoordinates([startCoords, endCoords]);
+    } else {
+      console.warn('🗺️ No coordinates found in ride data, using defaults');
+      setRouteCoordinates(defaultCoordinates);
+      setPolylineCoords(defaultCoordinates);
     }
     
-    // Parse polyline
-    if (detailedInfo.polyline) {  
+    // Parse polyline if available
+    if (rideInfo.polyline) {  
       try {
-        const parsed = JSON.parse(detailedInfo.polyline);
-        if (Array.isArray(parsed)) {
+        const parsed = JSON.parse(rideInfo.polyline);
+        if (Array.isArray(parsed) && parsed.length > 0) {
           setPolylineCoords(parsed);
+          console.log('📍 Polyline coordinates set:', parsed.length, 'points');
         }
       } catch (err) {
         console.warn('Failed to parse polyline from string:', err);
@@ -206,14 +180,18 @@ const DriverRideDetailsScreen = () => {
     }
 
     // Update passengers if available
-    if (detailedInfo.bookings && Array.isArray(detailedInfo.bookings)) {
-      const passengerList: PassengerInfo[] = detailedInfo.bookings.map((booking: any) => ({
+    if (rideInfo.bookings && Array.isArray(rideInfo.bookings)) {
+      const passengerList: PassengerInfo[] = rideInfo.bookings.map((booking: any) => ({
         name: safeString(booking.passengerName) || 'Unknown Passenger',
         phone: safeString(booking.phoneNumber) || '',
         seatsBooked: safeNumber(booking.seatsBooked),
       }));
       setPassengers(passengerList);
       console.log('🚗 Updated passengers:', passengerList.length);
+    } else {
+      // Clear passengers if no bookings
+      setPassengers([]);
+      console.log('🚗 No passengers found');
     }
   };
 

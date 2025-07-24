@@ -252,6 +252,13 @@ const useDriverRides = (): UseDriverRidesReturn => {
           safeDateString
         });
 
+        // Preserve coordinate data from backend
+        console.log(`🗺️ Preserving coordinate data for ride ${safeRideId}:`, {
+          coordinates: ride.coordinates,
+          endGeo: ride.endGeo,
+          polyline: ride.polyline ? 'Present' : 'Missing'
+        });
+
         const processedRide: ProcessedDriverRide = {
           id: safeRideId,
           from: safeStartLocation,
@@ -265,7 +272,12 @@ const useDriverRides = (): UseDriverRidesReturn => {
           bookedSeats,
           hasBookings,
           status: safeStatus,
-          date: safeDateString
+          date: safeDateString,
+          // Preserve location data from backend
+          coordinates: ride.coordinates,
+          endGeo: ride.endGeo,
+          polyline: ride.polyline,
+          bookings: ride.bookings
         };
 
         console.log(`🚗 Final processed ride ${safeRideId}:`, processedRide);
