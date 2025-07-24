@@ -5,20 +5,26 @@ import { FirebaseService } from "./firebase.service";
 export class FirebaseDriverService {
     constructor (private readonly firebase: FirebaseService) {}
 
-    // Private helper to get vehicleRef and vehicleSnap for a given vehicleId
-    async getVehicleSnapshot(vehicleId: string) {
+    async getVehicleRef(vehicleId: string){
         const vehRef = this.firebase.firestore.collection('vehicles').doc(vehicleId);
+
+        return vehRef;
+    }
+    
+    // Private helper to get vehicleRef and vehicleSnap for a given vehicleId
+    async getVehicleSnap(vehicleId: string) {
+        const vehRef = await this.getVehicleRef(vehicleId);
         const vehSnap = await vehRef.get();
 
         if (!vehSnap.exists) {
             throw new NotFoundException('Vehicle not found');
         }
 
-        return { vehRef, vehSnap };
+        return  vehSnap;
     }
 
     async fetchVehicleData(vehicleId: string) {
-        const { vehSnap } = await this.getVehicleSnapshot(vehicleId);
+        const vehSnap = await this.getVehicleSnap(vehicleId);
 
         const vehData = vehSnap.data();
         if (!vehData) {
@@ -63,14 +69,29 @@ export class FirebaseDriverService {
         }));
     }
 
-    // fetch ride by ride id
-    async getRideById(rideId: string) {
-        const rideDoc = await this.firebase.firestore.collection('rides').doc(rideId).get();
-        if (!rideDoc.exists) {
-            throw new NotFoundException('Ride does not exist');
+    async getRideRef(rideId: string){
+        const rideRef = this.firebase.firestore.collection('rides').doc(rideId);
+
+        return rideRef;
+    }
+
+    async getRideSnap(rideId: string){
+        const rideRef = await this.getRideRef(rideId)
+
+        const rideSnap = await rideRef.get();
+
+        if(!rideSnap.exists){
+            throw new NotFoundException('Ride does not exist')
         }
 
-        const rideData = rideDoc.data();
+        return rideSnap;
+    }
+
+    // fetch ride by ride id
+    async fetchRideData(rideId: string) {
+        const rideSnap = await this.getRideSnap(rideId)
+
+        const rideData = rideSnap.data();
         if (!rideData) {
             throw new NotFoundException('Ride data is undefined');
         }

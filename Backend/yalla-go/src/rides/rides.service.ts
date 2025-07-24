@@ -121,7 +121,7 @@ export class RidesService {
 
     private async calculateEcoPoints(rideId: string) {
         // Fetch the ride document from the 'rides' collection using the rideId
-        const rideData = await this.firebaseDriverService.getRideById(rideId);
+        const rideData = await this.firebaseDriverService.fetchRideData(rideId);
 
         // Get the distance in meters from the ride data
         const distance = rideData.distanceMeters;
@@ -150,7 +150,7 @@ export class RidesService {
     }
     
     async fetchRideById(rideId: string) {
-        const ride = await this.firebaseDriverService.getRideById(rideId);
+        const ride = await this.firebaseDriverService.fetchRideData(rideId);
 
         return omitFields(ride, ['g', 'distanceMeters', 'driverId', 'vehicleId']);
     }
@@ -434,7 +434,7 @@ export class RidesService {
 
     // Service method to handle the "Start Ride" action
     async startRide(rideId: string) {
-        const rideRef = this.firebase.firestore.collection('rides').doc(rideId);
+        const rideRef = await this.firebaseDriverService.getRideRef(rideId)
 
         // Update ride status to departed
         await rideRef.update({status: RideStatus.DEPARTED});
@@ -468,8 +468,7 @@ export class RidesService {
 
     // Service method to handle the "End Ride" action
     async endRide(rideId: string) {
-        const rideRef = this.firebase.firestore.collection('rides').doc(rideId);
-
+        const rideRef = await this.firebaseDriverService.getRideRef(rideId);
         // Update ride status to COMPLETED
         await rideRef.update({status: RideStatus.COMPLETED});
 
@@ -571,14 +570,9 @@ export class RidesService {
 
     // delete rides
     async deleteRide(rideId: string) {
-        const rideRef = this.firebase.firestore.collection('rides').doc(rideId);
-        const rideSnap = await rideRef.get();
+        const rideRef = await this.firebaseDriverService.getRideRef(rideId)
 
-        if(!rideSnap.exists) {
-            throw new NotFoundException('Ride doesnt exist');
-        }
-
-        const rideData = rideSnap.data();
+        const rideData = await this.firebaseDriverService.fetchRideData(rideId)
         if (!rideData) {
             throw new NotFoundException('Ride data is undefined');
         }
