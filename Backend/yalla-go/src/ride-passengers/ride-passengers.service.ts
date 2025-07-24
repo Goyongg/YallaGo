@@ -16,41 +16,28 @@ export class RidePassengersService {
 
     async createBooking(createRidePassengerDto: CreateRidePassengerDto, firebaseUid: string) {
         // Check if booked seats are less than or equal to available seats
-        await this.validateSeats(createRidePassengerDto.rideId, createRidePassengerDto.seatsBooked)
+        await this.validateSeats(createRidePassengerDto.rideId, createRidePassengerDto.seatsBooked);
         // Destructure to pull out startpoint and endpoint
-        const { startPoint, endPoint, ...rest} = createRidePassengerDto
-        
-        // Convert coordinates into GeoPoint
-        const startGeoPoint = new this.firebase.GeoPoint(
-            startPoint.lat, 
-            startPoint.lng
-        );
-        const endGeoPoint = new this.firebase.GeoPoint(
-            endPoint.lat, 
-            endPoint.lng
-        );
         
         const bookRef = this.firebase.firestore.collection('bookings').doc();
         // Construct the booking data object
         const bookingData = {
             bookingId: bookRef.id,
             passengerId: firebaseUid,
-            startGeo: startGeoPoint,
-            endGeo: endGeoPoint,
             // Spread the fields from the DTO
-            ...rest,
+            ...createRidePassengerDto,
             status: BookingStatus.PENDING
         }
 
         // Reduce available seats for the ride being booked based on the number of seats booked
-        await this.reduceRideSeats(createRidePassengerDto.rideId, createRidePassengerDto.seatsBooked)
+        await this.reduceRideSeats(createRidePassengerDto.rideId, createRidePassengerDto.seatsBooked);
 
         // Notify driver that a new booking has been made
-        await this.notifyDriver(bookingData)
+        await this.notifyDriver(bookingData);
 
         // Store the booking data in Firestore
         await bookRef.set(bookingData);
-        return { message: "Booking created successfully", bookingId: bookRef.id }
+        return { message: "Booking created successfully", bookingId: bookRef.id };
     };
 
     private async reduceRideSeats(rideId: string, seatsBooked: number){

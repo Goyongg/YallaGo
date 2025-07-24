@@ -35,8 +35,10 @@ export class RidesController {
     async
     @UseGuards(FirebaseAuthGuard)
     @Post('search')
-    async searchRides(@Body(ValidationPipe) searchRideDto: SearchRidesDto) {
-        return this.rideService.searchRides(searchRideDto);
+    async searchRides(@Body(ValidationPipe) searchRideDto: SearchRidesDto, @Req() req) {
+        const firebaseUid = req.user.uid; // extract user id from the request
+
+        return this.rideService.searchRides(searchRideDto, firebaseUid);
     }
 
     @UseGuards(FirebaseAuthGuard)
