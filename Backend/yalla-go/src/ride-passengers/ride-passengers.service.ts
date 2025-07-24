@@ -78,22 +78,13 @@ export class RidePassengersService {
         const bookings: any [] = [];
 
         // Iterate over each booking document
-        for (const doc of bookingSnapshot.docs) {
-            const data = doc.data();
-            // Fetch the ride document associated with this booking
-            const rideDoc = await this.firebase.firestore.collection('rides').doc(data.rideId).get();
+        for (const booking of bookingSnapshot.docs) {
+            const bookingData = booking.data();
 
-            if(!rideDoc.exists) {
-                throw new NotFoundException('Ride doesnt exist');
-            }
-
-            // Get the ride data
-            const rideData = rideDoc.data()!;
-
-            if(data.status === BookingStatus.PENDING || data.status === BookingStatus.CONFIRMED || data.status === BookingStatus.ONGOING) {
+            if(bookingData.status === BookingStatus.PENDING || bookingData.status === BookingStatus.CONFIRMED || bookingData.status === BookingStatus.ONGOING) {
                 // Fetch the ride document associated with this booking
-                const rideData = await this.firebaseDriverService.fetchRideData(data.rideId);
-                const redactedRideData = omitFields(rideData, ['distance', 'driverId', 'g', 'rideId', 'vehicleId', 'availableSeats', 'bookedSeats']);
+                const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
+                const redactedRideData = omitFields(rideData, ['distance', 'driverId', 'g', 'vehicleId', 'availableSeats', 'bookedSeats']);
                 
                 const driverData = await this.firebaseUserService.fetchUserData(rideData.driverId);
                 const redactedDriverData = pickFields(driverData, ['name', 'phoneNumber', 'averageRating']);
@@ -104,23 +95,30 @@ export class RidePassengersService {
                 // Push details of each booking into the array
                 bookings.push({
                     ...redactedRideData,
-                    seatsBooked: data.seatsBooked,
-                    bookingPrice: data.bookingPrice,
-                    status: data.status,
+                    bookingId: bookingData.bookingId,
+                    seatsBooked: bookingData.seatsBooked,
+                    bookingPrice: bookingData.bookingPrice,
+                    status: bookingData.status,
                     ...redactedDriverData,
                     ...redactedVehicleData
                 });
             }
 
-            if(data.status === BookingStatus.COMPLETED || data.status === BookingStatus.NO_SHOW || data.status === BookingStatus.CANCELLED) {
+            if(bookingData.status === BookingStatus.COMPLETED || bookingData.status === BookingStatus.NO_SHOW || bookingData.status === BookingStatus.CANCELLED) {
                 // Fetch the ride document associated with this booking
-                const rideData = await this.firebaseDriverService.fetchRideData(data.rideId);
-                const redactedRideData = pickFields(rideData, ['departureTime', 'durationSeconds', 'startLocation', 'endLocation', 'pricePerSeat']);
+                const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
+                const redactedRideData = pickFields(rideData, ['rideId', 'departureTime', 'durationSeconds', 'startLocation', 'endLocation', 'pricePerSeat']);
+
+                const driverData = await this.firebaseUserService.fetchUserData(rideData.driverId);
+                const redactedDriverData = pickFields(driverData, ['name', 'averageRating']);
+
                 bookings.push({
                     ...redactedRideData,
-                    seatsBooked: data.seatsBooked,
-                    bookingPrice: data.bookingPrice,
-                    status: data.status
+                    bookingId: bookingData.bookingId,
+                    seatsBooked: bookingData.seatsBooked,
+                    bookingPrice: bookingData.bookingPrice,
+                    status: bookingData.status,
+                    ...redactedDriverData
                 })
             }
         }
