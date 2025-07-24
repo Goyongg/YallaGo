@@ -272,6 +272,7 @@ export class RidesService {
             distanceMeters: distanceData.distanceMeters, //distance in meters
             polyline: distanceData.polyline,
             vehicleId: vehicleId,
+            bookedSeats: 0,
             ...rest, // spread out ride fields 
             status: RideStatus.IN_PROGRESS
         };
@@ -336,7 +337,7 @@ export class RidesService {
     }
 
     // search ride service
-    async searchRides(searchRidesDto: SearchRidesDto) {
+    async searchRides(searchRidesDto: SearchRidesDto, firebaseUid: string) {
         const radiusKm = 5; // pickup radius
         const toleranceKm = 1; // tolerance distance for destination matching
 
@@ -354,6 +355,9 @@ export class RidesService {
 
         // Step 2: filter rides by endpoint, seats, date
         const filtered = candidates.filter(ride => {
+            // Don't show driver's own ride on search
+            //if (ride.driverId === firebaseUid) return false;
+
             // Don't include rides that are departed, completed, or cancelled
             if (ride.status !== RideStatus.IN_PROGRESS) return false;
 

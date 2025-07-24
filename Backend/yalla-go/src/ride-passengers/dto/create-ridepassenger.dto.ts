@@ -8,22 +8,10 @@ export class CreateRidePassengerDto {
     rideId: string;
 
     @IsNotEmpty()
-    @IsString()
-    pickupPoint: string;
-
-    @ValidateNested()
-    @Type(() => Coordinates)
-    startPoint: Coordinates;
-
-    @IsNotEmpty()
-    @IsString()
-    dropOffPoint: string;
-
-    @ValidateNested()
-    @Type(() => Coordinates)
-    endPoint: Coordinates;
+    @IsNumber()
+    seatsBooked: number;
 
     @IsNotEmpty()
     @IsNumber()
-    seatsBooked: number;
+    bookingPrice: number;
 }
