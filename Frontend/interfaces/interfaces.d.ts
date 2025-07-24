@@ -275,6 +275,20 @@ export interface DriverRideResponse {
     seatsBooked: number;
     phoneNumber: string;
   }>;
+  // 🗺️ ADD: Coordinate fields that come from backend
+  coordinates?: {
+    latitude?: number;
+    longitude?: number;
+    _latitude?: number; // Firestore format
+    _longitude?: number; // Firestore format
+  };
+  endGeo?: {
+    latitude?: number;
+    longitude?: number;
+    _latitude?: number; // Firestore format
+    _longitude?: number; // Firestore format
+  };
+  polyline?: string; // JSON string of coordinate array
 }
 
 // Processed ride data for frontend components
@@ -292,6 +306,25 @@ export interface ProcessedDriverRide {
   hasBookings: boolean; // Whether ride has any passenger bookings
   status: string;
   date: string; // For grouping history (YYYY-MM-DD format)
+  // Add coordinate fields for map display
+  coordinates?: {
+    latitude?: number;
+    longitude?: number;
+    _latitude?: number; // Firestore format
+    _longitude?: number; // Firestore format
+  };
+  endGeo?: {
+    latitude?: number;
+    longitude?: number;
+    _latitude?: number; // Firestore format
+    _longitude?: number; // Firestore format
+  };
+  polyline?: string; // JSON string of coordinate array
+  bookings?: Array<{
+    passengerName: string;
+    phoneNumber: string;
+    seatsBooked: number;
+  }>;
 }
 
 // Driver rides hook return type

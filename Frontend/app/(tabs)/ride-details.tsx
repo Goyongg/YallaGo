@@ -1,4 +1,4 @@
-// app/ride-details.tsx - Updated to use real backend data
+// app/ride-details.tsx - Fixed to use single data source with polyline
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -48,14 +48,30 @@ interface RideData {
   departureTime: Date;
   status: string;
   coordinates?: {
-    latitude: number;
-    longitude: number;
+    latitude?: number;
+    longitude?: number;
+    _latitude?: number;
+    _longitude?: number;
   };
   endGeo?: {
-    latitude: number;
-    longitude: number;
+    latitude?: number;
+    longitude?: number;
+    _latitude?: number;
+    _longitude?: number;
   };
+  polyline?: string;
 }
+
+// Safety utility functions
+const safeString = (value: any): string => {
+  if (value === null || value === undefined) return '';
+  return String(value);
+};
+
+const safeNumber = (value: any): number => {
+  if (value === null || value === undefined || isNaN(Number(value))) return 0;
+  return Number(value);
+};
 
 const RideDetailsScreen = () => {
   const router = useRouter();
@@ -70,10 +86,14 @@ const RideDetailsScreen = () => {
     longitude: 55.2708,
   });
   
-  const [routeCoordinates, setRouteCoordinates] = useState([
-    { latitude: 25.2048, longitude: 55.2708 }, // Start point (placeholder)
-    { latitude: 25.1972, longitude: 55.2744 }, // End point (placeholder)
-  ]);
+  // Default coordinates (Dubai area)
+  const defaultCoordinates = [
+    { latitude: 25.2048, longitude: 55.2708 }, // Start
+    { latitude: 25.1972, longitude: 55.2744 }, // End
+  ];
+  
+  const [routeCoordinates, setRouteCoordinates] = useState(defaultCoordinates);
+  const [polylineCoords, setPolylineCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   
   const [passengers, setPassengers] = useState<PassengerInfo[]>([]);
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
@@ -121,9 +141,7 @@ const RideDetailsScreen = () => {
       });
 
       if (!targetItem) {
-        console.log('🚗 Ride not found in upcoming data, fetching from API...');
-        await fetchRideFromAPI();
-        return;
+        throw new Error('Ride not found in upcoming data');
       }
 
       console.log('🚗 Found ride data:', targetItem);
@@ -161,34 +179,25 @@ const RideDetailsScreen = () => {
       // Set ride data
       const ride: RideData = {
         rideId: rideItem.rideId,
-        from: rideItem.startLocation,
-        to: rideItem.endLocation,
+        from: safeString(rideItem.startLocation) || 'Unknown',
+        to: safeString(rideItem.endLocation) || 'Unknown',
         departureTime,
-        status: rideItem.status || 'in-progress',
+        status: safeString(rideItem.status) || 'in-progress',
         coordinates: rideItem.coordinates,
         endGeo: rideItem.endGeo,
+        polyline: rideItem.polyline,
       };
       setRideData(ride);
 
-      // Set route coordinates if available
-      if (rideItem.coordinates && rideItem.endGeo) {
-        const startCoords = {
-          latitude: rideItem.coordinates.latitude || rideItem.coordinates._latitude || 25.2048,
-          longitude: rideItem.coordinates.longitude || rideItem.coordinates._longitude || 55.2708,
-        };
-        const endCoords = {
-          latitude: rideItem.endGeo.latitude || rideItem.endGeo._latitude || 25.1972,
-          longitude: rideItem.endGeo.longitude || rideItem.endGeo._longitude || 55.2744,
-        };
-        setRouteCoordinates([startCoords, endCoords]);
-      }
+      // 🗺️ Process coordinates and polyline
+      processCoordinatesAndPolyline(rideItem);
 
       // Set passengers from bookings
       if (rideItem.bookings && Array.isArray(rideItem.bookings)) {
         const passengerList: PassengerInfo[] = rideItem.bookings.map((booking: any) => ({
-          name: booking.passengerName,
-          phone: booking.phoneNumber,
-          seatsBooked: booking.seatsBooked,
+          name: safeString(booking.passengerName) || 'Unknown Passenger',
+          phone: safeString(booking.phoneNumber) || '',
+          seatsBooked: safeNumber(booking.seatsBooked),
         }));
         setPassengers(passengerList);
       }
@@ -225,34 +234,47 @@ const RideDetailsScreen = () => {
       // Set ride data
       const ride: RideData = {
         rideId: bookingItem.bookingId,
-        from: bookingItem.pickupPoint,
-        to: bookingItem.dropOffPoint,
+        from: safeString(bookingItem.pickupPoint) || 'Unknown',
+        to: safeString(bookingItem.dropOffPoint) || 'Unknown',
         departureTime,
-        status: bookingItem.status || 'confirmed',
+        status: safeString(bookingItem.status) || 'confirmed',
         coordinates: bookingItem.ride?.coordinates,
         endGeo: bookingItem.ride?.endGeo,
+        polyline: bookingItem.ride?.polyline, // 🔧 FIX: Ensure this is preserved
       };
       setRideData(ride);
 
-      // Set route coordinates if available
-      if (bookingItem.bookingStart && bookingItem.bookingEnd) {
+      // 🔧 FIX: Use the main ride data for polyline, not booking-specific coordinates
+      console.log('🗺️ Passenger booking - checking for polyline data:', {
+        hasRide: !!bookingItem.ride,
+        hasPolyline: !!bookingItem.ride?.polyline,
+        polylineLength: bookingItem.ride?.polyline?.length
+      });
+
+      // Process coordinates and polyline from the main ride data
+      processCoordinatesAndPolyline(bookingItem.ride || bookingItem);
+
+      // 🔧 OPTIONAL: Only override with booking-specific coordinates if they exist AND no polyline
+      if (bookingItem.bookingStart && bookingItem.bookingEnd && !bookingItem.ride?.polyline) {
+        console.log('🗺️ Using booking-specific coordinates (no polyline available)');
         const startCoords = {
-          latitude: bookingItem.bookingStart.latitude || bookingItem.bookingStart._latitude || 25.2048,
-          longitude: bookingItem.bookingStart.longitude || bookingItem.bookingStart._longitude || 55.2708,
+          latitude: bookingItem.bookingStart.latitude || bookingItem.bookingStart._latitude || defaultCoordinates[0].latitude,
+          longitude: bookingItem.bookingStart.longitude || bookingItem.bookingStart._longitude || defaultCoordinates[0].longitude,
         };
         const endCoords = {
-          latitude: bookingItem.bookingEnd.latitude || bookingItem.bookingEnd._latitude || 25.1972,
-          longitude: bookingItem.bookingEnd.longitude || bookingItem.bookingEnd._longitude || 55.2744,
+          latitude: bookingItem.bookingEnd.latitude || bookingItem.bookingEnd._latitude || defaultCoordinates[1].latitude,
+          longitude: bookingItem.bookingEnd.longitude || bookingItem.bookingEnd._longitude || defaultCoordinates[1].longitude,
         };
         setRouteCoordinates([startCoords, endCoords]);
+        setPolylineCoords([startCoords, endCoords]); // Simple line for booking-specific route
       }
 
       // Set driver info
       if (bookingItem.driver) {
         const driver: DriverInfo = {
-          name: bookingItem.driver.name,
-          phone: bookingItem.driver.phoneNumber,
-          rating: bookingItem.driver.averageRating || 0,
+          name: safeString(bookingItem.driver.name) || 'Unknown Driver',
+          phone: safeString(bookingItem.driver.phoneNumber) || '',
+          rating: safeNumber(bookingItem.driver.averageRating),
         };
         setDriverInfo(driver);
       }
@@ -260,10 +282,10 @@ const RideDetailsScreen = () => {
       // Set vehicle info
       if (bookingItem.vehicle) {
         const vehicle: VehicleInfo = {
-          make: bookingItem.vehicle.make,
-          model: bookingItem.vehicle.model,
-          color: bookingItem.vehicle.color,
-          plateNumber: bookingItem.vehicle.plateNumber,
+          make: safeString(bookingItem.vehicle.make) || 'Unknown',
+          model: safeString(bookingItem.vehicle.model) || 'Unknown',
+          color: safeString(bookingItem.vehicle.color) || 'Unknown',
+          plateNumber: safeString(bookingItem.vehicle.plateNumber) || 'Unknown',
         };
         setVehicleInfo(vehicle);
       }
@@ -287,27 +309,79 @@ const RideDetailsScreen = () => {
     }
   };
 
-  const fetchRideFromAPI = async () => {
-    try {
-      // If ride not found in upcoming data, try to fetch from API
-      // This would require additional backend endpoints
-      console.log('🚗 Fetching ride from API not implemented yet');
-      throw new Error('Ride not found in upcoming data');
-    } catch (err) {
-      throw err;
+  // 🗺️ NEW: Process coordinates and polyline (same logic as driver-ride-details.tsx)
+  const processCoordinatesAndPolyline = (rideInfo: any) => {
+    console.log('🗺️ Processing ride info for coordinates:', rideInfo);
+    
+    // Process ride start and end coordinates if available
+    if (rideInfo.coordinates && rideInfo.endGeo) {
+      // Extract coordinates with proper type checking
+      const startLat = rideInfo.coordinates._latitude || rideInfo.coordinates.latitude;
+      const startLng = rideInfo.coordinates._longitude || rideInfo.coordinates.longitude;
+      const endLat = rideInfo.endGeo._latitude || rideInfo.endGeo.latitude;
+      const endLng = rideInfo.endGeo._longitude || rideInfo.endGeo.longitude;
+      
+      // Only proceed if we have all required coordinates as numbers
+      if (typeof startLat === 'number' && typeof startLng === 'number' && 
+          typeof endLat === 'number' && typeof endLng === 'number') {
+        
+        const startCoords = { latitude: startLat, longitude: startLng };
+        const endCoords = { latitude: endLat, longitude: endLng };
+        
+        console.log('📍 Route coordinates set from ride data:', [startCoords, endCoords]);
+        setRouteCoordinates([startCoords, endCoords]);
+        
+        // 🔧 FIX: Set simple line first, then try to parse polyline
+        setPolylineCoords([startCoords, endCoords]);
+      } else {
+        console.warn('🗺️ Invalid coordinates found, using defaults');
+        setRouteCoordinates(defaultCoordinates);
+        setPolylineCoords(defaultCoordinates);
+      }
+    } else {
+      console.warn('🗺️ No coordinates found in ride data, using defaults');
+      setRouteCoordinates(defaultCoordinates);
+      setPolylineCoords(defaultCoordinates);
+    }
+    
+    // 🔧 FIX: Parse polyline AFTER setting basic coordinates
+    if (rideInfo.polyline) {  
+      try {
+        console.log('🗺️ Attempting to parse polyline:', rideInfo.polyline.substring(0, 100) + '...');
+        const parsed = JSON.parse(rideInfo.polyline);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          console.log('📍 Polyline coordinates set:', parsed.length, 'points');
+          setPolylineCoords(parsed); // This should override the simple line
+        } else {
+          console.warn('🗺️ Parsed polyline is not a valid array');
+        }
+      } catch (err) {
+        console.warn('🗺️ Failed to parse polyline from string:', err);
+        console.log('🗺️ Polyline raw data:', rideInfo.polyline);
+      }
+    } else {
+      console.log('🗺️ No polyline data available');
     }
   };
 
   const handleCallPress = (phoneNumber: string, name: string) => {
+    const safeName = safeString(name) || 'Person';
+    const safePhone = safeString(phoneNumber);
+    
+    if (!safePhone) {
+      Alert.alert('Error', 'No phone number available');
+      return;
+    }
+
     Alert.alert(
-      `Call ${name}`,
-      `Do you want to call ${phoneNumber}?`,
+      `Call ${safeName}`,
+      `Do you want to call ${safePhone}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Call', 
           onPress: () => {
-            const url = `tel:${phoneNumber}`;
+            const url = `tel:${safePhone}`;
             Linking.openURL(url).catch(err => 
               Alert.alert('Error', 'Unable to make phone call')
             );
@@ -349,6 +423,8 @@ const RideDetailsScreen = () => {
                 
                 setRideStatus('departed');
                 Alert.alert('Success', 'Ride started successfully!');
+                // Refresh data
+                refetch();
               } catch (error: any) {
                 console.error('Error starting ride:', error);
                 Alert.alert('Error', 'Failed to start ride');
@@ -395,20 +471,24 @@ const RideDetailsScreen = () => {
                 );
                 
                 setRideStatus('completed');
-                Alert.alert('Success', 'Ride completed! Please leave reviews for your passengers.');
                 
-                // Show review modal for driver to review passengers
-                if (userRole === 'driver' && passengers.length > 0) {
-                  setTimeout(() => {
+                // 📝 MANDATORY REVIEW: Show review modal immediately after ride completion
+                // Driver must review passengers, Passenger must review driver
+                setTimeout(() => {
+                  if (userRole === 'driver' && passengers.length > 0) {
+                    // Driver reviews first passenger (can be extended for multiple passengers)
                     setReviewTarget({ name: passengers[0].name, id: passengers[0].phone });
                     setShowReviewModal(true);
-                  }, 1000);
-                }
+                  } else if (userRole === 'passenger' && driverInfo) {
+                    // Passenger reviews driver
+                    setReviewTarget({ name: driverInfo.name, id: driverInfo.phone });
+                    setShowReviewModal(true);
+                  }
+                }, 500);
                 
-                // Navigate back to home after a brief delay
-                setTimeout(() => {
-                  router.replace('/(tabs)/home');
-                }, 2000);
+                // Refresh data
+                refetch();
+                
               } catch (error: any) {
                 console.error('Error ending ride:', error);
                 Alert.alert('Error', 'Failed to end ride');
@@ -446,9 +526,11 @@ const RideDetailsScreen = () => {
   const handleReviewComplete = () => {
     setShowReviewModal(false);
     setReviewTarget(null);
+    
+    // Navigate back to home after review is completed
     setTimeout(() => {
       router.replace('/(tabs)/home');
-    }, 1000);
+    }, 500);
   };
 
   const handleLeaveReview = () => {
@@ -500,7 +582,7 @@ const RideDetailsScreen = () => {
             Error Loading Ride
           </Text>
           <Text className="text-gray-600 mt-2 text-center font-[Afacad]">
-            {error}
+            {safeString(error)}
           </Text>
           <Pressable 
             onPress={() => router.back()}
@@ -529,10 +611,10 @@ const RideDetailsScreen = () => {
               <View key={index} className="flex-row items-center justify-between p-4 border-b border-gray-100">
                 <View className="flex-1">
                   <Text className="text-base font-[Afacad] font-medium text-black">
-                    {passenger.name}
+                    {safeString(passenger.name) || 'Unknown Passenger'}
                   </Text>
                   <Text className="text-sm font-[Afacad] text-gray-600">
-                    {passenger.seatsBooked} seat{passenger.seatsBooked > 1 ? 's' : ''}
+                    {safeNumber(passenger.seatsBooked)} seat{safeNumber(passenger.seatsBooked) > 1 ? 's' : ''}
                   </Text>
                 </View>
                 <Pressable
@@ -607,12 +689,12 @@ const RideDetailsScreen = () => {
               </View>
               <View className="flex-1 ml-4">
                 <Text className="text-lg font-[Afacad] font-bold text-black">
-                  {driverInfo.name}
+                  {safeString(driverInfo.name) || 'Unknown Driver'}
                 </Text>
                 <View className="flex-row items-center">
                   <Ionicons name="star" size={16} color="#FFD700" />
                   <Text className="text-sm font-[Afacad] text-gray-600 ml-1">
-                    {driverInfo.rating.toFixed(1)}
+                    {safeNumber(driverInfo.rating).toFixed(1)}
                   </Text>
                 </View>
               </View>
@@ -630,10 +712,10 @@ const RideDetailsScreen = () => {
               <View className="bg-gray-50 rounded-lg p-3">
                 <Text className="text-sm font-[Afacad] text-gray-600 mb-2">Vehicle</Text>
                 <Text className="text-base font-[Afacad] font-medium text-black">
-                  {vehicleInfo.make} {vehicleInfo.model} • {vehicleInfo.color}
+                  {safeString(vehicleInfo.make)} {safeString(vehicleInfo.model)} • {safeString(vehicleInfo.color)}
                 </Text>
                 <Text className="text-lg font-[Afacad] font-bold text-black">
-                  {vehicleInfo.plateNumber}
+                  {safeString(vehicleInfo.plateNumber)}
                 </Text>
               </View>
             )}
@@ -661,15 +743,13 @@ const RideDetailsScreen = () => {
 
       {/* Passenger Action Buttons */}
       <View className="mx-4 mb-4">
-        {rideStatus === 'completed' && (
-          <Pressable
-            onPress={handleLeaveReview}
-            className="bg-[#00BD5F] py-4 rounded-lg items-center"
-          >
-            <Text className="text-white text-lg font-[Afacad] font-semibold">
-              Leave Review for Driver
+        {/* Remove manual review button since review is now mandatory after ride completion */}
+        {rideStatus === 'completed' && !showReviewModal && (
+          <View className="bg-gray-100 py-4 rounded-lg items-center">
+            <Text className="text-gray-600 text-lg font-[Afacad]">
+              Ride Completed - Thank you!
             </Text>
-          </Pressable>
+          </View>
         )}
       </View>
     </>
@@ -695,8 +775,8 @@ const RideDetailsScreen = () => {
             ref={mapRef}
             style={{ flex: 1 }}
             initialRegion={{
-              latitude: routeCoordinates[0].latitude,
-              longitude: routeCoordinates[0].longitude,
+              latitude: routeCoordinates.length > 0 ? routeCoordinates[0].latitude : defaultCoordinates[0].latitude,
+              longitude: routeCoordinates.length > 0 ? routeCoordinates[0].longitude : defaultCoordinates[0].longitude,
               latitudeDelta: 0.02,
               longitudeDelta: 0.02,
             }}
@@ -711,23 +791,29 @@ const RideDetailsScreen = () => {
             />
             
             {/* Route Markers */}
-            <Marker
-              coordinate={routeCoordinates[0]}
-              title="Start"
-              pinColor="green"
-            />
-            <Marker
-              coordinate={routeCoordinates[routeCoordinates.length - 1]}
-              title="End"
-              pinColor="red"
-            />
+            {routeCoordinates.length > 0 && (
+              <>
+                <Marker
+                  coordinate={routeCoordinates[0]}
+                  title="Start"
+                  pinColor="green"
+                />
+                <Marker
+                  coordinate={routeCoordinates[routeCoordinates.length - 1]}
+                  title="End"
+                  pinColor="red"
+                />
+              </>
+            )}
             
-            {/* Route Polyline */}
-            <Polyline
-              coordinates={routeCoordinates}
-              strokeColor="#00BD5F"
-              strokeWidth={3}
-            />
+            {/* Route Polyline - Show detailed route if available */}
+            {polylineCoords.length > 0 && (
+              <Polyline
+                coordinates={polylineCoords}
+                strokeColor="#00BD5F"
+                strokeWidth={3}
+              />
+            )}
           </MapView>
         </View>
 
@@ -736,12 +822,12 @@ const RideDetailsScreen = () => {
           <View className="mx-4 mt-4 mb-4">
             <View className="bg-white rounded-lg p-4 shadow-sm">
               <View className="flex-row items-center justify-between">
-                <View>
+                <View className="flex-1">
                   <Text className="text-lg font-bold font-[Afacad] text-black">
-                    {rideData.from} → {rideData.to}
+                    {safeString(rideData.from)} → {safeString(rideData.to)}
                   </Text>
                   <Text className="text-sm font-[Afacad] text-gray-600">
-                    {rideData.departureTime.toLocaleDateString()} at {rideData.departureTime.toLocaleTimeString()}
+                    {rideData.departureTime.toLocaleDateString()} at {rideData.departureTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                   </Text>
                 </View>
                 <View className={`px-3 py-1 rounded-full ${
