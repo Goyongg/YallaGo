@@ -33,7 +33,7 @@ export class SosAlertsService {
             status: AlertStatus.ACTIVE
         };
 
-        const rideData = await this.firebaseDriverService.getRideById(rideId);
+        const rideData = await this.firebaseDriverService.fetchRideData(rideId);
         
         // Store the SOS alert in Firestore
         await alertRef.set(alertData);
