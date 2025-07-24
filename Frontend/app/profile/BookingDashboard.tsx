@@ -33,36 +33,102 @@ const BookingDashboard = () => {
     return status === 'completed' || status === 'cancelled' || status === 'no-show';
   });
 
-  // Group history bookings by date - same as DriverDashboard
+  // Group bookings by date (works for both upcoming and history)
   const groupBookingsByDate = (bookings: typeof historyBookings) => {
     if (!Array.isArray(bookings)) {
       console.error('📅 Invalid bookings for grouping:', bookings);
       return {};
     }
     
-    return bookings.reduce((groups: Record<string, typeof bookings>, booking) => {
+    return bookings.reduce((groups: Record<string, any>, booking) => {
       if (!booking || !booking.date) {
         console.warn('📅 Invalid booking for date grouping:', booking);
         return groups;
       }
       
       try {
-        const date = new Date(booking.date).toLocaleDateString('en-US', {
+        // Ensure we have a valid date string
+        const dateStr = typeof booking.date === 'string' ? booking.date : String(booking.date);
+        const dateObj = new Date(dateStr);
+        
+        // Check if date is valid
+        if (isNaN(dateObj.getTime())) {
+          console.warn('📅 Invalid date object for booking:', booking.id, 'date:', booking.date);
+          return groups;
+        }
+        
+        // Format WITHOUT year for display
+        const formattedDate = dateObj.toLocaleDateString('en-US', {
           weekday: 'long',
           day: 'numeric',
           month: 'long',
         });
         
-        if (!groups[date]) {
-          groups[date] = [];
+        // Ensure the formatted date is a valid string
+        if (!formattedDate || formattedDate === 'Invalid Date') {
+          console.warn('📅 Invalid formatted date for booking:', booking.id);
+          return groups;
         }
-        groups[date].push(booking);
+        
+        if (!groups[formattedDate]) {
+          groups[formattedDate] = {
+            bookings: [],
+            originalDate: dateObj // Store original date object for sorting
+          };
+        }
+        groups[formattedDate].bookings.push(booking);
       } catch (error) {
         console.error('📅 Error grouping booking by date:', error, booking);
       }
       
       return groups;
     }, {});
+  };
+
+  // Sort grouped bookings by date (earliest first for upcoming, latest first for history)
+  const sortGroupedBookingsByDate = (groupedBookings: Record<string, any>, isUpcoming: boolean = false) => {
+    const entries = Object.entries(groupedBookings);
+    
+    // Filter out any invalid entries
+    const validEntries = entries.filter(([dateLabel, groupData]) => {
+      const isValidLabel = dateLabel && typeof dateLabel === 'string' && dateLabel !== 'Invalid Date';
+      const isValidGroupData = groupData && groupData.bookings && Array.isArray(groupData.bookings) && groupData.bookings.length > 0;
+      
+      if (!isValidLabel || !isValidGroupData) {
+        console.warn('📅 Filtering out invalid date group:', { dateLabel, bookingsCount: groupData?.bookings?.length });
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Sort by date using the stored original date objects
+    validEntries.sort(([dateA, groupDataA], [dateB, groupDataB]) => {
+      try {
+        const dateObjA = groupDataA.originalDate;
+        const dateObjB = groupDataB.originalDate;
+        
+        // Validate date objects
+        if (!dateObjA || !dateObjB || isNaN(dateObjA.getTime()) || isNaN(dateObjB.getTime())) {
+          console.warn('📅 Invalid date objects in sorting:', { dateA, dateB });
+          return 0; // Keep original order if dates are invalid
+        }
+        
+        if (isUpcoming) {
+          // For upcoming: earliest date first (ascending)
+          return dateObjA.getTime() - dateObjB.getTime();
+        } else {
+          // For history: latest date first (descending)
+          return dateObjB.getTime() - dateObjA.getTime();
+        }
+      } catch (error) {
+        console.error('📅 Error sorting dates:', error, { dateA, dateB });
+        return 0; // Keep original order on error
+      }
+    });
+    
+    // Convert back to the expected format: [dateLabel, bookings[]]
+    return validEntries.map(([dateLabel, groupData]) => [dateLabel, groupData.bookings]);
   };
 
   // Handle pull to refresh
@@ -185,27 +251,102 @@ const BookingDashboard = () => {
                 </Text>
               </View>
             ) : (
-              upcomingBookings.map((booking) => (
-                <UpcomingBookingCard
-                  key={booking.id}
-                  id={booking.id}
-                  rideId={booking.rideId}
-                  from={booking.from}
-                  to={booking.to}
-                  departureTime={booking.departureTime}
-                  arrivalTime={booking.arrivalTime}
-                  duration={booking.duration}
-                  totalCost={booking.totalCost}
-                  seatsBooked={booking.seatsBooked}
-                  status={booking.status}
-                  driver={booking.driver}
-                  vehicle={undefined} // Vehicle info not available from your backend structure
-                  stopovers={undefined} // Stopovers not available from your backend structure
-                />
-              ))
+              // NEW: Group and sort upcoming bookings by date
+              (() => {
+                const groupedBookings = groupBookingsByDate(upcomingBookings);
+                const sortedEntries = sortGroupedBookingsByDate(groupedBookings, true);
+                
+                console.log('📅 Grouped upcoming bookings by date:', Object.keys(groupedBookings));
+                console.log('📅 Sorted date entries:', sortedEntries.map(([date]) => date));
+                
+                if (sortedEntries.length === 0) {
+                  console.warn('📅 No valid date groups found for upcoming bookings');
+                  return (
+                    <View className="flex-1 justify-center items-center mt-20">
+                      <Ionicons name="calendar-outline" size={64} color="#9CA3AF" />
+                      <Text className="text-center text-gray-400 mt-4 font-[Afacad] text-lg">
+                        No properly dated upcoming bookings
+                      </Text>
+                      <Text className="text-center text-gray-400 mt-2 font-[Afacad]">
+                        Bookings may have invalid date information
+                      </Text>
+                    </View>
+                  );
+                }
+                
+                return sortedEntries.map(([dateLabel, bookings]) => {
+                  // Additional safety check for each date group
+                  if (!dateLabel || !Array.isArray(bookings) || bookings.length === 0) {
+                    console.warn('📅 Skipping invalid date group:', { dateLabel, bookingsCount: bookings?.length });
+                    return null;
+                  }
+                  
+                  return (
+                    <View key={dateLabel} className="mb-6">
+                      <Text className="text-lg font-bold text-gray-800 mb-3 font-[Afacad]">
+                        {String(dateLabel)}
+                      </Text>
+                      {bookings.map((booking, index) => {
+                        console.log('📅 About to render upcoming booking:', booking?.id || 'unknown');
+                        
+                        // Add safety check for each individual booking
+                        if (!booking || typeof booking !== 'object') {
+                          console.error('📅 Invalid booking object at render index', index, booking);
+                          return null;
+                        }
+
+                        // CRITICAL: Ensure all required props exist and are safe
+                        const safeBooking = {
+                          id: String(booking.id || `fallback-${index}`),
+                          rideId: String(booking.rideId || ''),
+                          from: String(booking.from || 'Unknown'),
+                          to: String(booking.to || 'Unknown'),
+                          departureTime: String(booking.departureTime || '00:00'),
+                          arrivalTime: String(booking.arrivalTime || '00:00'),
+                          duration: String(booking.duration || '0m'),
+                          totalCost: String(booking.totalCost || '0'),
+                          seatsBooked: typeof booking.seatsBooked === 'number' ? booking.seatsBooked : 1,
+                          status: String(booking.status || 'pending'),
+                          driver: booking.driver || {
+                            name: 'Driver',
+                            rating: 0.0,
+                            phoneNumber: 'N/A'
+                          }
+                        };
+
+                        console.log(`📅 Rendering booking ${index} with safe props:`, safeBooking);
+
+                        try {
+                          return (
+                            <UpcomingBookingCard
+                              key={safeBooking.id}
+                              id={safeBooking.id}
+                              rideId={safeBooking.rideId}
+                              from={safeBooking.from}
+                              to={safeBooking.to}
+                              departureTime={safeBooking.departureTime}
+                              arrivalTime={safeBooking.arrivalTime}
+                              duration={safeBooking.duration}
+                              totalCost={safeBooking.totalCost}
+                              seatsBooked={safeBooking.seatsBooked}
+                              status={safeBooking.status}
+                              driver={safeBooking.driver}
+                              vehicle={booking.vehicle} // Keep original vehicle if available
+                              stopovers={undefined} // Stopovers not available from your backend structure
+                            />
+                          );
+                        } catch (renderError) {
+                          console.error(`📅 Error rendering booking ${index}:`, renderError);
+                          return null;
+                        }
+                      }).filter(Boolean)} {/* Remove any null entries */}
+                    </View>
+                  );
+                }).filter(Boolean); // Remove any null date groups
+              })()
             )
           ) : (
-            // History bookings section
+            // History bookings section - with date grouping
             historyBookings.length === 0 ? (
               <View className="flex-1 justify-center items-center mt-20">
                 <Ionicons name="time-outline" size={64} color="#9CA3AF" />
@@ -217,12 +358,12 @@ const BookingDashboard = () => {
                 </Text>
               </View>
             ) : (
-              Object.entries(groupBookingsByDate(historyBookings)).map(([dateLabel, bookings]) => (
+              sortGroupedBookingsByDate(groupBookingsByDate(historyBookings), false).map(([dateLabel, bookings]) => (
                 <View key={dateLabel} className="mb-6">
                   <Text className="text-lg font-bold text-gray-800 mb-3 font-[Afacad]">
-                    {dateLabel}
+                    {String(dateLabel)}
                   </Text>
-                  {bookings.map((booking) => (
+                  {Array.isArray(bookings) && bookings.map((booking) => (
                     <BookingHistoryCard
                       key={booking.id}
                       id={booking.id}

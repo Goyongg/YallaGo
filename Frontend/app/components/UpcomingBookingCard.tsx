@@ -93,7 +93,6 @@ const UpcomingBookingCard: React.FC<UpcomingBookingCardProps> = ({
   };
 
   const statusConfig = getStatusDisplay(status);
-  // Don't modify location names - show them as-is from backend
   const fromLocation = from;
   const toLocation = to;
 

@@ -29,9 +29,11 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
   const { startRide, endRide, deleteRide, loading } = useRideActions();
   const [actionLoading, setActionLoading] = useState<'start' | 'end' | 'delete' | null>(null);
 
-  const truncateText = (text: string, maxLength: number = 12) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
+  const truncateText = (text: string | any, maxLength: number = 12) => {
+    if (text === null || text === undefined) return 'Unknown';
+    const safeText = String(text);
+    if (safeText.length <= maxLength) return safeText;
+    return safeText.substring(0, maxLength) + '...';
   };
 
   const handleCardPress = () => {
@@ -39,7 +41,7 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
     router.push({
       pathname: '/(tabs)/driver-ride-details',
       params: {
-        rideId: id,
+        rideId: String(id),
       },
     });
   };
@@ -55,7 +57,7 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
           style: 'default',
           onPress: async () => {
             setActionLoading('start');
-            const result = await startRide(id);
+            const result = await startRide(String(id));
             setActionLoading(null);
             
             if (result.success) {
@@ -81,7 +83,7 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
           style: 'destructive',
           onPress: async () => {
             setActionLoading('end');
-            const result = await endRide(id);
+            const result = await endRide(String(id));
             setActionLoading(null);
             
             if (result.success) {
@@ -116,7 +118,7 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
           style: 'destructive',
           onPress: async () => {
             setActionLoading('delete');
-            const result = await deleteRide(id);
+            const result = await deleteRide(String(id));
             setActionLoading(null);
             
             if (result.success) {
@@ -132,7 +134,7 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
   };
 
   const getStatusColor = (status: string | undefined) => {
-    switch (status?.toLowerCase()) {
+    switch (String(status || '').toLowerCase()) {
       case 'upcoming':
         return 'bg-[#00BD5F]';
       case 'departed':
@@ -142,13 +144,25 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
     }
   };
 
+  // Safe value conversion with explicit null/undefined checks
+  const safeId = id !== null && id !== undefined ? String(id) : 'unknown';
+  const safeDepartureTime = departureTime !== null && departureTime !== undefined ? String(departureTime) : '00:00';
+  const safeArrivalTime = arrivalTime !== null && arrivalTime !== undefined ? String(arrivalTime) : '00:00';
+  const safeDuration = duration !== null && duration !== undefined ? String(duration) : '0m';
+  const safeFrom = from !== null && from !== undefined ? String(from) : 'Unknown';
+  const safeTo = to !== null && to !== undefined ? String(to) : 'Unknown';
+  const safePrice = price !== null && price !== undefined ? String(price) : '0';
+  const safeAvailableSeats = typeof availableSeats === 'number' ? availableSeats : 0;
+  const safeBookedSeats = typeof bookedSeats === 'number' ? bookedSeats : 0;
+  const safeStatus = status !== null && status !== undefined ? String(status) : 'unknown';
+
   // 🔧 FIXED LOGIC: Show delete button for upcoming rides with no bookings
   // Show end button for departed rides
-  const shouldShowEndButton = status?.toLowerCase() === 'departed';
-  const shouldShowDeleteButton = status?.toLowerCase() === 'upcoming' && !hasBookings && bookedSeats === 0;
+  const shouldShowEndButton = safeStatus.toLowerCase() === 'departed';
+  const shouldShowDeleteButton = safeStatus.toLowerCase() === 'upcoming' && !hasBookings && safeBookedSeats === 0;
   
   // Show action buttons if there are any actions available OR if there are passengers
-  const shouldShowActionSection = shouldShowEndButton || shouldShowDeleteButton || bookedSeats > 0;
+  const shouldShowActionSection = shouldShowEndButton || shouldShowDeleteButton || safeBookedSeats > 0;
 
   return (
     <Pressable
@@ -160,9 +174,9 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
         <View className="flex-row items-center flex-1 mr-3">
           {/* Left: Time */}
           <View className="items-end pr-2">
-            <Text className="text-md font-bold text-gray-900">{departureTime}</Text>
-            <Text className="text-xs text-gray-500">{duration}</Text>
-            <Text className="text-md font-bold text-gray-900 mt-1">{arrivalTime}</Text>
+            <Text className="text-md font-bold text-gray-900">{safeDepartureTime}</Text>
+            <Text className="text-xs text-gray-500">{safeDuration}</Text>
+            <Text className="text-md font-bold text-gray-900 mt-1">{safeArrivalTime}</Text>
           </View>
 
           {/* Middle: Line */}
@@ -175,18 +189,18 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
           {/* Right: Locations */}
           <View className="ml-2 flex-1">
             <Text className="text-md font-semibold text-gray-900" numberOfLines={1}>
-              {truncateText(from, 15)}
+              {truncateText(safeFrom, 15)}
             </Text>
             <View className="h-5" />
             <Text className="text-md font-semibold text-gray-900" numberOfLines={1}>
-              {truncateText(to, 15)}
+              {truncateText(safeTo, 15)}
             </Text>
           </View>
         </View>
 
         {/* Right: Price */}
         <View className="items-end">
-          <Text className="text-lg font-bold text-gray-900">{price}</Text>
+          <Text className="text-lg font-bold text-gray-900">{safePrice}</Text>
           <Text className="text-xs text-gray-500">AED</Text>
         </View>
       </View>
@@ -200,23 +214,23 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
         <View className="flex-row justify-between items-center pb-3">
           <View className="flex-row items-center flex-wrap">
             <Text className="text-sm text-gray-600 font-[Afacad]">
-              🧍 {availableSeats} seats available
+              🧍 {String(safeAvailableSeats)} seats available
             </Text>
-            {bookedSeats > 0 && (
+            {safeBookedSeats > 0 && (
               <Text className="text-sm text-blue-600 font-[Afacad] ml-2">
-                • {bookedSeats} booked
+                • {String(safeBookedSeats)} booked
               </Text>
             )}
           </View>
-          {status && (
+          {safeStatus && (
             <View className="flex-grow items-end">
-            <Text
-              className={`text-center text-sm text-white px-3 py-1 rounded-full font-semibold ${getStatusColor(status)}`}
-              style={{ minWidth: 85 }}
-            >
-              {status}
-            </Text>
-          </View>
+              <Text
+                className={`text-center text-sm text-white px-3 py-1 rounded-full font-semibold ${getStatusColor(safeStatus)}`}
+                style={{ minWidth: 85 }}
+              >
+                {String(safeStatus)}
+              </Text>
+            </View>
           )}
         </View>
 
