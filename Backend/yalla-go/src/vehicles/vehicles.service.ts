@@ -41,7 +41,7 @@ export class VehiclesService {
     };
 
     private async linkDriver(driverId: string, newVehicleId: string) {
-        const { userRef } = await this.firebaseUserSerivce.getUserSnapshot(driverId);
+        const userRef = await this.firebaseUserSerivce.getUserRef(driverId);
 
         // Update user's document to store the associated vehicleId
         await userRef.update({
@@ -55,17 +55,16 @@ export class VehiclesService {
         // Get the vehicle ID linked to this user
         const vehicleId = userData.vehicleId;
 
-        const { vehSnap } = await this.firebaseDriverService.getVehicleSnapshot(vehicleId);
-        const vehData = vehSnap.data()!;
+        const vehData = await this.firebaseDriverService.fetchVehicleData(vehicleId);
 
         return { maxSeats: vehData.seats }
     }
 
     async deleteVehicle(firebaseUid: string) {
-        const { userRef, userSnap } = await this.firebaseUserSerivce.getUserSnapshot(firebaseUid);
+        const userRef = await this.firebaseUserSerivce.getUserRef(firebaseUid);
 
         // Extract user data
-        const userData = userSnap.data()!;
+        const userData = await this.firebaseUserSerivce.fetchUserData(firebaseUid);
 
         const vehicleId = userData.vehicleId;
 
@@ -73,8 +72,7 @@ export class VehiclesService {
             throw new NotFoundException('User has no linked vehicle');
         }
 
-        const { vehRef, vehSnap } = await this.firebaseDriverService.getVehicleSnapshot(vehicleId);
-        const vehData = vehSnap.data()!;
+        const vehRef = await this.firebaseDriverService.getVehicleRef(vehicleId);
 
         const ridesRef = this.firebase.firestore.collection('rides');
 
@@ -101,9 +99,7 @@ export class VehiclesService {
     }
 
     async updateVehicleColor(firebaseUid: string, updateVehicleColorDto: UpdateVehicleColorDto) {
-        const { userSnap } = await this.firebaseUserSerivce.getUserSnapshot(firebaseUid);
-
-        const userData = userSnap.data()!;
+        const userData = await this.firebaseUserSerivce.fetchUserData(firebaseUid);
 
         const vehicleId = userData.vehicleId;
 
@@ -111,7 +107,7 @@ export class VehiclesService {
             throw new NotFoundException('User has no linked vehicle');
         }
 
-        const { vehRef } = await this.firebaseDriverService.getVehicleSnapshot(vehicleId);
+        const vehRef = await this.firebaseDriverService.getVehicleRef(vehicleId);
 
         // Convert DTO to plain object
         const plainData = instanceToPlain(updateVehicleColorDto);

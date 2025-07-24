@@ -4,8 +4,8 @@ import { CreateRidePassengerDto } from './dto/create-ridepassenger.dto';
 import { BookingStatus } from './enums/booking-status.enum';
 import { FirebaseDriverService } from 'src/firebase/firebase-driver.service';
 import { FirebaseNotificationsService } from 'src/firebase/firebase-notifications.service';
-import { omitFields, pickFields } from 'src/common/helpers/object.helpers';
 import { FirebaseUserService } from 'src/firebase/firebase-user.service';
+import { omitFields, pickFields } from 'src/common/helpers/object.helpers';
 
 @Injectable()
 export class RidePassengersService {
@@ -14,7 +14,7 @@ export class RidePassengersService {
         private readonly firebase: FirebaseService,
         private readonly firebaseDriverService: FirebaseDriverService,
         private readonly firebaseNotificationsService: FirebaseNotificationsService,
-        private readonly firebaseUserService: FirebaseUserService 
+        private readonly firebaseUserService: FirebaseUserService
     ) {}
 
     async createBooking(createRidePassengerDto: CreateRidePassengerDto, firebaseUid: string) {
@@ -43,17 +43,9 @@ export class RidePassengersService {
     };
 
     private async reduceRideSeats(rideId: string, seatsBooked: number){
-        const rideRef = this.firebase.firestore.collection('rides').doc(rideId);
+        const rideRef = await this.firebaseDriverService.getRideRef(rideId);
 
-        // Get the ride document snapshot
-        const rideSnap = await rideRef.get();
-
-        if(!rideSnap.exists) {
-            throw new NotFoundException('Use profile not found');
-        }
-
-        // Extract ride data from the snapshot (non-null assertion used since existence was already checked)
-        const rideData = rideSnap.data()!;
+        const rideData = await this.firebaseDriverService.fetchRideData(rideId)
 
         // Compute the new number of available seats
         const currentAvailableSeats = rideData.availableSeats;
@@ -100,7 +92,7 @@ export class RidePassengersService {
 
             if(data.status === BookingStatus.PENDING || data.status === BookingStatus.CONFIRMED || data.status === BookingStatus.ONGOING) {
                 // Fetch the ride document associated with this booking
-                const rideData = await this.firebaseDriverService.getRideById(data.rideId);
+                const rideData = await this.firebaseDriverService.fetchRideData(data.rideId);
                 const redactedRideData = omitFields(rideData, ['distance', 'driverId', 'g', 'rideId', 'vehicleId', 'availableSeats', 'bookedSeats']);
                 
                 const driverData = await this.firebaseUserService.fetchUserData(rideData.driverId);
@@ -122,7 +114,7 @@ export class RidePassengersService {
 
             if(data.status === BookingStatus.COMPLETED || data.status === BookingStatus.NO_SHOW || data.status === BookingStatus.CANCELLED) {
                 // Fetch the ride document associated with this booking
-                const rideData = await this.firebaseDriverService.getRideById(data.rideId);
+                const rideData = await this.firebaseDriverService.fetchRideData(data.rideId);
                 const redactedRideData = pickFields(rideData, ['departureTime', 'durationSeconds', 'startLocation', 'endLocation', 'pricePerSeat']);
                 bookings.push({
                     ...redactedRideData,
@@ -158,13 +150,13 @@ export class RidePassengersService {
         }
 
         // Fetch the current ride data using a service method
-        const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId);
+        const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
 
         // Recalculate the available seats by adding back the seats from the cancelled booking
         const newSeats = bookingData.seatsBooked + rideData.availableSeats
 
         // Get a reference to the ride associated with this booking
-        const rideRef = await this.firebase.firestore.collection('rides').doc(bookingData.rideId);
+        const rideRef = await this.firebaseDriverService.getRideRef(bookingData.rideId)
         
         // Update the ride document with the new available seat count
         rideRef.update({ availableSeats: newSeats })
@@ -177,7 +169,7 @@ export class RidePassengersService {
 
     async notifyDriver(bookingData: any) {
         // Retrieve the ride details using the rideId from bookingData
-        const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId);
+        const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
 
         // Query Firestore to find all device tokens registered for the driver
         const tokenSnapshot = await this.firebase.firestore.collection('device-tokens')
@@ -201,7 +193,7 @@ export class RidePassengersService {
                 const response = await this.firebaseNotificationsService.sendToDevice(
                     token, // Target device token
                     '🚗 New Ride Booking', // Notification title
-                    `Pickup: ${bookingData.pickupPoint} → Dropoff: ${bookingData.dropOffPoint}\nSeats Booked: ${bookingData.seatsBooked}` // Notification body
+                    `Pickup: ${rideData.startLocation} → Dropoff: ${rideData.endLocation}\nSeats Booked: ${bookingData.seatsBooked}` // Notification body
                 );
                 console.log(`✅ Sent to ${bookingData.passengerId}`);
             } catch (error) {

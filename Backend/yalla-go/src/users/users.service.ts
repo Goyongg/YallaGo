@@ -159,7 +159,7 @@ export class UsersService {
             };
 
             // Fetch the ride document linked to this booking
-            const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId);
+            const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
             // Keep only specific ride fields
             const cleanRideData = pickFields(rideData, ['coordinates', 'departureTime', 'endGeo'])
 
@@ -239,7 +239,7 @@ export class UsersService {
 
     async updateUser(patchUserDto: PatchUserDto, firebaseUid: string) {
         // Get user doc ref
-        const { userRef } = await this.firebaseUserService.getUserSnapshot(firebaseUid);
+        const userRef = await this.firebaseUserService.getUserRef(firebaseUid);
 
         // Get user doc data
         const userData = await this.firebaseUserService.fetchUserData(firebaseUid);
@@ -277,14 +277,14 @@ export class UsersService {
 
     async deleteUser(firebaseUid: string) {
         // Get user doc ref
-        const { userRef } = await this.firebaseUserService.getUserSnapshot(firebaseUid);
+        const userRef = await this.firebaseUserService.getUserRef(firebaseUid);
 
         // If driver, delete driver vehicle
         const userData = await this.firebaseUserService.fetchUserData(firebaseUid);
         if (userData.role === 'driver') {
             // Get vehicle ref
             if (userData.vehicleId) {
-            const { vehRef } = await this.firebaseDriverService.getVehicleSnapshot(userData.vehicleId);
+            const vehRef = await this.firebaseDriverService.getVehicleRef(userData.vehicleId);
             await vehRef.delete(); // delete vehicle doc
             }
         }
@@ -345,6 +345,9 @@ export class UsersService {
         // Extract the booking data from the document snapshot
         const bookingData = bookingSnap.data()!;
 
+        const rideRef = await this.firebaseDriverService.getRideRef(bookingData.rideId)
+        const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
+
         // Update the status field of this booking to CONFIRMED
         bookingRef.update({ status: BookingStatus.CONFIRMED })
 
@@ -352,11 +355,8 @@ export class UsersService {
         await this.notifyPassenger(
             bookingData.passengerId,
             '✅ Booking Confirmed',
-            `Your ride booking from ${bookingData.pickupPoint} to ${bookingData.dropOffPoint} has been accepted by the driver.`
+            `Your ride booking from ${rideData.startLocation} to ${rideData.endLocation} has been accepted by the driver.`
         );
-
-        const rideRef = await this.firebase.firestore.collection('rides').doc(bookingData.rideId);
-        const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId);
         
         // Update the ride's status to BOOKED
         // This implies that at least one booking has been accepted for the ride
@@ -382,6 +382,9 @@ export class UsersService {
         // Extract the booking data from the snapshot
         const bookingData = bookingSnap.data()!;
 
+        // Retrieve the corresponding ride details using the rideId from the booking
+        const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
+
         // Update the booking's status to CANCELLED in the database
         bookingRef.update({ status: BookingStatus.CANCELLED })
 
@@ -389,11 +392,8 @@ export class UsersService {
         await this.notifyPassenger(
             bookingData.passengerId,
             '❌ Booking Declined',
-            `Unfortunately, your booking request from ${bookingData.pickupPoint} to ${bookingData.dropOffPoint} was declined by the driver.`
+            `Unfortunately, your booking request from ${rideData.startLocation} to ${rideData.endLocation} was declined by the driver.`
         );
-
-        // Retrieve the corresponding ride details using the rideId from the booking
-        const rideData = await this.firebaseDriverService.getRideById(bookingData.rideId);
 
         // Calculate the new available seat count by adding back the cancelled seats
         const newSeats = bookingData.seatsBooked + rideData.availableSeats;
