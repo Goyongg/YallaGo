@@ -272,6 +272,7 @@ export class RidesService {
             distanceMeters: distanceData.distanceMeters, //distance in meters
             polyline: distanceData.polyline,
             vehicleId: vehicleId,
+            bookedSeats: 0,
             ...rest, // spread out ride fields 
             status: RideStatus.IN_PROGRESS
         };

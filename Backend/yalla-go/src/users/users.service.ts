@@ -364,6 +364,9 @@ export class UsersService {
             rideRef.update({ status: RideStatus.BOOKED})
         }
         
+        const newSeatsBooked = rideData.bookedSeats + bookingData.seatsBooked
+        rideRef.update({ bookedSeats: newSeatsBooked})
+        
         return { message: "Booking confirmed" }
     }
 
