@@ -41,6 +41,7 @@ interface ExtendedRideData extends ProcessedDriverRide {
     _latitude?: number; // Firestore format
     _longitude?: number; // Firestore format
   };
+  
   polyline?: string;
   bookings?: Array<{
     passengerName: string;
@@ -70,6 +71,9 @@ const DriverRideDetailsScreen = () => {
   const { startRide, endRide, loading: actionLoading } = useRideActions();
   
   const [routeCoordinates, setRouteCoordinates] = useState<{ latitude: number; longitude: number }[]>([]);
+  const [stopovers, setStopovers] = useState<
+    { id: string; location: string; coordinates: { latitude: number; longitude: number } }[]
+  >([]);
   const [polylineCoords, setPolylineCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   
   const [passengers, setPassengers] = useState<PassengerInfo[]>([]);
@@ -177,6 +181,21 @@ const DriverRideDetailsScreen = () => {
       } catch (err) {
         console.warn('Failed to parse polyline from string:', err);
       }
+    }
+    
+    console.log('Ride waypoints:', rideInfo.waypoints);
+    // 🛑 Parse stopovers (waypoints)
+    if (Array.isArray(rideInfo.waypoints)) {
+      const formattedStopovers = rideInfo.waypoints.map((wp: any, index: number) => ({
+        id: `stopover-${index}`,
+        location: wp.label || `Stopover ${index + 1}`,
+        coordinates: {
+          latitude: wp.coordinates?.lat ?? wp.coordinates?._latitude ?? 0,
+          longitude: wp.coordinates?.lng ?? wp.coordinates?._longitude ?? 0,
+        },
+      }));
+      setStopovers(formattedStopovers);
+      console.log('🛑 Stopovers parsed:', formattedStopovers);
     }
 
     // Update passengers if available
@@ -450,6 +469,21 @@ const DriverRideDetailsScreen = () => {
               title="End"
               pinColor="red"
             />
+
+            {/* Stopover Markers */}
+            {stopovers.map((stopover) => (
+              <Marker
+                key={stopover.id}
+                coordinate={stopover.coordinates}
+                title={stopover.location}
+                description="Stopover"
+              >
+                <View className="bg-orange-400 rounded-full p-2">
+                  <Ionicons name="pause" size={10} color="white" />
+                </View>
+              </Marker>
+            ))}
+
             
             {/* Route Polyline */}
             <Polyline

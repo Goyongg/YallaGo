@@ -412,6 +412,15 @@ export interface ProcessedDriverRide {
     _latitude?: number; // Firestore format
     _longitude?: number; // Firestore format
   };
+  waypoints?: Array<{
+    label?: string;
+    coordinates?: {
+      lat?: number;
+      lng?: number;
+      _latitude?: number;
+      _longitude?: number;
+    };
+  }>;
   polyline?: string; // JSON string of coordinate array
   bookings?: Array<{
     passengerName: string;

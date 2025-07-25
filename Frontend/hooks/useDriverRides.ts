@@ -276,6 +276,7 @@ const useDriverRides = (): UseDriverRidesReturn => {
           // Preserve location data from backend
           coordinates: ride.coordinates,
           endGeo: ride.endGeo,
+          waypoints: ride.waypoints,
           polyline: ride.polyline,
           bookings: ride.bookings
         };
