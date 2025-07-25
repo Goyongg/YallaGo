@@ -63,10 +63,10 @@ const BookingDetailsScreen = () => {
   
   const { bookingId } = params;
   
-  const [currentLocation, setCurrentLocation] = useState({
-    latitude: 25.2048, // Default to Dubai
-    longitude: 55.2708,
-  });
+  // const [currentLocation, setCurrentLocation] = useState({
+  //   latitude: 25.2048, // Default to Dubai
+  //   longitude: 55.2708,
+  // });
   
   // Default coordinates (Dubai area)
   const defaultCoordinates = [
@@ -479,11 +479,11 @@ const BookingDetailsScreen = () => {
             showsMyLocationButton={false}
           >
             {/* Current Location Marker */}
-            <Marker
+            {/* <Marker
               coordinate={currentLocation}
               title="Your Location"
               pinColor="blue"
-            />
+            /> */}
             
             {/* Route Markers */}
             <Marker
@@ -531,6 +531,22 @@ const BookingDetailsScreen = () => {
             </View>
           </View>
         </View>
+
+        {/* Comments if available */}
+        {bookingData.comments && (
+          <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
+            <View className="p-4 border-b border-gray-200">
+              <Text className="text-lg font-bold font-[Afacad] text-black">
+                Ride Notes
+              </Text>
+            </View>
+            <View className="p-4">
+              <Text className="text-base font-[Afacad] text-gray-700">
+                {safeString(bookingData.comments)}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Driver Info */}
         {bookingData.name && (
@@ -603,22 +619,6 @@ const BookingDetailsScreen = () => {
             </Text>
           </Pressable>
         </View>
-
-        {/* Comments if available */}
-        {bookingData.comments && (
-          <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
-            <View className="p-4 border-b border-gray-200">
-              <Text className="text-lg font-bold font-[Afacad] text-black">
-                Ride Notes
-              </Text>
-            </View>
-            <View className="p-4">
-              <Text className="text-base font-[Afacad] text-gray-700">
-                {safeString(bookingData.comments)}
-              </Text>
-            </View>
-          </View>
-        )}
       </ScrollView>
     </SafeAreaView>
   );

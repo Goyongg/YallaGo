@@ -6,7 +6,18 @@ import RideSearchForm from '../components/RideSearchForm';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import useHomeUserData from '../../hooks/useHomeUserData';
 
-// Updated interface to match backend response structure
+// Updated interface to match backend data structure
+interface Waypoint {
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+  label: string;
+  estimatedArrival?: any; // Firestore Timestamp
+  estimatedDeparture?: any; // Firestore Timestamp
+  duration?: number; // Duration in minutes
+}
+
 interface EnrichedRideResult {
   ride: {
     rideId: string;
@@ -25,8 +36,14 @@ interface EnrichedRideResult {
     pricePerSeat: number;
     availableSeats: number;
     femaleOnly?: boolean;
-    waypoints?: any[];
+    waypoints?: Waypoint[]; // Changed from stopovers to waypoints
     polyline?: string;
+    // New fields for comments and stopovers - using correct field name from logs
+    comments?: string; // Changed from driverComment to comments
+    allowsSmoking?: boolean;
+    petsAllowed?: boolean;
+    musicPreference?: string;
+    luggageSpace?: 'small' | 'medium' | 'large';
   };
   driver: {
     name: string;
@@ -47,6 +64,7 @@ const SearchResultsScreen = () => {
   const [rides, setRides] = useState<EnrichedRideResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [expandedRides, setExpandedRides] = useState<Set<string>>(new Set());
   
   // Search form state
   const [femaleOnly, setFemaleOnly] = useState(false);
@@ -89,6 +107,8 @@ const SearchResultsScreen = () => {
           console.log('First ride departureTime:', searchResults[0].ride.departureTime);
           console.log('First driver data:', searchResults[0].driver);
           console.log('First vehicle data:', searchResults[0].vehicle);
+          console.log('Driver comment:', searchResults[0].ride.comments); // Fixed field name
+          console.log('Waypoints:', searchResults[0].ride.waypoints); // Changed from stopovers to waypoints
         }
       }
       
@@ -100,6 +120,47 @@ const SearchResultsScreen = () => {
       setIsLoading(false);
     }
   }, [params.searchResults]);
+
+  // Toggle expanded view for a specific ride
+  const toggleRideExpansion = (rideId: string) => {
+    const newExpanded = new Set(expandedRides);
+    if (newExpanded.has(rideId)) {
+      newExpanded.delete(rideId);
+    } else {
+      newExpanded.add(rideId);
+    }
+    setExpandedRides(newExpanded);
+  };
+
+  // Format time from Firestore timestamp
+  const formatTime = (timestamp: any) => {
+    if (!timestamp) return 'N/A';
+    
+    try {
+      let date: Date;
+      
+      if (timestamp && typeof timestamp === 'object' && timestamp._seconds) {
+        date = new Date(timestamp._seconds * 1000);
+      } else if (timestamp && typeof timestamp === 'object' && timestamp.toDate) {
+        date = timestamp.toDate();
+      } else if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
+        date = new Date(timestamp.seconds * 1000);
+      } else if (typeof timestamp === 'string') {
+        date = new Date(timestamp);
+      } else {
+        return 'N/A';
+      }
+      
+      return date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: false 
+      });
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return 'N/A';
+    }
+  };
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -141,8 +202,6 @@ const SearchResultsScreen = () => {
         departure = new Date();
       }
       
-      console.log('Parsed departure time:', departure.toISOString());
-      
       const arrival = new Date(departure.getTime() + (durationSeconds * 1000));
       
       const depTime = departure.toLocaleTimeString('en-US', { 
@@ -161,8 +220,6 @@ const SearchResultsScreen = () => {
       const minutes = Math.floor((durationSeconds % 3600) / 60);
       const duration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
       
-      console.log('Formatted times - Departure:', depTime, 'Arrival:', arrTime, 'Duration:', duration);
-      
       return { depTime, arrTime, duration };
       
     } catch (error) {
@@ -174,6 +231,94 @@ const SearchResultsScreen = () => {
         duration: '0m' 
       };
     }
+  };
+
+  // Component to render waypoints (stopovers)
+  const renderStopovers = (waypoints: Waypoint[] | undefined, rideId: string) => {
+    if (!waypoints || waypoints.length === 0) return null;
+
+    const isExpanded = expandedRides.has(rideId);
+    const displayedWaypoints = isExpanded ? waypoints : waypoints.slice(0, 2);
+
+    return (
+      <View className="mt-3 pt-3 border-t border-gray-200">
+        <Text className="text-sm font-semibold text-gray-700 font-[Afacad] mb-2">
+          Stopovers ({waypoints.length})
+        </Text>
+        
+        {displayedWaypoints.map((waypoint, index) => (
+          <View key={index} className="flex-row items-center mb-2">
+            <View className="w-2 h-2 rounded-full bg-orange-400 mr-3" />
+            <View className="flex-1">
+              <Text className="text-sm font-medium font-[Afacad]">
+                {waypoint.label}
+              </Text>
+              {waypoint.estimatedArrival && (
+                <Text className="text-xs text-gray-500 font-[Afacad]">
+                  Stop at {formatTime(waypoint.estimatedArrival)}
+                  {waypoint.duration && ` • ${waypoint.duration}min stop`}
+                </Text>
+              )}
+            </View>
+          </View>
+        ))}
+        
+        {waypoints.length > 2 && (
+          <Pressable 
+            onPress={() => toggleRideExpansion(rideId)}
+            className="mt-1"
+          >
+            <Text className="text-xs text-[#00BD5F] font-[Afacad] font-medium">
+              {isExpanded ? 'Show less' : `Show ${waypoints.length - 2} more stopovers`}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  };
+
+  // Component to render driver preferences/comments
+  const renderRidePreferences = (ride: EnrichedRideResult['ride']) => {
+    const preferences = [];
+    
+    if (ride.allowsSmoking) preferences.push({ icon: 'cloud-outline', text: 'Smoking OK', color: '#F59E0B' });
+    if (ride.petsAllowed) preferences.push({ icon: 'paw-outline', text: 'Pets OK', color: '#8B5CF6' });
+    if (ride.musicPreference) preferences.push({ icon: 'musical-notes-outline', text: ride.musicPreference, color: '#06B6D4' });
+    if (ride.luggageSpace) {
+      const luggageText = ride.luggageSpace === 'large' ? 'Large luggage' : 
+                         ride.luggageSpace === 'medium' ? 'Medium luggage' : 'Small luggage only';
+      preferences.push({ icon: 'bag-outline', text: luggageText, color: '#10B981' });
+    }
+
+    if (preferences.length === 0) return null; // Removed comment check - don't show comment content on card
+
+    return (
+      <View className="mt-3 pt-3 border-t border-gray-200">
+        {/* Removed Driver Comment section - only show in RideDetailsScreen */}
+
+        {/* Preferences */}
+        {preferences.length > 0 && (
+          <View>
+            <Text className="text-sm font-semibold text-gray-700 font-[Afacad] mb-2">
+              Ride Preferences
+            </Text>
+            <View className="flex-row flex-wrap">
+              {preferences.map((pref, index) => (
+                <View 
+                  key={index}
+                  className="flex-row items-center bg-gray-100 px-2 py-1 rounded-full mr-2 mb-1"
+                >
+                  <Ionicons name={pref.icon as any} size={12} color={pref.color} />
+                  <Text className="text-xs text-gray-600 font-[Afacad] ml-1">
+                    {pref.text}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+      </View>
+    );
   };
 
   const { weekday, monthDay, year } = formatDate(searchParams.date);
@@ -258,11 +403,9 @@ const SearchResultsScreen = () => {
               </Pressable>
             </View>
           ) : (
-            /* Ride Results - Updated to handle enriched data structure */
+            /* Enhanced Ride Results with Stopovers and Comments */
             rides.map((enrichedRide, index) => {
               const { ride, driver, vehicle } = enrichedRide;
-              console.log('Ride coordinates:', ride.coordinates);
-              console.log('Ride endGeo:', ride.endGeo);
               
               if (!ride) {
                 console.warn('Missing ride data for index:', index);
@@ -275,36 +418,145 @@ const SearchResultsScreen = () => {
               const driverName = driver?.name || 'Driver';
               const driverRating = driver?.averageRating || 0;
               
-              // Get vehicle info for display
-              const vehicleInfo = vehicle ? `${vehicle.make} ${vehicle.model}` : '';
-              
               return (
-                <RideResultCard
-                  key={ride.rideId || index}
-                  departureTime={depTime}
-                  arrivalTime={arrTime}
-                  duration={duration}
-                  from={ride.startLocation}
-                  fromLat={ride.coordinates._latitude.toString()}
-                  fromLng={ride.coordinates._longitude.toString()}
-                  to={ride.endLocation}
-                  toLat={ride.endGeo._latitude.toString()}
-                  toLng={ride.endGeo._longitude.toString()}
-                  price={ride.pricePerSeat.toString()}
-                  polyline={ride.polyline} // send polyline
-                  driverName={driverName}
-                  driverRating={driverRating}
-                  driverImage=""
-                  availableSeats={ride.availableSeats}
-                  femaleOnly={ride.femaleOnly}
-                  rideId={ride.rideId}
-                  // Pass vehicle information for RideDetailsScreen
-                  vehicleMake={vehicle?.make}
-                  vehicleModel={vehicle?.model}
-                  vehicleColor={vehicle?.color}
-                  vehiclePlateNumber={vehicle?.plateNumber}
-                  userGender={userData?.gender}
-                />
+                <View key={ride.rideId || index} className="bg-[#F3F3F3] rounded-2xl p-4 mb-4 shadow border border-gray-100">
+                  {/* Original Ride Card Content */}
+                  <View className="flex-row justify-between items-start min-h-[70px]">
+                    {/* Ride Route Details */}
+                    <View className="flex-row items-center justify-start flex-1">
+                      {/* Left: Time & Duration */}
+                      <View className="items-end pr-2">
+                        <Text className="text-md font-bold font-[Afacad]">{depTime}</Text>
+                        <Text className="text-xs text-gray-500 font-[Afacad]">{duration}</Text>
+                        <Text className="text-md font-bold mt-1 font-[Afacad]">{arrTime}</Text>
+                      </View>
+
+                      {/* Center: Line & Circles - Simple version without stopovers */}
+                      <View className="items-center mx-2">
+                        <Ionicons name="ellipse-outline" size={10} color="#00BD5F" />
+                        <View className="w-px h-8 bg-[#00BD5F]" />
+                        <Ionicons name="ellipse-outline" size={10} color="#00BD5F" />
+                      </View>
+
+                      {/* Right: Locations - Simple version without inline waypoints */}
+                      <View className="ml-2 flex-1">
+                        <Text className="text-md font-semibold font-[Afacad]" numberOfLines={1}>
+                          {ride.startLocation}
+                        </Text>
+                        <View className="h-5" />
+                        <Text className="text-md font-semibold font-[Afacad]" numberOfLines={1}>
+                          {ride.endLocation}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Right Side: Price and Info */}
+                    <View className="items-end ml-4">
+                      <Text className="text-lg font-bold text-black font-[Afacad]">{ride.pricePerSeat} AED</Text>
+                      {ride.availableSeats && (
+                        <Text className="text-xs text-gray-500 font-[Afacad] mt-1">
+                          {ride.availableSeats} seat{ride.availableSeats !== 1 ? 's' : ''} left
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Badges Row */}
+                  <View className="flex-row mb-2 flex-wrap">
+                    {ride.femaleOnly && (
+                      <View className="bg-pink-100 px-2 py-1 rounded-full mr-2 mb-1">
+                        <Text className="text-xs text-pink-600 font-[Afacad] font-medium">Female-only</Text>
+                      </View>
+                    )}
+                    {ride.waypoints && ride.waypoints.length > 0 && (
+                      <View className="bg-orange-100 px-2 py-1 rounded-full mr-2 mb-1">
+                        <Text className="text-xs text-orange-600 font-[Afacad] font-medium">
+                          {ride.waypoints.length} stop{ride.waypoints.length !== 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                    )}
+                    {ride.comments && ( // Fixed field name
+                      <View className="bg-blue-100 px-2 py-1 rounded-full mr-2 mb-1">
+                        <Text className="text-xs text-blue-600 font-[Afacad] font-medium">Has note</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Render Waypoints - Removed from card, only show in details */}
+                  {/* {renderStopovers(ride.waypoints, ride.rideId)} */}
+
+                  {/* Render Ride Preferences and Comments */}
+                  {renderRidePreferences(ride)}
+
+                  {/* Bottom Row: Driver Info */}
+                  <View className="border-t border-gray-300 mt-4 pt-4 pl-4 flex-row items-center justify-between">
+                    <View className="flex-row items-center flex-1">
+                      <View className="w-10 h-10 rounded-full items-center justify-center overflow-hidden bg-[#00BD5F]">
+                        <Ionicons name="person" size={22} color="white" />
+                      </View>
+                      <View className="pl-2 flex-1">
+                        <View className="flex-row items-center">
+                          <Text className="font-[Afacad] text-base font-medium">{driverName}</Text>
+                          <View className="flex-row items-center ml-2">
+                            <Ionicons name="star" size={12} color="#FFD700" />
+                            <Text className="text-sm text-gray-500 font-[Afacad] ml-1">
+                              {(driverRating || 0).toFixed(1)}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text className="text-sm text-gray-500 font-[Afacad]" numberOfLines={1}>
+                          {vehicle ? `${vehicle.color} ${vehicle.make} ${vehicle.model} • ${vehicle.plateNumber}` : 'Vehicle details available'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Book Now Button */}
+                    <Pressable 
+                      onPress={() => {
+                        router.push({
+                          pathname: '/(tabs)/RideDetailsScreen',
+                          params: {
+                            rideId: ride.rideId,
+                            departureTime: depTime,
+                            arrivalTime: arrTime,
+                            duration: duration,
+                            from: ride.startLocation,
+                            fromLat: ride.coordinates._latitude.toString(),
+                            fromLng: ride.coordinates._longitude.toString(),
+                            to: ride.endLocation,
+                            toLat: ride.endGeo._latitude.toString(),
+                            toLng: ride.endGeo._longitude.toString(),
+                            price: ride.pricePerSeat.toString(),
+                            polyline: ride.polyline,
+                            driverName: driverName,
+                            driverRating: driverRating.toString(),
+                            availableSeats: ride.availableSeats?.toString(),
+                            femaleOnly: ride.femaleOnly ? '1' : '0',
+                            vehicleMake: vehicle?.make,
+                            vehicleModel: vehicle?.model,
+                            vehicleColor: vehicle?.color,
+                            vehiclePlateNumber: vehicle?.plateNumber,
+                            userGender: userData?.gender,
+                            // Pass additional ride data
+                            driverComment: ride.comments,
+                            stopovers: JSON.stringify(ride.waypoints || []),
+                            ridePreferences: JSON.stringify({
+                              allowsSmoking: ride.allowsSmoking,
+                              petsAllowed: ride.petsAllowed,
+                              musicPreference: ride.musicPreference,
+                              luggageSpace: ride.luggageSpace,
+                            }),
+                          }
+                        });
+                      }}
+                      className="bg-[#00BD5F] px-4 py-2 rounded-xl"
+                    >
+                      <Text className="text-white font-[Afacad] text-sm font-semibold">
+                        Book Now
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
               );
             })
           )}

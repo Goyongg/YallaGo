@@ -9,12 +9,33 @@ import { BASE_URL } from '@/config';
 
 const { width } = Dimensions.get('window');
 
+interface Stopover {
+  id: string;
+  location: string;
+  coordinates: {
+    _latitude: number;
+    _longitude: number;
+  };
+  estimatedArrival?: any;
+  estimatedDeparture?: any;
+  duration?: number;
+}
+
+interface RidePreferences {
+  allowsSmoking?: boolean;
+  petsAllowed?: boolean;
+  musicPreference?: string;
+  luggageSpace?: 'small' | 'medium' | 'large';
+}
+
 const RideDetailsScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
   const [passengerCount, setPassengerCount] = useState(1);
   const [isBooking, setIsBooking] = useState(false);
   const [vehicleInfo, setVehicleInfo] = useState<any>(null);
+  const [stopovers, setStopovers] = useState<Stopover[]>([]);
+  const [ridePreferences, setRidePreferences] = useState<RidePreferences>({});
 
   // Extract user gender from params
   const userGender = params.userGender as string;
@@ -43,6 +64,8 @@ const RideDetailsScreen = () => {
     vehicleModel: params.vehicleModel as string,
     vehicleColor: params.vehicleColor as string,
     vehiclePlateNumber: params.vehiclePlateNumber as string,
+    // Driver comment and ride data
+    driverComment: params.driverComment as string,
 
     // Parse polyline back from stringyfied version after getting passed from router
     polyline: (() => {
@@ -57,9 +80,47 @@ const RideDetailsScreen = () => {
   
   console.log('FROM:', rideDetails.fromLat, rideDetails.fromLng);
   console.log('TO:', rideDetails.toLat, rideDetails.toLng);
+  console.log('Driver Comment:', rideDetails.driverComment);
 
   // Check if user can book this ride
   const canBookRide = !rideDetails.femaleOnly || isFemale;
+
+  // Parse stopovers and preferences from params
+  useEffect(() => {
+    try {
+      if (params.stopovers) {
+        const parsedStopovers = JSON.parse(params.stopovers as string);
+        // Convert waypoints structure to stopover structure for consistency
+        const convertedStopovers = parsedStopovers.map((waypoint: any, index: number) => ({
+          id: `waypoint-${index}`,
+          location: waypoint.label || 'Unknown location',
+          coordinates: {
+            _latitude: waypoint.coordinates?.lat || 0,
+            _longitude: waypoint.coordinates?.lng || 0,
+          },
+          estimatedArrival: waypoint.estimatedArrival,
+          estimatedDeparture: waypoint.estimatedDeparture,
+          duration: waypoint.duration,
+        }));
+        setStopovers(convertedStopovers);
+        console.log('Parsed and converted stopovers:', convertedStopovers);
+      }
+    } catch (error) {
+      console.error('Error parsing stopovers:', error);
+      setStopovers([]);
+    }
+
+    try {
+      if (params.ridePreferences) {
+        const parsedPreferences = JSON.parse(params.ridePreferences as string);
+        setRidePreferences(parsedPreferences || {});
+        console.log('Parsed preferences:', parsedPreferences);
+      }
+    } catch (error) {
+      console.error('Error parsing ride preferences:', error);
+      setRidePreferences({});
+    }
+  }, [params.stopovers, params.ridePreferences]);
 
   // Set vehicle info if available
   useEffect(() => {
@@ -72,6 +133,36 @@ const RideDetailsScreen = () => {
       });
     }
   }, []);
+
+  // Format time from various timestamp formats
+  const formatTime = (timestamp: any) => {
+    if (!timestamp) return 'N/A';
+    
+    try {
+      let date: Date;
+      
+      if (timestamp && typeof timestamp === 'object' && timestamp._seconds) {
+        date = new Date(timestamp._seconds * 1000);
+      } else if (timestamp && typeof timestamp === 'object' && timestamp.toDate) {
+        date = timestamp.toDate();
+      } else if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
+        date = new Date(timestamp.seconds * 1000);
+      } else if (typeof timestamp === 'string') {
+        date = new Date(timestamp);
+      } else {
+        return 'N/A';
+      }
+      
+      return date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: false 
+      });
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return 'N/A';
+    }
+  };
 
   // Create route coordinates from the passed coordinates
   const routeCoordinates = [
@@ -124,25 +215,17 @@ const RideDetailsScreen = () => {
         return;
       }
 
-      // Prepare booking payload according to CreateRidePassengerDto
+      // Simplified booking payload - only send required fields
       const bookingPayload = {
         rideId: rideDetails.rideId,
-        pickupPoint: rideDetails.from,
-        startPoint: {
-          lat: rideDetails.fromLat,
-          lng: rideDetails.fromLng,
-        },
-        dropOffPoint: rideDetails.to,
-        endPoint: {
-          lat: rideDetails.toLat,
-          lng: rideDetails.toLng,
-        },
         seatsBooked: passengerCount,
+        bookingPrice: (rideDetails.price * passengerCount), // Changed from 'price' to 'bookingPrice'
+        pricePerSeat: rideDetails.price, // Price per individual seat
       };
 
       console.log('Booking ride with payload:', bookingPayload);
 
-      // FIXED: Use correct endpoint /bookings instead of /ride-passengers
+      // Use correct endpoint /bookings
       const response = await fetch(`${BASE_URL}/bookings`, {
         method: 'POST',
         headers: {
@@ -161,7 +244,7 @@ const RideDetailsScreen = () => {
       const result = await response.json();
       console.log('Booking successful:', result);
 
-      // FIXED: Show success message and stay on the same page
+      // Show success message and stay on the same page
       Alert.alert(
         'Booking Successful! 🎉', 
         `Your ride has been booked successfully.\n\nBooking ID: ${result.bookingId || 'N/A'}\nSeats booked: ${passengerCount}\nTotal cost: ${((rideDetails.price || 0) * passengerCount).toFixed(1)} AED`,
@@ -169,7 +252,6 @@ const RideDetailsScreen = () => {
           {
             text: 'OK',
             onPress: () => {
-              // FIXED: Stay on the same page instead of navigating away
               console.log('Booking completed, staying on current page');
             }
           }
@@ -227,6 +309,93 @@ const RideDetailsScreen = () => {
     return formatDate(); // Fallback to current date
   };
 
+  // Render stopovers section
+  const renderStopovers = () => {
+    if (!stopovers || stopovers.length === 0) return null;
+
+    return (
+      <View className="mx-4 mb-4">
+        <Text className="text-lg font-semibold font-[Afacad] mb-3">
+          Trip Stopovers ({stopovers.length})
+        </Text>
+        <View className="bg-orange-50 rounded-xl p-4">
+          {stopovers.map((stopover, index) => (
+            <View key={stopover.id || index} className="flex-row items-center mb-3 last:mb-0">
+              <View className="w-3 h-3 rounded-full bg-orange-400 mr-3" />
+              <View className="flex-1">
+                <Text className="text-base font-medium font-[Afacad]">
+                  {stopover.location}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+        <View className="h-px bg-gray-200 mt-6" />
+      </View>
+    );
+  };
+
+  // Render driver comment section
+  const renderDriverComment = () => {
+    if (!rideDetails.driverComment) return null;
+    
+    return (
+      <View className="mx-4 mb-6">
+        <Text className="text-lg font-semibold font-[Afacad] mb-3">
+          Driver's Note
+        </Text>
+        <View className="bg-gray-100 rounded-xl p-4">
+          <View className="flex-row items-start">
+            <Ionicons name="chatbubble-outline" size={16} color="#00BD5F" style={{ marginTop: 2, marginRight: 8 }} />
+            <Text className="text-base text-gray-700 font-[Afacad] italic flex-1">
+              "{rideDetails.driverComment}"
+            </Text>
+          </View>
+        </View>
+        <View className="h-px bg-gray-200 mt-6" />
+      </View>
+    );
+  };
+
+  // Render ride preferences
+  const renderRidePreferences = () => {
+    const preferences = [];
+    
+    if (ridePreferences.allowsSmoking) preferences.push({ icon: 'cloud-outline', text: 'Smoking OK', color: '#F59E0B' });
+    if (ridePreferences.petsAllowed) preferences.push({ icon: 'paw-outline', text: 'Pets OK', color: '#8B5CF6' });
+    if (ridePreferences.musicPreference) preferences.push({ icon: 'musical-notes-outline', text: ridePreferences.musicPreference, color: '#06B6D4' });
+    if (ridePreferences.luggageSpace) {
+      const luggageText = ridePreferences.luggageSpace === 'large' ? 'Large luggage' : 
+                         ridePreferences.luggageSpace === 'medium' ? 'Medium luggage' : 'Small luggage only';
+      preferences.push({ icon: 'bag-outline', text: luggageText, color: '#10B981' });
+    }
+
+    if (preferences.length === 0) return null;
+
+    return (
+      <View className="mx-4 mb-6">
+        <Text className="text-lg font-semibold font-[Afacad] mb-3">
+          Ride Preferences
+        </Text>
+        <View className="bg-gray-50 rounded-xl p-4">
+          <View className="flex-row flex-wrap">
+            {preferences.map((pref, index) => (
+              <View 
+                key={index}
+                className="flex-row items-center bg-white px-3 py-2 rounded-full mr-2 mb-2 shadow-sm"
+              >
+                <Ionicons name={pref.icon as any} size={16} color={pref.color} />
+                <Text className="text-sm text-gray-700 font-[Afacad] ml-2">
+                  {pref.text}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <View className="flex-1 bg-white">
       {/* Header */}
@@ -256,7 +425,7 @@ const RideDetailsScreen = () => {
             rotateEnabled={false}
           >
             {/* Route Polyline */}
-            {routeCoordinates.length > 1 && (
+            {rideDetails.polyline.length > 1 && (
               <Polyline
                 coordinates={rideDetails.polyline}
                 strokeColor="#00BD5F"
@@ -286,10 +455,28 @@ const RideDetailsScreen = () => {
                 <Ionicons name="location" size={12} color="white" />
               </View>
             </Marker>
+
+            {/* Stopover Markers */}
+            {stopovers.map((stopover, index) => (
+              <Marker
+                key={stopover.id || index}
+                coordinate={{
+                  latitude: stopover.coordinates._latitude,
+                  longitude: stopover.coordinates._longitude,
+                }}
+                title={stopover.location}
+                description="Stopover"
+              >
+                <View className="bg-orange-400 rounded-full p-2">
+                  <Ionicons name="pause" size={10} color="white" />
+                </View>
+              </Marker>
+            ))}
           </MapView>
           
           <Text className="text-md text-gray-600 mt-2 font-[Afacad]">
             Check the trip route on the map 🗺️
+            {stopovers.length > 0 && ` • ${stopovers.length} stopover${stopovers.length !== 1 ? 's' : ''}`}
           </Text>
         </View>
 
@@ -343,6 +530,15 @@ const RideDetailsScreen = () => {
 
         {/* Divider */}
         <View className="h-px bg-gray-200 mx-4 mb-4" />
+
+        {/* Stopovers Section */}
+        {renderStopovers()}
+
+        {/* Driver Comment Section */}
+        {renderDriverComment()}
+
+        {/* Ride Preferences Section */}
+        {renderRidePreferences()}
 
         {/* Driver Info */}
         <View className="mx-4 mb-6">
