@@ -321,7 +321,7 @@ export class UsersService {
                     // Select only the required user fields (name and average rating)
                     const cleanUserData = pickFields(userData, ['name', 'averageRating'])
                     // Get seats booked
-                    const cleanBookingData = pickFields(booking.data(), ['seatsBooked'])
+                    const cleanBookingData = pickFields(booking.data(), ['bookingId', 'seatsBooked'])
                     // Get start and end location
                     const rideData = await this.firebaseDriverService.fetchRideData(booking.data().rideId);
                     const cleanRideData = pickFields(rideData, ['startLocation', 'endLocation']);
