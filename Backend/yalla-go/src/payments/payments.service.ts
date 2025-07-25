@@ -3,25 +3,63 @@ import { FirebaseService } from 'src/firebase/firebase.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentStatus } from './enums/payment-status.enum';
 import { Timestamp } from 'firebase-admin/firestore'
+import Stripe from 'stripe';
 
 @Injectable()
 export class PaymentsService {
     constructor(private readonly firebase: FirebaseService) {}
 
-    // create payment record in firestore
-    async createPayment(createPaymentDto: CreatePaymentDto, firebaseUid: string) {
-        const paymentRef = this.firebase.firestore.collection('payments').doc();
-        const paymentData = {
-            paymentId: paymentRef.id, // create paymentid
-            // rideId...
-            passengerId: firebaseUid, // link to passenger
-            ...createPaymentDto,
-            status: PaymentStatus.PENDING,
-            timestamp: Timestamp.now().toDate(),
-            //stripe trans id...
-        };
+    async createPaymentIntent(firebaseUid: string, createPaymentDto: CreatePaymentDto) {
+        const { rideId, amount } = createPaymentDto;
 
-        await paymentRef.set(paymentData);
-        return { message: "Payment record created successfully", userId: firebaseUid }
-    };
+        const secretKey = process.env.STRIPE_SECRET_KEY;
+        if (!secretKey) {
+        throw new Error('🚨 STRIPE_SECRET_KEY is not defined in environment variables.');
+        }
+
+        // Fetch user info from Firestore
+        const userSnap = await this.firebase.firestore.collection('users').doc(firebaseUid).get();
+
+        if (!userSnap.exists) {
+            throw new Error('🚨 User not found');
+        }
+
+        const userData = userSnap.data();
+        const passengerName = userData?.name || 'Unknown';
+
+        const stripe = new Stripe(secretKey, {
+            apiVersion: '2025-06-30.basil',
+        });
+
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(amount * 100), // convert to cents
+            currency: 'aed',
+            capture_method: 'manual', // 👈 Important!
+            metadata: {
+            rideId,
+            passengerId: firebaseUid,
+            passengerName
+            },
+        });
+
+        const paymentRef = this.firebase.firestore.collection('payments').doc(paymentIntent.id);
+
+        await paymentRef.set({
+            paymentId: paymentIntent.id,
+            rideId,
+            passengerId: firebaseUid,
+            passengerName,
+            amount,
+            currency: paymentIntent.currency,
+            status: PaymentStatus.PENDING,
+            createdAt: this.firebase.FieldValue.serverTimestamp(),
+            stripeTransactionId: paymentIntent.id,
+        });
+
+        return {
+            clientSecret: paymentIntent.client_secret,
+            paymentId: paymentIntent.id,
+        };
+    }
+
 }

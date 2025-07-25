@@ -60,7 +60,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 /Backend/yalla-go/src/config/yallago-app-e3745-firebase-adminsdk-fbsvc-66667a44a9.json
 
 # Firebase get-token.js
-/Backend/yalla-go/scripts/get-token.js
+/Backend/yalla-go/scripts
 
 # Heap dump files
 *.hprof

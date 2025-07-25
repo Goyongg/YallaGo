@@ -19,6 +19,10 @@ export class FirebaseService implements OnModuleInit{
     // Expose FieldPath
     public readonly FieldPath = admin.firestore.FieldPath;
 
+    // Expose FieldValue
+    public readonly FieldValue = admin.firestore.FieldValue;
+
+
     onModuleInit() {
         // If there is already a Firebase Admin app initialized re-use it
         const app = admin.apps.length

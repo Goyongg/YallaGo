@@ -6,6 +6,7 @@ import { FirebaseDriverService } from 'src/firebase/firebase-driver.service';
 import { FirebaseNotificationsService } from 'src/firebase/firebase-notifications.service';
 import { FirebaseUserService } from 'src/firebase/firebase-user.service';
 import { omitFields, pickFields } from 'src/common/helpers/object.helpers';
+import { PaymentsService } from 'src/payments/payments.service';
 
 @Injectable()
 export class RidePassengersService {
@@ -14,7 +15,8 @@ export class RidePassengersService {
         private readonly firebase: FirebaseService,
         private readonly firebaseDriverService: FirebaseDriverService,
         private readonly firebaseNotificationsService: FirebaseNotificationsService,
-        private readonly firebaseUserService: FirebaseUserService
+        private readonly firebaseUserService: FirebaseUserService,
+        private readonly paymentsService: PaymentsService
     ) {}
 
     private async reduceRideSeats(rideId: string, seatsBooked: number){
@@ -66,8 +68,17 @@ export class RidePassengersService {
         // Notify driver that a new booking has been made
         await this.notifyDriver(bookingData);
 
-        // Store the booking data in Firestore
-        await bookRef.set(bookingData);
+        const { clientSecret, paymentId } = await this.paymentsService.createPaymentIntent(firebaseUid, {
+            rideId: createRidePassengerDto.rideId,
+            amount: createRidePassengerDto.bookingPrice,
+        });
+
+        // then store paymentIntent ID with the booking
+        await bookRef.set({
+            ...bookingData,
+            paymentIntentId: paymentId,
+            paymentClientSecret: clientSecret,
+        });
         return { message: "Booking created successfully", bookingId: bookRef.id };
     };
 

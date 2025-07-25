@@ -7,11 +7,11 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 export class PaymentsController {
     constructor(private readonly paymentService: PaymentsService) {}
 
+    @Post('create-intent')
     @UseGuards(FirebaseAuthGuard)
-    @Post('payment')
-    async createPayment(@Body(ValidationPipe) createPaymentDto: CreatePaymentDto, @Req() req) {
-        const firebaseUid = req.user.uid; // extract user id from the request
+    async createIntent(@Req() req, @Body() createPaymentDto: CreatePaymentDto) {
 
-        return this.paymentService.createPayment(createPaymentDto, firebaseUid);
+    const uid = req.user.uid;
+    return this.paymentService.createPaymentIntent(uid, createPaymentDto);
     }
 }

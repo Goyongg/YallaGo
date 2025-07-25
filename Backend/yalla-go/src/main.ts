@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express from 'express';
 import { https } from 'firebase-functions/v2';
+import bodyParser from 'body-parser';
 
 // Log all environment variable keys (for debugging)
 console.log("✅ All process.env keys:");
@@ -10,6 +11,9 @@ console.log(Object.keys(process.env));
 
 // Craete an Express server
 const server = express();
+
+// ✅ Required: preserve raw body for Stripe webhook
+server.post('/webhooks/stripe', bodyParser.raw({ type: 'application/json' }));
 
 // Keep a reference to avoid re-creating Nest on every request
 let nestAppInitialized = false;
