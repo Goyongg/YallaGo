@@ -364,19 +364,19 @@ export class UsersService {
 
         const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
 
-        // 💳 Capture the authorized payment
-        try {
-            await this.stripe.paymentIntents.capture(bookingData.paymentIntentId);
+        // // 💳 Capture the authorized payment
+        // try {
+        //     await this.stripe.paymentIntents.capture(bookingData.paymentIntentId);
 
-            // Update payment Firestore document
-            await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
-                status: PaymentStatus.PAID,
-                completedAt: this.firebase.FieldValue.serverTimestamp(),
-            });
-        } catch (err) {
-            console.error(`❌ Failed to capture payment for booking ${bookingId}`, err.message);
-            throw new Error('Payment capture failed. Booking cannot be confirmed.');
-        }
+        //     // Update payment Firestore document
+        //     await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
+        //         status: PaymentStatus.PAID,
+        //         completedAt: this.firebase.FieldValue.serverTimestamp(),
+        //     });
+        // } catch (err) {
+        //     console.error(`❌ Failed to capture payment for booking ${bookingId}`, err.message);
+        //     throw new Error('Payment capture failed. Booking cannot be confirmed.');
+        // }
 
         // Update the status field of this booking to CONFIRMED
         bookingRef.update({ status: BookingStatus.CONFIRMED })
@@ -409,18 +409,18 @@ export class UsersService {
         // Retrieve the corresponding ride details using the rideId from the booking
         const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
 
-        // 💳 Cancel the PaymentIntent to release the authorization
-        try {
-            await this.stripe.paymentIntents.cancel(bookingData.paymentIntentId);
+        // // 💳 Cancel the PaymentIntent to release the authorization
+        // try {
+        //     await this.stripe.paymentIntents.cancel(bookingData.paymentIntentId);
 
-            await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
-                status: PaymentStatus.CANCELLED,
-                cancelledAt: this.firebase.FieldValue.serverTimestamp(),
-            });
-        } catch (err) {
-            console.error(`❌ Failed to cancel payment for booking ${bookingId}`, err.message);
-            // Proceed anyway — this is non-critical for booking logic
-        }
+        //     await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
+        //         status: PaymentStatus.CANCELLED,
+        //         cancelledAt: this.firebase.FieldValue.serverTimestamp(),
+        //     });
+        // } catch (err) {
+        //     console.error(`❌ Failed to cancel payment for booking ${bookingId}`, err.message);
+        //     // Proceed anyway — this is non-critical for booking logic
+        // }
 
         // Update the booking's status to CANCELLED in the database
         bookingRef.update({ status: BookingStatus.CANCELLED })
