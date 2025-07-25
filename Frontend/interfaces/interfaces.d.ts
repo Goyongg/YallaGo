@@ -399,6 +399,7 @@ export interface ProcessedDriverRide {
   hasBookings: boolean; // Whether ride has any passenger bookings
   status: string;
   date: string; // For grouping history (YYYY-MM-DD format)
+  comments?: string;
   // Add coordinate fields for map display
   coordinates?: {
     latitude?: number;

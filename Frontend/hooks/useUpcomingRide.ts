@@ -1,4 +1,4 @@
-// hooks/useUpcomingRide.ts - Fixed to accept upcomingData directly
+// hooks/useUpcomingRide.ts - Fixed to handle actual backend data structure
 import { useState, useEffect } from 'react';
 
 interface UpcomingRideData {
@@ -133,16 +133,45 @@ const useUpcomingRide = (userData: UserData | null, upcomingData: any[] | null, 
         console.log('📅 - bookingId:', passengerBooking.bookingId);
         console.log('📅 - pickupPoint:', passengerBooking.pickupPoint);
         console.log('📅 - dropOffPoint:', passengerBooking.dropOffPoint);
+        console.log('📅 - startLocation:', passengerBooking.startLocation);
+        console.log('📅 - endLocation:', passengerBooking.endLocation);
         console.log('📅 - ride object:', passengerBooking.ride);
         console.log('📅 - vehicle object:', passengerBooking.vehicle);
         
-        if (passengerBooking.bookingId && passengerBooking.pickupPoint && passengerBooking.dropOffPoint) {
-          console.log('📅 ✅ Passenger booking has required fields');
+        // ✅ FIX: Handle different field names from backend
+        // Check for pickupPoint/dropOffPoint first, then fallback to startLocation/endLocation
+        let fromLocation = '';
+        let toLocation = '';
+        
+        if (passengerBooking.pickupPoint && passengerBooking.dropOffPoint) {
+          fromLocation = passengerBooking.pickupPoint;
+          toLocation = passengerBooking.dropOffPoint;
+          console.log('📅 Using pickupPoint/dropOffPoint fields');
+        } else if (passengerBooking.startLocation && passengerBooking.endLocation) {
+          fromLocation = passengerBooking.startLocation;
+          toLocation = passengerBooking.endLocation;
+          console.log('📅 Using startLocation/endLocation fields');
+        } else {
+          // Try to extract from ride context if available
+          const ride = passengerBooking.ride;
+          if (ride && ride.startLocation && ride.endLocation) {
+            fromLocation = ride.startLocation;
+            toLocation = ride.endLocation;
+            console.log('📅 Using ride.startLocation/endLocation fields');
+          } else {
+            console.log('📅 ❌ No location fields found, using fallback');
+            fromLocation = 'Your pickup location';
+            toLocation = 'Your destination';
+          }
+        }
+        
+        if (passengerBooking.bookingId && fromLocation && toLocation) {
+          console.log('📅 ✅ Passenger booking has required fields (after processing)');
           
           // Handle Firestore timestamp conversion for ride departure time
           let departureTimeISO: string;
           try {
-            const rideDepTime = passengerBooking.ride?.departureTime;
+            const rideDepTime = passengerBooking.ride?.departureTime || passengerBooking.departureTime;
             console.log('📅 Ride departure time:', rideDepTime);
             
             if (rideDepTime) {
@@ -168,8 +197,8 @@ const useUpcomingRide = (userData: UserData | null, upcomingData: any[] | null, 
           const ride: UpcomingRideData = {
             rideId: passengerBooking.bookingId,
             departureTime: departureTimeISO,
-            from: passengerBooking.pickupPoint,
-            to: passengerBooking.dropOffPoint,
+            from: fromLocation,
+            to: toLocation,
             userRole: 'passenger',
             vehicle: passengerBooking.vehicle ? {
               make: passengerBooking.vehicle.make,
@@ -182,7 +211,10 @@ const useUpcomingRide = (userData: UserData | null, upcomingData: any[] | null, 
           console.log('📅 ✅ Setting passenger ride:', JSON.stringify(ride, null, 2));
           setUpcomingRide(ride);
         } else {
-          console.log('📅 ❌ Passenger booking missing required fields');
+          console.log('📅 ❌ Passenger booking missing required fields after processing');
+          console.log('📅 - bookingId:', !!passengerBooking.bookingId);
+          console.log('📅 - fromLocation:', fromLocation);
+          console.log('📅 - toLocation:', toLocation);
           setUpcomingRide(null);
         }
       } else {

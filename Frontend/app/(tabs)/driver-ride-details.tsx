@@ -1,4 +1,4 @@
-// app/(tabs)/driver-ride-details.tsx - FIXED version
+// app/(tabs)/driver-ride-details.tsx - FIXED version with ONLY comments and stopovers added
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -48,6 +48,9 @@ interface ExtendedRideData extends ProcessedDriverRide {
     phoneNumber: string;
     seatsBooked: number;
   }>;
+  
+  // ONLY ADDED: Comment field
+  comments?: string;
 }
 
 // ADDED: Safety utility functions
@@ -347,6 +350,54 @@ const DriverRideDetailsScreen = () => {
     }
   };
 
+  // ADDED: Render driver comment section (keeping original design style)
+  const renderDriverComment = () => {
+    if (!rideData?.comments) return null;
+    
+    return (
+      <View className="mx-4 mb-6">
+        <Text className="text-lg font-semibold font-[Afacad] mb-3">
+          Your Note to Passengers
+        </Text>
+        <View className="bg-gray-100 rounded-xl p-4">
+          <View className="flex-row items-start">
+            <Ionicons name="chatbubble-outline" size={16} color="#00BD5F" style={{ marginTop: 2, marginRight: 8 }} />
+            <Text className="text-base text-gray-700 font-[Afacad] italic flex-1">
+              "{safeString(rideData.comments)}"
+            </Text>
+          </View>
+        </View>
+        <View className="h-px bg-gray-200 mt-6" />
+      </View>
+    );
+  };
+
+  // ADDED: Render stopovers section (keeping original design style)
+  const renderStopovers = () => {
+    if (!stopovers || stopovers.length === 0) return null;
+
+    return (
+      <View className="mx-4 mb-6">
+        <Text className="text-lg font-semibold font-[Afacad] mb-3">
+          Trip Stopovers ({stopovers.length})
+        </Text>
+        <View className="bg-orange-50 rounded-xl p-4">
+          {stopovers.map((stopover, index) => (
+            <View key={stopover.id || index} className="flex-row items-center mb-3 last:mb-0">
+              <View className="w-3 h-3 rounded-full bg-orange-400 mr-3" />
+              <View className="flex-1">
+                <Text className="text-base font-medium font-[Afacad]">
+                  {stopover.location}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+        <View className="h-px bg-gray-200 mt-6" />
+      </View>
+    );
+  };
+
   // Loading state
   if (loading || ridesLoading) {
     return (
@@ -534,6 +585,12 @@ const DriverRideDetailsScreen = () => {
           </View>
         </View>
 
+        {/* ADDED: Driver Comment Section - keeping original style */}
+        {renderDriverComment()}
+
+        {/* ADDED: Stopovers Section - keeping original style */}
+        {renderStopovers()}
+
         {/* Seat Information - FIXED with safety checks */}
         <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
           <View className="p-4 border-b border-gray-200">
@@ -554,14 +611,6 @@ const DriverRideDetailsScreen = () => {
                 {safeNumber(rideData.bookedSeats)}
               </Text>
             </View>
-            {/* {rideData.totalSeats && (
-              <View className="flex-row justify-between items-center">
-                <Text className="text-base font-[Afacad] text-gray-600">Total Seats:</Text>
-                <Text className="text-base font-[Afacad] font-semibold text-black">
-                  {safeNumber(rideData.totalSeats)}
-                </Text>
-              </View>
-            )} */}
           </View>
         </View>
 

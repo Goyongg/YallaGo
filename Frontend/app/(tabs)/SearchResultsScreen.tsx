@@ -571,7 +571,7 @@ const SearchResultsScreen = () => {
         onRequestClose={() => setShowSearchModal(false)}
       >
         <TouchableWithoutFeedback onPress={() => setShowSearchModal(false)}>
-          <View className="flex-1 justify-center items-center px-6">
+          <View className="flex-1 justify-center items-center px-6 bg-black/30">
             <TouchableWithoutFeedback>
               <View className="bg-white rounded-xl p-6 w-full shadow-lg" style={{ maxWidth: 400, minWidth: 300 }}>
                 {/* Modal Header */}

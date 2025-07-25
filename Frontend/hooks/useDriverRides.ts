@@ -278,7 +278,8 @@ const useDriverRides = (): UseDriverRidesReturn => {
           endGeo: ride.endGeo,
           waypoints: ride.waypoints,
           polyline: ride.polyline,
-          bookings: ride.bookings
+          bookings: ride.bookings,
+          comments: ride.comments,
         };
 
         console.log(`🚗 Final processed ride ${safeRideId}:`, processedRide);

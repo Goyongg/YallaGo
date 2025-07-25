@@ -34,7 +34,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, r
   return (
     <Modal transparent animationType="slide" visible={visible} onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <View className="flex-1 justify-end">
+        <View className="flex-1 justify-end bg-black/30">
           <TouchableWithoutFeedback>
             <View className="bg-white rounded-t-3xl pt-6 pb-12 px-6">
               {/* Close Button */}
