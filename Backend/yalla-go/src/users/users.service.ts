@@ -67,20 +67,9 @@ export class UsersService {
 
             // Loop through each ride
             for (const ride of rides) {
-                // Cast to make TypeScript aware of optional fields
-                const rideWithDeparture = ride as {
-                departureTime?: FirebaseFirestore.Timestamp;
-                status?: string;
-                };
-
-                // If departureTime is missing or invalid, skip
-                if (!rideWithDeparture.departureTime || typeof rideWithDeparture.departureTime.toDate !== 'function') {
-                    continue;
-                }
-
                 // Convert Firestore Timestamp to JS Date
-                const departureTime = rideWithDeparture.departureTime.toDate();
-                const status = rideWithDeparture.status;
+                const departureTime = ride.departureTime.toDate();
+                const status = ride.status;
                 // Check if departure is within the next hour and status is in-progress
                 const matchesTimeWindow = departureTime >= now && departureTime <= oneHourFromNow;
                 const isInProgressAndInTimeWindow = matchesTimeWindow && (status === RideStatus.IN_PROGRESS || status === RideStatus.BOOKED);
@@ -332,20 +321,13 @@ export class UsersService {
     }
 
     async acceptBookingRequest(bookingId: string) {
-        const bookingRef = await this.firebase.firestore.collection('bookings').doc(bookingId);
+        const bookingRef = await this.firebaseUserService.getBookingRef(bookingId);
         
-        // Retrieve the snapshot of the booking document
-        const bookingSnap = await bookingRef.get();
-
-        // If the booking doesn't exist, throw a 404 error
-        if(!bookingSnap.exists){
-            throw new NotFoundException('Booking not found')
-        }
-
         // Extract the booking data from the document snapshot
-        const bookingData = bookingSnap.data()!;
+        const bookingData = await this.firebaseUserService.fetchBookingData(bookingId);
 
-        const rideRef = await this.firebaseDriverService.getRideRef(bookingData.rideId)
+        const rideRef = await this.firebaseDriverService.getRideRef(bookingData.rideId);
+
         const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
 
         // Update the status field of this booking to CONFIRMED
@@ -371,16 +353,10 @@ export class UsersService {
     }
 
     async declineBookingRequest(bookingId: string) {
-        const bookingRef = await this.firebase.firestore.collection('bookings').doc(bookingId);
-        const bookingSnap = await bookingRef.get();
-
-        // If the booking doesn't exist, throw a 404 error
-        if(!bookingSnap.exists){
-            throw new NotFoundException('Booking not found')
-        }
+        const bookingRef = await this.firebaseUserService.getBookingRef(bookingId);
 
         // Extract the booking data from the snapshot
-        const bookingData = bookingSnap.data()!;
+        const bookingData = await this.firebaseUserService.fetchBookingData(bookingId);
 
         // Retrieve the corresponding ride details using the rideId from the booking
         const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);

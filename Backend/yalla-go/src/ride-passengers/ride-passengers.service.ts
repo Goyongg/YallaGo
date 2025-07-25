@@ -17,31 +17,6 @@ export class RidePassengersService {
         private readonly firebaseUserService: FirebaseUserService
     ) {}
 
-    async createBooking(createRidePassengerDto: CreateRidePassengerDto, firebaseUid: string) {
-        // Check if booked seats are less than or equal to available seats
-        await this.validateSeats(createRidePassengerDto.rideId, createRidePassengerDto.seatsBooked);
-        
-        const bookRef = this.firebase.firestore.collection('bookings').doc();
-        // Construct the booking data object
-        const bookingData = {
-            bookingId: bookRef.id,
-            passengerId: firebaseUid,
-            // Spread the fields from the DTO
-            ...createRidePassengerDto,
-            status: BookingStatus.PENDING
-        }
-
-        // Reduce available seats for the ride being booked based on the number of seats booked
-        await this.reduceRideSeats(createRidePassengerDto.rideId, createRidePassengerDto.seatsBooked);
-
-        // Notify driver that a new booking has been made
-        await this.notifyDriver(bookingData);
-
-        // Store the booking data in Firestore
-        await bookRef.set(bookingData);
-        return { message: "Booking created successfully", bookingId: bookRef.id };
-    };
-
     private async reduceRideSeats(rideId: string, seatsBooked: number){
         const rideRef = await this.firebaseDriverService.getRideRef(rideId);
 
@@ -71,6 +46,31 @@ export class RidePassengersService {
         }
     }
 
+    async createBooking(createRidePassengerDto: CreateRidePassengerDto, firebaseUid: string) {
+        // Check if booked seats are less than or equal to available seats
+        await this.validateSeats(createRidePassengerDto.rideId, createRidePassengerDto.seatsBooked);
+        
+        const bookRef = this.firebase.firestore.collection('bookings').doc();
+        // Construct the booking data object
+        const bookingData = {
+            bookingId: bookRef.id,
+            passengerId: firebaseUid,
+            // Spread the fields from the DTO
+            ...createRidePassengerDto,
+            status: BookingStatus.PENDING
+        }
+
+        // Reduce available seats for the ride being booked based on the number of seats booked
+        await this.reduceRideSeats(createRidePassengerDto.rideId, createRidePassengerDto.seatsBooked);
+
+        // Notify driver that a new booking has been made
+        await this.notifyDriver(bookingData);
+
+        // Store the booking data in Firestore
+        await bookRef.set(bookingData);
+        return { message: "Booking created successfully", bookingId: bookRef.id };
+    };
+
     async getBookings(firebaseUid: string) {
         // Query the 'bookings' collection for documents where passengerId matches the Firebase UID
         const bookingSnapshot = await this.firebase.firestore.collection('bookings').where('passengerId', '==', firebaseUid).get();
@@ -80,13 +80,12 @@ export class RidePassengersService {
         // Iterate over each booking document
         for (const booking of bookingSnapshot.docs) {
             const bookingData = booking.data();
+            const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
+            const driverData = await this.firebaseUserService.fetchUserData(rideData.driverId);
 
             if(bookingData.status === BookingStatus.PENDING || bookingData.status === BookingStatus.CONFIRMED || bookingData.status === BookingStatus.ONGOING) {
-                // Fetch the ride document associated with this booking
-                const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
                 const redactedRideData = omitFields(rideData, ['distance', 'driverId', 'g', 'vehicleId', 'availableSeats', 'bookedSeats']);
                 
-                const driverData = await this.firebaseUserService.fetchUserData(rideData.driverId);
                 const redactedDriverData = pickFields(driverData, ['name', 'phoneNumber', 'averageRating']);
 
                 const vehicleData = await this.firebaseDriverService.fetchVehicleData(driverData.vehicleId);
@@ -105,11 +104,8 @@ export class RidePassengersService {
             }
 
             if(bookingData.status === BookingStatus.COMPLETED || bookingData.status === BookingStatus.NO_SHOW || bookingData.status === BookingStatus.CANCELLED) {
-                // Fetch the ride document associated with this booking
-                const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
                 const redactedRideData = pickFields(rideData, ['rideId', 'departureTime', 'durationSeconds', 'startLocation', 'endLocation', 'pricePerSeat']);
 
-                const driverData = await this.firebaseUserService.fetchUserData(rideData.driverId);
                 const redactedDriverData = pickFields(driverData, ['name', 'averageRating']);
 
                 bookings.push({
@@ -129,17 +125,10 @@ export class RidePassengersService {
 
     async deleteBooking(bookingId: string) {
         // Get a reference to the booking document in the "bookings" collection
-        const bookingRef = await this.firebase.firestore.collection('bookings').doc(bookingId);
+        const bookingRef = await this.firebaseUserService.getBookingRef(bookingId);
 
-        // Fetch the document snapshot from Firestore
-        const bookingSnap = await bookingRef.get();
-
-        if(!bookingSnap.exists){
-            throw new NotFoundException('Booking not found')
-        }
-
-        // Extract the booking data from the snapshot
-        const bookingData = bookingSnap.data()!;
+        // Extract the booking data
+        const bookingData = await this.firebaseUserService.fetchBookingData(bookingId);
 
         // If the booking is not in PENDING state, deny deletion
         // This protects confirmed or ongoing bookings from being removed

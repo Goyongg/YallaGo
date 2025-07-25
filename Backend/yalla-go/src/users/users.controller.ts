@@ -11,6 +11,25 @@ import { PatchUserDto } from './dto/patch-user.dto';
 export class UsersController {
     constructor(private readonly userService: UsersService) {}
 
+    // GET /users/profile
+    @UseGuards(FirebaseAuthGuard)
+    @Get('profile')
+    async getUserProfile(@Req() req) {
+        const firebaseUid = req.user.uid;
+        console.log(firebaseUid);
+
+        return await this.userService.getUserProfile(firebaseUid);
+    }
+
+    @UseGuards(FirebaseAuthGuard)
+    @Get('booking-requests')
+    async getBookingRequests(@Req() req) {
+        const firebaseUid = req.user.uid;
+        console.log(firebaseUid);
+
+        return await this.userService.getBookingRequests(firebaseUid)
+    }
+
     // GET /users/home
     @UseGuards(FirebaseAuthGuard)
     @Get('home')
@@ -31,25 +50,6 @@ export class UsersController {
         const firebaseUid = req.user.uid;
 
         return await this.userService.saveDeviceToken(firebaseUid, fcmToken)
-    }
-
-    // GET /users/profile
-    @UseGuards(FirebaseAuthGuard)
-    @Get('profile')
-    async getUserProfile(@Req() req) {
-        const firebaseUid = req.user.uid;
-        console.log(firebaseUid);
-
-        return await this.userService.getUserProfile(firebaseUid);
-    }
-
-    @UseGuards(FirebaseAuthGuard)
-    @Get('booking-requests')
-    async getBookingRequests(@Req() req) {
-        const firebaseUid = req.user.uid;
-        console.log(firebaseUid);
-
-        return await this.userService.getBookingRequests(firebaseUid)
     }
 
     // POST /users/register

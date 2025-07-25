@@ -1,13 +1,13 @@
 import { IsEmail, IsEnum, IsMobilePhone, IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export enum UserRole {
-    DRIVER = "driver",
-    PASSENGER = "passenger"
+    DRIVER = 'driver',
+    PASSENGER = 'passenger'
 }
 
 export enum UserGender {
-    MALE = "male",
-    FEMALE = "female"
+    MALE = 'male',
+    FEMALE = 'female'
 }
 
 export class CreateUserDto {

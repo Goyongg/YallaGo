@@ -5,6 +5,10 @@ export class CreateReviewDto {
     @IsString()
     rideId: string;
 
+    @IsString()
+    @IsOptional()
+    passengerId?: string;
+
     @IsNumber()
     @Min(1)
     @Max(5)

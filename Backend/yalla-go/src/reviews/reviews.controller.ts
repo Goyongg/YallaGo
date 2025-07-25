@@ -9,14 +9,6 @@ export class ReviewsController {
     constructor(private readonly reviewsService: ReviewsService) {}
 
     @UseGuards(FirebaseAuthGuard)
-    @Post()
-    async addReview(@Body(ValidationPipe) createReviewDto: CreateReviewDto, @Req() req) {
-        const firebaseUid = req.user.uid; // extract user id from the request
-
-        return this.reviewsService.createReview(createReviewDto, firebaseUid)
-    }
-
-    @UseGuards(FirebaseAuthGuard)
     @Get()
     async getReviews(@Req() req) {
         const firebaseUid = req.user.uid;
@@ -24,4 +16,11 @@ export class ReviewsController {
         return this.reviewsService.getReviews(firebaseUid)
     }
 
+    @UseGuards(FirebaseAuthGuard)
+    @Post()
+    async addReview(@Body(ValidationPipe) createReviewDto: CreateReviewDto, @Req() req) {
+        const firebaseUid = req.user.uid; // extract user id from the request
+
+        return this.reviewsService.createReview(createReviewDto, firebaseUid)
+    }
 }

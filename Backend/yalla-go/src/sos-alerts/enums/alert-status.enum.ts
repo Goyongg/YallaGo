@@ -1,4 +1,4 @@
 export enum AlertStatus {
-    ACTIVE = "active",
-    RESOLVED = "resolved"
+    ACTIVE = 'active',
+    RESOLVED = 'resolved'
 }

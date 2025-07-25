@@ -8,10 +8,10 @@ export const getUserDefaults = (role: string) => {
     };
     
     // driver default fields
-    if (role === "driver") {
+    if (role === 'driver') {
         return {
             ...base,
-            kycStatus: "pending",
+            kycStatus: 'pending',
             vehicleId: null
         };
     }
