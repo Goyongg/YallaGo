@@ -22,36 +22,102 @@ const DriverDashboard = () => {
     }
   }, []);
 
-  // Group history rides by date
+  // Group rides by date (works for both upcoming and history)
   const groupRidesByDate = (rides: typeof historyRides) => {
     if (!Array.isArray(rides)) {
       console.error('🚗 Invalid rides for grouping:', rides);
       return {};
     }
     
-    return rides.reduce((groups: Record<string, typeof rides>, ride) => {
+    return rides.reduce((groups: Record<string, any>, ride) => {
       if (!ride || !ride.date) {
         console.warn('🚗 Invalid ride for date grouping:', ride);
         return groups;
       }
       
       try {
-        const date = new Date(ride.date).toLocaleDateString('en-US', {
+        // Ensure we have a valid date string
+        const dateStr = typeof ride.date === 'string' ? ride.date : String(ride.date);
+        const dateObj = new Date(dateStr);
+        
+        // Check if date is valid
+        if (isNaN(dateObj.getTime())) {
+          console.warn('🚗 Invalid date object for ride:', ride.id, 'date:', ride.date);
+          return groups;
+        }
+        
+        // Format WITHOUT year for display
+        const formattedDate = dateObj.toLocaleDateString('en-US', {
           weekday: 'long',
           day: 'numeric',
           month: 'long',
         });
         
-        if (!groups[date]) {
-          groups[date] = [];
+        // Ensure the formatted date is a valid string
+        if (!formattedDate || formattedDate === 'Invalid Date') {
+          console.warn('🚗 Invalid formatted date for ride:', ride.id);
+          return groups;
         }
-        groups[date].push(ride);
+        
+        if (!groups[formattedDate]) {
+          groups[formattedDate] = {
+            rides: [],
+            originalDate: dateObj // Store original date object for sorting
+          };
+        }
+        groups[formattedDate].rides.push(ride);
       } catch (error) {
         console.error('🚗 Error grouping ride by date:', error, ride);
       }
       
       return groups;
     }, {});
+  };
+
+  // Sort grouped rides by date (newest first for upcoming, newest first for history)
+  const sortGroupedRidesByDate = (groupedRides: Record<string, any>, isUpcoming: boolean = false) => {
+    const entries = Object.entries(groupedRides);
+    
+    // Filter out any invalid entries
+    const validEntries = entries.filter(([dateLabel, groupData]) => {
+      const isValidLabel = dateLabel && typeof dateLabel === 'string' && dateLabel !== 'Invalid Date';
+      const isValidGroupData = groupData && groupData.rides && Array.isArray(groupData.rides) && groupData.rides.length > 0;
+      
+      if (!isValidLabel || !isValidGroupData) {
+        console.warn('🚗 Filtering out invalid date group:', { dateLabel, ridesCount: groupData?.rides?.length });
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Sort by date using the stored original date objects
+    validEntries.sort(([dateA, groupDataA], [dateB, groupDataB]) => {
+      try {
+        const dateObjA = groupDataA.originalDate;
+        const dateObjB = groupDataB.originalDate;
+        
+        // Validate date objects
+        if (!dateObjA || !dateObjB || isNaN(dateObjA.getTime()) || isNaN(dateObjB.getTime())) {
+          console.warn('🚗 Invalid date objects in sorting:', { dateA, dateB });
+          return 0; // Keep original order if dates are invalid
+        }
+        
+        if (isUpcoming) {
+          // For upcoming: earliest date first (ascending)
+          return dateObjA.getTime() - dateObjB.getTime();
+        } else {
+          // For history: latest date first (descending)
+          return dateObjB.getTime() - dateObjA.getTime();
+        }
+      } catch (error) {
+        console.error('🚗 Error sorting dates:', error, { dateA, dateB });
+        return 0; // Keep original order on error
+      }
+    });
+    
+    // Convert back to the expected format: [dateLabel, rides[]]
+    return validEntries.map(([dateLabel, groupData]) => [dateLabel, groupData.rides]);
   };
 
   // Handle pull to refresh
@@ -174,87 +240,108 @@ const DriverDashboard = () => {
                 </Text>
               </View>
             ) : (
+              // NEW: Group and sort upcoming rides by date
               (() => {
-                console.log('🚗 About to render upcoming rides:', upcomingRides.length);
+                const groupedRides = groupRidesByDate(upcomingRides);
+                const sortedEntries = sortGroupedRidesByDate(groupedRides, true);
                 
-                // Debug each ride before rendering
-                upcomingRides.forEach((ride, index) => {
-                  console.log(`🚗 Ride ${index} props:`, {
-                    id: ride.id,
-                    from: ride.from,
-                    to: ride.to,
-                    price: ride.price,
-                    status: ride.status,
-                    departureTime: ride.departureTime,
-                    arrivalTime: ride.arrivalTime,
-                    duration: ride.duration,
-                    availableSeats: ride.availableSeats,
-                    bookedSeats: ride.bookedSeats,
-                    hasBookings: ride.hasBookings
-                  });
-                });
-
-                return upcomingRides.map((ride, index) => {
-                  // CRITICAL: Add safety check for each individual ride
-                  if (!ride || typeof ride !== 'object') {
-                    console.error('🚗 Invalid ride object at render index', index, ride);
+                console.log('🚗 Grouped upcoming rides by date:', Object.keys(groupedRides));
+                console.log('🚗 Sorted date entries:', sortedEntries.map(([date]) => date));
+                
+                if (sortedEntries.length === 0) {
+                  console.warn('🚗 No valid date groups found for upcoming rides');
+                  return (
+                    <View className="flex-1 justify-center items-center mt-20">
+                      <Ionicons name="calendar-outline" size={64} color="#9CA3AF" />
+                      <Text className="text-center text-gray-400 mt-4 font-[Afacad] text-lg">
+                        No properly dated upcoming rides
+                      </Text>
+                      <Text className="text-center text-gray-400 mt-2 font-[Afacad]">
+                        Rides may have invalid date information
+                      </Text>
+                    </View>
+                  );
+                }
+                
+                return sortedEntries.map(([dateLabel, rides]) => {
+                  // Additional safety check for each date group
+                  if (!dateLabel || !Array.isArray(rides) || rides.length === 0) {
+                    console.warn('🚗 Skipping invalid date group:', { dateLabel, ridesCount: rides?.length });
                     return null;
                   }
+                  
+                  return (
+                    <View key={dateLabel} className="mb-6">
+                      <Text className="text-lg font-bold text-gray-800 mb-3 font-[Afacad]">
+                        {String(dateLabel)}
+                      </Text>
+                      {rides.map((ride, index) => {
+                        console.log('🚗 About to render upcoming ride:', ride?.id || 'unknown');
+                        
+                        // CRITICAL: Add safety check for each individual ride
+                        if (!ride || typeof ride !== 'object') {
+                          console.error('🚗 Invalid ride object at render index', index, ride);
+                          return null;
+                        }
 
-                  // CRITICAL: Ensure all required props exist and are safe
-                  const safeRide = {
-                    id: ride.id || `fallback-${index}`,
-                    departureTime: ride.departureTime || '00:00',
-                    arrivalTime: ride.arrivalTime || '00:00',
-                    duration: ride.duration || '0m',
-                    from: ride.from || 'Unknown',
-                    to: ride.to || 'Unknown',
-                    price: ride.price || '0',
-                    availableSeats: typeof ride.availableSeats === 'number' ? ride.availableSeats : 0,
-                    bookedSeats: typeof ride.bookedSeats === 'number' ? ride.bookedSeats : 0,
-                    hasBookings: Boolean(ride.hasBookings),
-                    status: ride.status || 'unknown'
-                  };
+                        // CRITICAL: Ensure all required props exist and are safe
+                        const safeRide = {
+                          id: String(ride.id || `fallback-${index}`),
+                          departureTime: String(ride.departureTime || '00:00'),
+                          arrivalTime: String(ride.arrivalTime || '00:00'),
+                          duration: String(ride.duration || '0m'),
+                          from: String(ride.from || 'Unknown'),
+                          to: String(ride.to || 'Unknown'),
+                          price: String(ride.price || '0'),
+                          availableSeats: typeof ride.availableSeats === 'number' ? ride.availableSeats : 0,
+                          bookedSeats: typeof ride.bookedSeats === 'number' ? ride.bookedSeats : 0,
+                          hasBookings: Boolean(ride.hasBookings),
+                          status: String(ride.status || 'unknown')
+                        };
 
-                  // Determine display status safely
-                  let displayStatus = 'Upcoming';
-                  if (safeRide.status === 'departed') {
-                    displayStatus = 'Departed';
-                  } else if (safeRide.status === 'booked') {
-                    displayStatus = 'Booked';
-                  } else if (safeRide.status === 'in-progress') {
-                    displayStatus = 'Upcoming';
-                  }
+                        // Determine display status safely
+                        let displayStatus = 'Upcoming';
+                        const statusLower = safeRide.status.toLowerCase();
+                        if (statusLower === 'departed') {
+                          displayStatus = 'Departed';
+                        } else if (statusLower === 'booked') {
+                          displayStatus = 'Booked';
+                        } else if (statusLower === 'in-progress') {
+                          displayStatus = 'Upcoming';
+                        }
 
-                  console.log(`🚗 Rendering ride ${index} with safe props:`, safeRide);
+                        console.log(`🚗 Rendering ride ${index} with safe props:`, safeRide);
 
-                  try {
-                    return (
-                      <DriverUpcomingRideCard
-                        key={safeRide.id}
-                        id={safeRide.id}
-                        departureTime={safeRide.departureTime}
-                        arrivalTime={safeRide.arrivalTime}
-                        duration={safeRide.duration}
-                        from={safeRide.from}
-                        to={safeRide.to}
-                        price={safeRide.price}
-                        availableSeats={safeRide.availableSeats}
-                        status={displayStatus}
-                        bookedSeats={safeRide.bookedSeats}
-                        hasBookings={safeRide.hasBookings}
-                        onRideUpdated={refetch}
-                      />
-                    );
-                  } catch (renderError) {
-                    console.error(`🚗 Error rendering ride ${index}:`, renderError);
-                    return null;
-                  }
-                }).filter(Boolean); // Remove any null entries
+                        try {
+                          return (
+                            <DriverUpcomingRideCard
+                              key={safeRide.id}
+                              id={safeRide.id}
+                              departureTime={safeRide.departureTime}
+                              arrivalTime={safeRide.arrivalTime}
+                              duration={safeRide.duration}
+                              from={safeRide.from}
+                              to={safeRide.to}
+                              price={safeRide.price}
+                              availableSeats={safeRide.availableSeats}
+                              status={displayStatus}
+                              bookedSeats={safeRide.bookedSeats}
+                              hasBookings={safeRide.hasBookings}
+                              onRideUpdated={refetch}
+                            />
+                          );
+                        } catch (renderError) {
+                          console.error(`🚗 Error rendering ride ${index}:`, renderError);
+                          return null;
+                        }
+                      }).filter(Boolean)} {/* Remove any null entries */}
+                    </View>
+                  );
+                }).filter(Boolean); // Remove any null date groups
               })()
             )
           ) : (
-            // History rides section remains the same...
+            // History rides section - remains the same
             historyRides.length === 0 ? (
               <View className="flex-1 justify-center items-center mt-20">
                 <Ionicons name="time-outline" size={64} color="#9CA3AF" />
@@ -266,12 +353,12 @@ const DriverDashboard = () => {
                 </Text>
               </View>
             ) : (
-              Object.entries(groupRidesByDate(historyRides)).map(([dateLabel, rides]) => (
+              sortGroupedRidesByDate(groupRidesByDate(historyRides), false).map(([dateLabel, rides]) => (
                 <View key={dateLabel} className="mb-6">
                   <Text className="text-lg font-bold text-gray-800 mb-3 font-[Afacad]">
-                    {dateLabel}
+                    {String(dateLabel)}
                   </Text>
-                  {rides.map((ride) => (
+                  {Array.isArray(rides) && rides.map((ride) => (
                     <DriverRideHistoryCard
                       key={ride.id}
                       id={ride.id}

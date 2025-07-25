@@ -1,4 +1,4 @@
-// interfaces.d.ts - Updated with backend compatibility
+// interfaces.d.ts - Updated with booking history interfaces
 
 export interface HomeUserData {
   id: string;
@@ -65,6 +65,24 @@ export interface DriverHistoryRideCardProps {
   arrivalTime: string;
   duration: string;
   price: string;
+}
+
+// NEW: Booking History Card Props - Updated without vehicle info
+export interface BookingHistoryCardProps {
+  id: string;
+  from: string;
+  to: string;
+  departureTime: string;
+  arrivalTime: string;
+  duration: string;
+  totalCost: string;
+  seatsBooked: number;
+  status: string;
+  driver: {
+    name: string;
+    rating: number;
+    phoneNumber: string;
+  };
 }
 
 export interface RideSearchFormProps {
@@ -224,6 +242,81 @@ export interface BookingResponse {
   bookingId: string;
 }
 
+// Updated backend response interface to match actual backend structure
+export interface BookingHistoryResponse {
+  // Core booking fields
+  startLocation: string;
+  endLocation: string;
+  departureTime: {
+    _seconds: number;
+    _nanoseconds: number;
+  };
+  durationSeconds: number;
+  pricePerSeat: number;
+  seatsBooked: number;
+  status: 'pending' | 'confirmed' | 'ongoing' | 'completed' | 'cancelled' | 'no-show';
+  
+  // Driver info (available in most bookings)
+  name?: string;
+  phoneNumber?: string;
+  averageRating?: number;
+  
+  // Vehicle info (when available)
+  make?: string;
+  model?: string;
+  color?: string;
+  plateNumber?: string;
+  
+  // Location coordinates (when available)
+  coordinates?: {
+    _latitude: number;
+    _longitude: number;
+  };
+  endGeo?: {
+    _latitude: number;
+    _longitude: number;
+  };
+  
+  // Additional fields
+  distanceMeters?: number;
+  comments?: string;
+  waypoints?: any[];
+}
+
+// Updated processed booking interface with vehicle info
+export interface ProcessedBooking {
+  id: string;
+  rideId: string;
+  from: string;
+  to: string;
+  departureTime: string;
+  arrivalTime: string;
+  duration: string;
+  totalCost: string;
+  seatsBooked: number;
+  status: string;
+  date: string; // For grouping (YYYY-MM-DD format)
+  driver: {
+    name: string;
+    rating: number;
+    phoneNumber: string;
+  };
+  vehicle?: {
+    make: string;
+    model: string;
+    color: string;
+    plateNumber: string;
+  };
+}
+
+// NEW: Booking History Hook Return Type
+export interface UseBookingHistoryReturn {
+  bookings: ProcessedBooking[];
+  loading: boolean;
+  error: string | null;
+  refetch: () => void;
+}
+
 // Review interfaces
 export interface CreateReviewDto {
   rideId: string;
@@ -267,7 +360,7 @@ export interface DriverRideResponse {
   femaleOnly?: boolean;
   waypoints?: Waypoint[];
   comments?: string;
-  status: 'in-progress' | 'departed' | 'completed' | 'cancelled';
+  status: 'in-progress' | 'departed' | 'completed' | 'cancelled' | 'booked';
   // Add these fields that might come from backend
   vehicleSeats?: number; // From vehicle data
   bookings?: Array<{
@@ -350,7 +443,8 @@ export enum RideStatusFrontend {
   IN_PROGRESS = 'in-progress',
   DEPARTED = 'departed',
   COMPLETED = 'completed',
-  CANCELLED = 'cancelled'
+  CANCELLED = 'cancelled',
+  BOOKED = 'booked'
 }
 
 // Status display mapping
@@ -358,7 +452,8 @@ export const STATUS_DISPLAY_MAP = {
   'in-progress': 'Upcoming',
   'departed': 'Departed',
   'completed': 'Completed',
-  'cancelled': 'Cancelled'
+  'cancelled': 'Cancelled',
+  'booked': 'Booked'
 } as const;
 
 // Add ride conflict check response

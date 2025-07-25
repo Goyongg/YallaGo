@@ -3,7 +3,7 @@ import { View, Text, TextInput, Switch, Pressable, KeyboardAvoidingView, Platfor
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useGlobalSearchParams, useFocusEffect } from 'expo-router';
 import { RideSearchFormProps } from '../../interfaces/interfaces';
-import DateTimePickerModal from './DateTimePickerModal';
+import DatePickerModal from './DatePickerModal'; // Updated import
 import { saveRecentSearch } from '../../utils/recentSearchStorage';
 import auth from '@react-native-firebase/auth';
 import { BASE_URL } from '@/config';
@@ -14,14 +14,31 @@ interface LocationData {
   lng: number;
 }
 
-const RideSearchForm: React.FC<RideSearchFormProps> = ({
+// Extended interface to include the new props
+interface ExtendedRideSearchFormProps extends RideSearchFormProps {
+  initialFrom?: string;
+  initialTo?: string;
+  initialFromCoordinates?: {lat: number, lng: number};
+  initialToCoordinates?: {lat: number, lng: number};
+  initialDate?: string; // Add date prop
+}
+
+// Static time to use for all searches (you can adjust this as needed)
+const STATIC_SEARCH_TIME = { hour: 9, minute: 0 }; // 09:00
+
+const RideSearchForm: React.FC<ExtendedRideSearchFormProps> = ({
   femaleOnly,
   setFemaleOnly,
   passengerCount,
   setPassengerCount,
   userGender,
+  initialFrom,
+  initialTo,
+  initialFromCoordinates,
+  initialToCoordinates,
+  initialDate,
 }) => {
-  const [dateTime, setDateTime] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null); // Changed from dateTime to selectedDate
   const [pickerVisible, setPickerVisible] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -34,6 +51,40 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
   
   const router = useRouter();
   const params = useGlobalSearchParams();
+
+  // Pre-populate form with initial data when provided (only when coming from SearchResultsScreen)
+  useEffect(() => {
+    // Only pre-populate if we have initial data (indicating we're in the modal from SearchResultsScreen)
+    if (initialFrom || initialTo || initialFromCoordinates || initialToCoordinates || initialDate) {
+      if (initialFrom) {
+        setFrom(initialFrom);
+      }
+      if (initialTo) {
+        setTo(initialTo);
+      }
+      if (initialFromCoordinates) {
+        setFromLocation({
+          name: initialFrom || '',
+          lat: initialFromCoordinates.lat,
+          lng: initialFromCoordinates.lng,
+        });
+      }
+      if (initialToCoordinates) {
+        setToLocation({
+          name: initialTo || '',
+          lat: initialToCoordinates.lat,
+          lng: initialToCoordinates.lng,
+        });
+      }
+      if (initialDate) {
+        // Convert ISO string back to Date object
+        const date = new Date(initialDate);
+        if (!isNaN(date.getTime())) {
+          setSelectedDate(date);
+        }
+      }
+    }
+  }, [initialFrom, initialTo, initialFromCoordinates, initialToCoordinates, initialDate]);
 
   // Handle location data from location picker - only for search context
   useFocusEffect(
@@ -81,11 +132,10 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
     }, [params])
   );
 
-  const formattedDateTime = dateTime
-    ? `${dateTime.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}, ${String(
-        dateTime.getHours(),
-      ).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`
-    : 'Select date & time';
+  // Updated to show only date, no time
+  const formattedDate = selectedDate
+    ? selectedDate.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })
+    : 'Select date';
 
   // Add this useEffect to reset femaleOnly if user is not female
   useEffect(() => {
@@ -122,8 +172,8 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
       return;
     }
 
-    if (!dateTime) {
-      Alert.alert('Missing Information', 'Please select a date and time');
+    if (!selectedDate) {
+      Alert.alert('Missing Information', 'Please select a date');
       return;
     }
 
@@ -142,9 +192,19 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
     setIsSearching(true);
 
     try {
+      // Create a datetime object using the selected date with static time
+      const searchDateTime = new Date(
+        selectedDate.getFullYear(),
+        selectedDate.getMonth(),
+        selectedDate.getDate(),
+        STATIC_SEARCH_TIME.hour,
+        STATIC_SEARCH_TIME.minute,
+        0
+      );
+
       // Prepare search payload according to SearchRidesDto from backend
-      const dateStr = dateTime.toISOString().split('T')[0]; // YYYY-MM-DD format
-      const timeStr = dateTime.toTimeString().slice(0, 5); // HH:MM format
+      const dateStr = searchDateTime.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const timeStr = searchDateTime.toTimeString().slice(0, 5); // HH:MM format
 
       const searchPayload = {
         startPoint: {
@@ -187,12 +247,12 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
       // Backend now returns enriched ride data with driver and vehicle info
       // The response structure is: [{ ride: {...}, driver: {...}, vehicle: {...} }, ...]
 
-      // Save recent search with coordinates
+      // Save recent search with coordinates (using the search datetime)
       await saveRecentSearch({
         from,
         to,
         passengers: parseInt(passengerCount),
-        date: dateTime.toISOString(),
+        date: searchDateTime.toISOString(), // Use the datetime with static time
         femaleOnly,
         fromCoordinates: { lat: fromLocation.lat, lng: fromLocation.lng },
         toCoordinates: { lat: toLocation.lat, lng: toLocation.lng },
@@ -208,7 +268,7 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
           fromLng: fromLocation.lng.toString(),
           toLat: toLocation.lat.toString(),
           toLng: toLocation.lng.toString(),
-          date: dateTime.toISOString(),
+          date: searchDateTime.toISOString(), // Use the datetime with static time
           passengerCount: passengerCount,
           femaleOnly: femaleOnly ? '1' : '0',
           searchResults: JSON.stringify(searchResults), // Pass the enriched results
@@ -269,13 +329,13 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
             </View>
           </View>
 
-          {/* Date & Time */}
+          {/* Date Only - Updated */}
           <View className="mb-3 mx-4">
             <View className="flex-row items-center border-b border-gray-400 pt-3 pb-3">
               <Ionicons name="calendar-outline" size={18} color="#00BD5F" />
               <Pressable onPress={() => setPickerVisible(true)} className="ml-2 flex-1">
-                <Text className={`text-lg font-[Afacad] ml-1 ${dateTime ? 'text-black' : 'text-gray-400'}`}>
-                  {formattedDateTime}
+                <Text className={`text-lg font-[Afacad] ml-1 ${selectedDate ? 'text-black' : 'text-gray-400'}`}>
+                  {formattedDate}
                 </Text>
               </Pressable>
             </View>
@@ -338,12 +398,12 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
         </View>
       </KeyboardAvoidingView>
 
-      {/* Date & Time Picker Modal */}
-      <DateTimePickerModal
+      {/* Date Picker Modal - Updated */}
+      <DatePickerModal
         visible={pickerVisible}
         onClose={() => setPickerVisible(false)}
-        onConfirm={(dt) => {
-          setDateTime(dt);
+        onConfirm={(date) => {
+          setSelectedDate(date);
           setPickerVisible(false);
         }}
       />

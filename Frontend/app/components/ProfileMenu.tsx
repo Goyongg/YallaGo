@@ -7,8 +7,9 @@ import { ProfileMenuProps } from '../../interfaces/interfaces';
 const allMenuItems = [
   { label: 'Manage Profile', route: '../profile/manage' },
   { label: 'Driver Dashboard', route: '../profile/DriverDashboard', driverOnly: true }, // Added driverOnly flag
+  { label: 'Booking Requests', route: '../profile/BookingRequests', driverOnly: true },
   { label: 'Gifts and discounts', sub: 'Enter promo code', route: '../profile/gifts' },
-  { label: 'Booking History', route: '../profile/history' },
+  { label: 'Booking Dashboard', sub: 'Access all your bookings', route: '../profile/BookingDashboard' },
   { label: 'Info', route: '../profile/info' },
 ];
 
