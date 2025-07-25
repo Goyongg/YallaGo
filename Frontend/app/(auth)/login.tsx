@@ -4,8 +4,9 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import auth from '@react-native-firebase/auth';
 import { isValidEmail, isValidPassword } from '@/utils/validation';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/context/AuthContext';
 
+// Firebase login function
 export const loginUser = async (email: string, password: string) => {
   const userCredential = await auth().signInWithEmailAndPassword(email, password);
   const idToken = await userCredential.user.getIdToken();
@@ -18,22 +19,31 @@ export const loginUser = async (email: string, password: string) => {
 
 const Login = () => {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth(); // ✅ Access current user + auth loading state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  const isValid = isValidEmail(email) && isValidPassword(password);
   const [loading, setLoading] = useState(false);
 
+  const isValid = isValidEmail(email) && isValidPassword(password);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !authLoading) {
+      router.replace('/(tabs)/home');
+    }
+  }, [user, authLoading]);
+
+  // Login handler
   const handleLogin = async () => {
     setLoading(true);
     try {
       const { token, user } = await loginUser(email, password);
-
       console.log("Login complete:");
       console.log("Token:", token);
       console.log("User:", user);
       console.log("User ID (UID):", user.uid);
 
+      // Navigate to home tab on successful login
       router.replace("/(tabs)/home");
     } catch (err: any) {
       Alert.alert("Login Failed", err.message || "Invalid email or password");

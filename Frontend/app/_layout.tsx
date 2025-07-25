@@ -10,6 +10,7 @@ import { BASE_URL } from "@/config";
 import axios from "axios";
 import auth from '@react-native-firebase/auth';
 import { getDeviceToken } from "@/services/firebaseMessagingService";
+import { AuthProvider } from "@/context/AuthContext";
 
 export default function Layout() {
   const [fontsLoaded] = useFonts({
@@ -93,5 +94,10 @@ export default function Layout() {
   //     <Slot />
   //   </RegistrationProvider>
   // );
-  return <Slot />;
+  // return <Slot />;
+  return (
+    <AuthProvider>
+      <Slot />
+    </AuthProvider>
+  );
 }
