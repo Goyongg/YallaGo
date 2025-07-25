@@ -320,11 +320,14 @@ export class UsersService {
                     const userData = await this.firebaseUserService.fetchUserData(booking.data().passengerId);
                     // Select only the required user fields (name and average rating)
                     const cleanUserData = pickFields(userData, ['name', 'averageRating'])
-                    // Exclude unnecessary booking fields
-                    const cleanBookingData = omitFields(booking.data(), ['passengerId', 'rideId', 'status'])
+                    // Get seats booked
+                    const cleanBookingData = pickFields(booking.data(), ['seatsBooked'])
+                    // Get start and end location
+                    const rideData = await this.firebaseDriverService.fetchRideData(booking.data().rideId);
+                    const cleanRideData = pickFields(rideData, ['startLocation', 'endLocation']);
 
                     // Merge the cleaned user and booking data into one object and store in the result array
-                    bookingRequests.push({ ...cleanUserData, ...cleanBookingData })
+                    bookingRequests.push({ ...cleanUserData, ...cleanBookingData, ...cleanRideData })
                 }
         }
         // Return the list of all pending booking requests
