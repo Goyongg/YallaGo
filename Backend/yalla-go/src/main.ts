@@ -41,7 +41,7 @@ export const yallago = https.onRequest(
   {
     region: 'asia-south1', // set server location to mumbai
     // Reference the secret name directly
-    secrets: ['GOOGLE_MAPS_API_KEY'],
+    secrets: ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'GOOGLE_MAPS_API_KEY'],
   },
   async (req, res) => {
     // Confirm the secret is available in process.env
