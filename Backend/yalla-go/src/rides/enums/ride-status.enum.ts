@@ -1,7 +1,7 @@
 export enum RideStatus {
-    IN_PROGRESS = "in-progress",
-    BOOKED = "booked",
+    IN_PROGRESS = 'in-progress',
+    BOOKED = 'booked',
     DEPARTED = 'departed',
-    COMPLETED = "completed",
-    CANCELLED = "cancelled"
+    COMPLETED = 'completed',
+    CANCELLED = 'cancelled'
 }

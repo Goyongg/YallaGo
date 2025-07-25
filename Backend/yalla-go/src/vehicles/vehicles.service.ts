@@ -15,6 +15,15 @@ export class VehiclesService {
         private readonly firebaseDriverService: FirebaseDriverService
     ) {}
 
+    private async linkDriver(driverId: string, newVehicleId: string) {
+        const userRef = await this.firebaseUserSerivce.getUserRef(driverId);
+
+        // Update user's document to store the associated vehicleId
+        await userRef.update({
+            vehicleId: newVehicleId
+        })
+    }
+
     async getVehicle(firebaseUid: string) {
         // Fetch vehicle data of driver
         const vehData = await this.firebaseDriverService.getVehicleByDriver(firebaseUid);
@@ -39,15 +48,6 @@ export class VehiclesService {
         await vehRef.set(vehicleData); // set data to the vehicle
         return { message: "Vehicle added succsessfully", vehicleId: vehRef.id}
     };
-
-    private async linkDriver(driverId: string, newVehicleId: string) {
-        const userRef = await this.firebaseUserSerivce.getUserRef(driverId);
-
-        // Update user's document to store the associated vehicleId
-        await userRef.update({
-            vehicleId: newVehicleId
-        })
-    }
 
     async getSeats(firebaseUid: string) {
         const userData = await this.firebaseUserSerivce.fetchUserData(firebaseUid);
@@ -79,7 +79,7 @@ export class VehiclesService {
         // Query for any active or ongoing rides by this driver
         const ridesQuery = await ridesRef
             .where('driverId', '==', firebaseUid)
-            .where('status', 'in', ["in-progress", "departed"]) // only block deletion if rides are currently running
+            .where('status', 'in', ['in-progress', 'departed']) // only block deletion if rides are currently running
             .limit(1) // limit to one match — we only care if *any* exist
             .get();
 

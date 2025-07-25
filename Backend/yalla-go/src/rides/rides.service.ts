@@ -258,6 +258,11 @@ export class RidesService {
         // get the vehicleId of the driver
         const vehicleId = await this.fetchVehicleId(firebaseUid);
 
+        const vehicleData = await this.firebaseDriverService.fetchVehicleData(vehicleId);
+        if(createRideDto.availableSeats > vehicleData.seats) {
+            throw new ForbiddenException('Available seats cannot be more than vehicle seats');
+        }
+
         // prepare data
         const rawRideData = {
             rideId: rideRef.id, // set rideId
@@ -283,7 +288,7 @@ export class RidesService {
         await geoRidesCollection.doc(rideRef.id).set(rideData);
 
         // await rideRef.set(rideData); // set ride data
-        return { message: "Ride created successfull", rideId: rideData.rideId }
+        return { message: "Ride created successfully", rideId: rideData.rideId }
     };
 
     // calculate recommended price per seat based on the start and end coordinates
@@ -440,7 +445,10 @@ export class RidesService {
         await rideRef.update({status: RideStatus.DEPARTED});
 
         // Query all bookings where the rideId matches the ride being started
-        const bookingsSnap = await this.firebase.firestore.collection('bookings').where('rideId', '==', rideId).get();
+        const bookingsSnap = await this.firebase.firestore
+            .collection('bookings')
+            .where('rideId', '==', rideId)
+            .get();
 
         // Initialize a Firestore batch to perform all updates atomically
         const batch = this.firebase.firestore.batch();

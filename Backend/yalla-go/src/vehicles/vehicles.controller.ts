@@ -18,14 +18,6 @@ export class VehiclesController {
     }
 
     @UseGuards(FirebaseAuthGuard)
-    @Post()
-    async addVehicle(@Body(ValidationPipe) createVehicleDto: CreateVehicleDto, @Req() req) {
-        const firebaseUid = req.user.uid; // extract user id from the request
-
-        return this.vehiclesService.createVehicle(createVehicleDto, firebaseUid);
-    }
-
-    @UseGuards(FirebaseAuthGuard)
     @Get('maxseats')
     async getSeats(@Req() req) {
         const firebaseUid = req.user.uid;
@@ -34,11 +26,11 @@ export class VehiclesController {
     }
 
     @UseGuards(FirebaseAuthGuard)
-    @Delete()
-    async deleteVehicle(@Req() req) {
-        const firebaseUid = req.user.uid;
-        
-        return this.vehiclesService.deleteVehicle(firebaseUid);
+    @Post()
+    async addVehicle(@Body(ValidationPipe) createVehicleDto: CreateVehicleDto, @Req() req) {
+        const firebaseUid = req.user.uid; // extract user id from the request
+
+        return this.vehiclesService.createVehicle(createVehicleDto, firebaseUid);
     }
 
     @UseGuards(FirebaseAuthGuard)
@@ -49,5 +41,11 @@ export class VehiclesController {
         return this.vehiclesService.updateVehicleColor(firebaseUid, updateVehicleColorDto);
     }
 
-    
+    @UseGuards(FirebaseAuthGuard)
+    @Delete()
+    async deleteVehicle(@Req() req) {
+        const firebaseUid = req.user.uid;
+        
+        return this.vehiclesService.deleteVehicle(firebaseUid);
+    }    
 }

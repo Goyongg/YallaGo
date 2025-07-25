@@ -25,6 +25,6 @@ export class CreateRideDto extends RidePlanDto {
     femaleOnly: boolean;
 
     @IsOptional()
-    @MaxLength(200, { message: 'Comments can be at most 200 characters long' })
+    @MaxLength(200, { message: "Comments can be at most 200 characters long" })
     comments?: string
 }
