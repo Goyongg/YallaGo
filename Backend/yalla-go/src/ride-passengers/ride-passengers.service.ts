@@ -79,7 +79,12 @@ export class RidePassengersService {
             paymentIntentId: paymentId,
             paymentClientSecret: clientSecret,
         });
-        return { message: "Booking created successfully", bookingId: bookRef.id };
+
+        return {
+            message: "Booking created successfully",
+            bookingId: bookingData.bookingId,
+            clientSecret,
+        };
     };
 
     async getBookings(firebaseUid: string) {
