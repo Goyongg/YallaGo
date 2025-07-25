@@ -58,7 +58,16 @@ export class UsersService {
 
         const response = pickFields(userData, homepageFields);
 
-        const upcomingInfo = await this.getUpcomingInfo(userData, firebaseUid);
+        let upcomingInfo: any[] = [];
+
+        try {
+        upcomingInfo = await this.getUpcomingInfo(userData, firebaseUid);
+        } 
+        catch (err: any) {
+        console.warn(`[getHomePageInfo] getUpcomingInfo() failed: ${err.message}`);
+        // Always return empty array on failure to avoid frontend 404s
+        upcomingInfo = [];
+        }
 
         return { response, upcomingInfo }; 
     }
@@ -71,7 +80,18 @@ export class UsersService {
         // Check if the user is a driver
         if (userData.role === 'driver') {
             // Fetch all rides created by this driver
-            const rides = await this.firebaseDriverService.getRideByDriver(firebaseUid);
+            let rides: any[] = [];
+            try {
+            rides = await this.firebaseDriverService.getRideByDriver(firebaseUid);
+            } catch (err) {
+            console.warn(`[getUpcomingInfo] No rides found for driver ${firebaseUid}. Returning empty array.`);
+            return []; // ✅ prevent throwing or breaking getHomePageInfo
+            }
+
+            if (!rides || rides.length === 0) {
+            console.log(`[getUpcomingInfo] Driver ${firebaseUid} has no upcoming rides.`);
+            return []; // ✅ no 404, just empty
+            }
 
             // Will hold rides happening soon or departed
             const upcomingRides: typeof rides = [];
