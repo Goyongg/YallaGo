@@ -34,12 +34,21 @@ function cleanUserData(data: Record<string, any>) {
 
 @Injectable()
 export class UsersService {
+    private stripe: Stripe;
+
     constructor(
         private readonly firebase: FirebaseService,
         private readonly firebaseUserService: FirebaseUserService,
         private readonly firebaseDriverService: FirebaseDriverService,
         private readonly FirebaseNotificationsService: FirebaseNotificationsService
-    ) {}
+    ) {
+        const secretKey = process.env.STRIPE_SECRET_KEY;
+        if (!secretKey) {
+            throw new Error('🚨 STRIPE_SECRET_KEY not defined');
+        }
+
+        this.stripe = new Stripe(secretKey, { apiVersion: '2025-06-30.basil' });
+    }
 
     // fetch homepage user data based on role
     async getHomePageInfo(firebaseUid: string) {
@@ -333,15 +342,8 @@ export class UsersService {
         const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
 
         // 💳 Capture the authorized payment
-        const secretKey = process.env.STRIPE_SECRET_KEY;
-        if (!secretKey) {
-            throw new Error('🚨 STRIPE_SECRET_KEY not defined');
-        }
-
-        const stripe = new Stripe(secretKey, { apiVersion: '2025-06-30.basil' });
-
         try {
-            await stripe.paymentIntents.capture(bookingData.paymentIntentId);
+            await this.stripe.paymentIntents.capture(bookingData.paymentIntentId);
 
             // Update payment Firestore document
             await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
@@ -385,15 +387,8 @@ export class UsersService {
         const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
 
         // 💳 Cancel the PaymentIntent to release the authorization
-        const secretKey = process.env.STRIPE_SECRET_KEY;
-        if (!secretKey) {
-            throw new Error('🚨 STRIPE_SECRET_KEY not defined');
-        }
-
-        const stripe = new Stripe(secretKey, { apiVersion: '2025-06-30.basil' });
-
         try {
-            await stripe.paymentIntents.cancel(bookingData.paymentIntentId);
+            await this.stripe.paymentIntents.cancel(bookingData.paymentIntentId);
 
             await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
                 status: PaymentStatus.CANCELLED,

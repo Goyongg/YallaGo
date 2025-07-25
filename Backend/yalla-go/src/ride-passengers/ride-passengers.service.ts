@@ -182,13 +182,12 @@ export class RidePassengersService {
 
         // Extract all device tokens from the snapshot documents
         const tokens: string[] = tokenSnapshot.docs.map(doc => doc.data().token);
-        console.log('📱 Tokens:', tokens);
 
         // Loop through each token and send a notification
         for (const token of tokens) {
             try {
                 // Attempt to send a push notification using Firebase Cloud Messaging
-                const response = await this.firebaseNotificationsService.sendToDevice(
+                await this.firebaseNotificationsService.sendToDevice(
                     token, // Target device token
                     '🚗 New Ride Booking', // Notification title
                     `Pickup: ${rideData.startLocation} → Dropoff: ${rideData.endLocation}\nSeats Booked: ${bookingData.seatsBooked}` // Notification body
