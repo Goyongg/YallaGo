@@ -4,10 +4,14 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentStatus } from './enums/payment-status.enum';
 import { Timestamp } from 'firebase-admin/firestore'
 import Stripe from 'stripe';
+import { FirebaseUserService } from 'src/firebase/firebase-user.service';
 
 @Injectable()
 export class PaymentsService {
-    constructor(private readonly firebase: FirebaseService) {}
+    constructor(
+        private readonly firebase: FirebaseService,
+        private readonly firebaseUserService: FirebaseUserService
+    ) {}
 
     async createPaymentIntent(firebaseUid: string, createPaymentDto: CreatePaymentDto) {
         const { rideId, amount } = createPaymentDto;
@@ -18,14 +22,8 @@ export class PaymentsService {
         }
 
         // Fetch user info from Firestore
-        const userSnap = await this.firebase.firestore.collection('users').doc(firebaseUid).get();
-
-        if (!userSnap.exists) {
-            throw new Error('🚨 User not found');
-        }
-
-        const userData = userSnap.data();
-        const passengerName = userData?.name || 'Unknown';
+        const userData = await this.firebaseUserService.fetchUserData(firebaseUid);
+        const passengerName = userData.name;
 
         const stripe = new Stripe(secretKey, {
             apiVersion: '2025-06-30.basil',
