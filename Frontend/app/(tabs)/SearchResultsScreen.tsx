@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Modal, TouchableWithoutFeedback } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import RideResultCard from '../components/RideResultCard';
+import RideSearchForm from '../components/RideSearchForm';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import useHomeUserData from '../../hooks/useHomeUserData';
 
@@ -40,12 +41,17 @@ interface EnrichedRideResult {
 }
 
 const SearchResultsScreen = () => {
-
   const router = useRouter();
   const params = useLocalSearchParams();
   
   const [rides, setRides] = useState<EnrichedRideResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  
+  // Search form state
+  const [femaleOnly, setFemaleOnly] = useState(false);
+  const [passengerCount, setPassengerCount] = useState('');
+  const [date, setDate] = useState('');
 
   // Get user data to access gender
   const { userData } = useHomeUserData();
@@ -62,6 +68,13 @@ const SearchResultsScreen = () => {
     toLat: parseFloat(params.toLat as string),
     toLng: parseFloat(params.toLng as string),
   };
+
+  useEffect(() => {
+    // Initialize search form state with current search params
+    setPassengerCount(searchParams.passengerCount.toString());
+    setFemaleOnly(searchParams.femaleOnly);
+    setDate(searchParams.date);
+  }, [searchParams.passengerCount, searchParams.femaleOnly, searchParams.date]);
 
   useEffect(() => {
     // Parse search results from params
@@ -180,24 +193,27 @@ const SearchResultsScreen = () => {
     <View className="flex-1 bg-white pt-[70px] items-center">
       {/* Inner content wrapper */}
       <View className="w-[80%] gap-3">
-        {/* Header Row */}
-        <View className="flex-row justify-between items-center mb-4 px-2 py-3 rounded-xl border border-black">
+        {/* Header Row - Now Pressable */}
+        <Pressable 
+          onPress={() => setShowSearchModal(true)}
+          className="flex-row items-center mb-4 px-2 py-3 rounded-xl border border-black"
+        >
           {/* Left Side: Back Arrow and Text */}
-          <View className="flex-row items-center gap-2">
+          <View className="flex-row items-center gap-2 flex-1">
             <Pressable onPress={() => router.back()}>
               <Ionicons name="chevron-back" size={28} color="#00BD5F" />
             </Pressable>
-            <View>
-              <Text className="text-xl font-[Afacad]">
+            <View className="flex-1">
+              <Text className="text-xl font-[Afacad]" numberOfLines={1} ellipsizeMode="tail">
                 {searchParams.from} → {searchParams.to}
               </Text>
-              <Text className="text-md text-gray-500 font-[Afacad]">
+              <Text className="text-md text-gray-500 font-[Afacad]" numberOfLines={1} ellipsizeMode="tail">
                 {weekday} {monthDay}, {searchParams.passengerCount} passenger(s)
                 {searchParams.femaleOnly && ' • Female-only'}
               </Text>
             </View>
           </View>
-        </View>
+        </Pressable>
 
         {/* Date Label */}
         <Text className="text-xl mb-2 font-[Afacad]">{monthDay} {year}</Text>
@@ -233,7 +249,7 @@ const SearchResultsScreen = () => {
               </View>
 
               <Pressable 
-                onPress={() => router.back()}
+                onPress={() => setShowSearchModal(true)}
                 className="bg-[#00BD5F] px-6 py-3 rounded-xl"
               >
                 <Text className="text-white font-[Afacad] text-base font-semibold">
@@ -294,6 +310,57 @@ const SearchResultsScreen = () => {
           )}
         </ScrollView>
       </View>
+
+      {/* Search Modal - Content-sized and Responsive */}
+      <Modal
+        visible={showSearchModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowSearchModal(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowSearchModal(false)}>
+          <View className="flex-1 justify-center items-center px-6">
+            <TouchableWithoutFeedback>
+              <View className="bg-white rounded-xl p-6 w-full shadow-lg" style={{ maxWidth: 400, minWidth: 300 }}>
+                {/* Modal Header */}
+                <View className="relative mb-6">
+                  <Text className="text-xl font-[Afacad] font-semibold text-center">Adjust Search</Text>
+                  <Pressable 
+                    onPress={() => setShowSearchModal(false)}
+                    className="absolute right-0 top-0 p-1"
+                    style={{ top: -2 }}
+                  >
+                    <Ionicons name="close" size={24} color="#00BD5F" />
+                  </Pressable>
+                </View>
+
+                {/* Search Form */}
+                <RideSearchForm
+                  femaleOnly={femaleOnly}
+                  setFemaleOnly={setFemaleOnly}
+                  passengerCount={passengerCount}
+                  setPassengerCount={setPassengerCount}
+                  date={date}
+                  setDate={setDate}
+                  userGender={userData?.gender}
+                  // Pass current search locations to pre-populate the form
+                  initialFrom={searchParams.from}
+                  initialTo={searchParams.to}
+                  initialFromCoordinates={{
+                    lat: searchParams.fromLat,
+                    lng: searchParams.fromLng,
+                  }}
+                  initialToCoordinates={{
+                    lat: searchParams.toLat,
+                    lng: searchParams.toLng,
+                  }}
+                  initialDate={searchParams.date}
+                />
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 };

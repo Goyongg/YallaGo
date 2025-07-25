@@ -14,15 +14,29 @@ interface LocationData {
   lng: number;
 }
 
+// Extended interface to include the new props
+interface ExtendedRideSearchFormProps extends RideSearchFormProps {
+  initialFrom?: string;
+  initialTo?: string;
+  initialFromCoordinates?: {lat: number, lng: number};
+  initialToCoordinates?: {lat: number, lng: number};
+  initialDate?: string; // Add date prop
+}
+
 // Static time to use for all searches (you can adjust this as needed)
 const STATIC_SEARCH_TIME = { hour: 9, minute: 0 }; // 09:00
 
-const RideSearchForm: React.FC<RideSearchFormProps> = ({
+const RideSearchForm: React.FC<ExtendedRideSearchFormProps> = ({
   femaleOnly,
   setFemaleOnly,
   passengerCount,
   setPassengerCount,
   userGender,
+  initialFrom,
+  initialTo,
+  initialFromCoordinates,
+  initialToCoordinates,
+  initialDate,
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null); // Changed from dateTime to selectedDate
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -37,6 +51,40 @@ const RideSearchForm: React.FC<RideSearchFormProps> = ({
   
   const router = useRouter();
   const params = useGlobalSearchParams();
+
+  // Pre-populate form with initial data when provided (only when coming from SearchResultsScreen)
+  useEffect(() => {
+    // Only pre-populate if we have initial data (indicating we're in the modal from SearchResultsScreen)
+    if (initialFrom || initialTo || initialFromCoordinates || initialToCoordinates || initialDate) {
+      if (initialFrom) {
+        setFrom(initialFrom);
+      }
+      if (initialTo) {
+        setTo(initialTo);
+      }
+      if (initialFromCoordinates) {
+        setFromLocation({
+          name: initialFrom || '',
+          lat: initialFromCoordinates.lat,
+          lng: initialFromCoordinates.lng,
+        });
+      }
+      if (initialToCoordinates) {
+        setToLocation({
+          name: initialTo || '',
+          lat: initialToCoordinates.lat,
+          lng: initialToCoordinates.lng,
+        });
+      }
+      if (initialDate) {
+        // Convert ISO string back to Date object
+        const date = new Date(initialDate);
+        if (!isNaN(date.getTime())) {
+          setSelectedDate(date);
+        }
+      }
+    }
+  }, [initialFrom, initialTo, initialFromCoordinates, initialToCoordinates, initialDate]);
 
   // Handle location data from location picker - only for search context
   useFocusEffect(
