@@ -141,6 +141,7 @@ export class UsersService {
                         const userData = await this.firebaseUserService.fetchUserData(bookingData.passengerId);
 
                         bookings.push({
+                            passengerId: bookingData.passengerId,
                             passengerName: userData.name,
                             seatsBooked: bookingData.seatsBooked,
                             phoneNumber: userData.phoneNumber

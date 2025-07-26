@@ -148,7 +148,7 @@ const BookingDashboard = () => {
             <Pressable onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color="black" />
             </Pressable>
-            <Text className="text-xl ml-4 font-bold font-[Afacad]">Booking Dashboard</Text>
+            <Text className="text-xl ml-4 font-bold font-[Afacad]">My Bookings</Text>
           </View>
           
           {/* Loading indicator */}
@@ -171,7 +171,7 @@ const BookingDashboard = () => {
             <Pressable onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color="black" />
             </Pressable>
-            <Text className="text-xl ml-4 font-bold font-[Afacad]">Booking Dashboard</Text>
+            <Text className="text-xl ml-4 font-bold font-[Afacad]">My Bookings</Text>
           </View>
           
           {/* Error message */}
@@ -203,7 +203,7 @@ const BookingDashboard = () => {
           <Pressable onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
-          <Text className="text-xl ml-4 font-bold font-[Afacad]">Booking Dashboard</Text>
+          <Text className="text-xl ml-4 font-bold font-[Afacad]">My Bookings</Text>
         </View>
 
         {/* Tabs */}
