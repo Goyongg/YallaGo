@@ -7,9 +7,36 @@ import auth from '@react-native-firebase/auth';
 import { Platform } from 'react-native';
 import { BASE_URL } from '@/config';
 
+// Utility function to shorten location names - keeps complete words
+const shortenLocationName = (locationName: string, maxDisplayLength: number = 20): string => {
+  if (locationName.length <= maxDisplayLength) {
+    return locationName;
+  }
+  
+  for (let i = 0; i < locationName.length; i++) {
+    const testString = locationName + (locationName ? ' ' : '') + locationName[i];
+    if (testString.length <= maxDisplayLength) {
+      locationName = testString;
+    } else {
+      break;
+    }
+  }
+  
+  // If we have at least one complete word, use it
+  if (locationName.length > 0 && locationName !== locationName) {
+    return locationName + '...';
+  }
+  
+  // Fallback: if even first word is too long, truncate it
+  return locationName.substring(0, maxDisplayLength - 3) + '...';
+};
+
 const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSearches }) => {
   const router = useRouter();
   const [searchingIndex, setSearchingIndex] = useState<number | null>(null);
+
+  // Limit to last 3 searches
+  const limitedRecentSearches = recentSearches.slice(0, 3);
 
   const handleRecentSearchPress = async (recentSearch: RecentSearch, index: number) => {
     try {
@@ -122,7 +149,7 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
     }
   };
 
-  if (recentSearches.length === 0) {
+  if (limitedRecentSearches.length === 0) {
     return (
       <View className="px-12 mb-8">
         <Text className="text-2xl font-[Afacad] mb-4">Recent Searches</Text>
@@ -140,36 +167,46 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
     <View className="px-12 mb-8">
       <Text className="text-2xl font-[Afacad] mb-4">Recent Searches</Text>
 
-      {recentSearches.map((item, idx) => (
-        <Pressable
-          key={idx}
-          onPress={() => handleRecentSearchPress(item, idx)}
-          disabled={searchingIndex === idx}
-          className={`self-center w-full h-[58px] flex-row justify-between items-center border-b border-gray-200 ${
-            searchingIndex === idx ? 'bg-gray-100' : 'active:bg-gray-100'
-          }`}
-        >
-          <View className="flex-row items-center">
-            <Ionicons name="refresh" size={26} color="#00BD5F" />
-            <View className="ml-2">
-              <Text className="font-[Afacad] text-black text-xl">
-                {item.from} → {item.to}
-              </Text>
-              <Text className="text-md text-gray-500 font-[Afacad] -mt-[2px]">
-                {item.passengers} passenger{item.passengers > 1 ? 's' : ''}
-                {item.femaleOnly && ' • Female-only'}
-                {!item.fromCoordinates && ' • Needs location selection'}
-              </Text>
+      {limitedRecentSearches.map((item, idx) => {
+        // Shorten location names for display
+        const shortFrom = shortenLocationName(item.from);
+        const shortTo = shortenLocationName(item.to);
+        
+        return (
+          <Pressable
+            key={idx}
+            onPress={() => handleRecentSearchPress(item, idx)}
+            disabled={searchingIndex === idx}
+            className={`self-center w-full h-[58px] flex-row justify-between items-center border-b border-gray-200 ${
+              searchingIndex === idx ? 'bg-gray-100' : 'active:bg-gray-100'
+            }`}
+          >
+            <View className="flex-row items-center flex-1">
+              <Ionicons name="refresh" size={26} color="#00BD5F" />
+              <View className="ml-2 flex-1">
+                <Text 
+                  className="font-[Afacad] text-black text-xl"
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {shortFrom} → {shortTo}
+                </Text>
+                <Text className="text-md text-gray-500 font-[Afacad] -mt-[2px]">
+                  {item.passengers} passenger{item.passengers > 1 ? 's' : ''}
+                  {item.femaleOnly && ' • Female-only'}
+                  {!item.fromCoordinates && ' • Needs location selection'}
+                </Text>
+              </View>
             </View>
-          </View>
-          
-          {searchingIndex === idx ? (
-            <ActivityIndicator size="small" color="#00BD5F" />
-          ) : (
-            <Ionicons name="chevron-forward" size={20} color="#00BD5F" />
-          )}
-        </Pressable>
-      ))}
+            
+            {searchingIndex === idx ? (
+              <ActivityIndicator size="small" color="#00BD5F" />
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color="#00BD5F" />
+            )}
+          </Pressable>
+        );
+      })}
     </View>
   );
 };
