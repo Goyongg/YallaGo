@@ -133,16 +133,19 @@ export class UsersService {
                     const bookingData = bookingDoc.data() as {
                         passengerId: string;
                         seatsBooked: number;
+                        status: string;
                     };
 
-                    // Fetch user data for the passenger
-                    const userData = await this.firebaseUserService.fetchUserData(bookingData.passengerId);
+                    // Only send ongoing/confirmed bookings
+                    if (bookingData.status === BookingStatus.ONGOING || bookingData.status === BookingStatus.CONFIRMED) {
+                        const userData = await this.firebaseUserService.fetchUserData(bookingData.passengerId);
 
-                    bookings.push({
-                        passengerName: userData.name,
-                        seatsBooked: bookingData.seatsBooked,
-                        phoneNumber: userData.phoneNumber
-                    });
+                        bookings.push({
+                            passengerName: userData.name,
+                            seatsBooked: bookingData.seatsBooked,
+                            phoneNumber: userData.phoneNumber
+                        });
+                    }
                 }
 
                 // Add the enriched ride (with bookings) to the list
