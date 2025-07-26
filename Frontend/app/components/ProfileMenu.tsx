@@ -6,10 +6,10 @@ import { ProfileMenuProps } from '../../interfaces/interfaces';
 
 const allMenuItems = [
   { label: 'Manage Profile', route: '../profile/manage' },
-  { label: 'Driver Dashboard', route: '../profile/DriverDashboard', driverOnly: true }, // Added driverOnly flag
-  { label: 'Booking Requests', route: '../profile/BookingRequests', driverOnly: true },
+  { label: 'My Rides', route: '../profile/DriverDashboard', driverOnly: true }, // Added driverOnly flag
+  { label: 'Passenger Requests', route: '../profile/BookingRequests', driverOnly: true }, // Added driverOnly flag
   { label: 'Gifts and discounts', sub: 'Enter promo code', route: '../profile/gifts' },
-  { label: 'Booking Dashboard', sub: 'Access all your bookings', route: '../profile/BookingDashboard' },
+  { label: 'My Bookings', sub: 'Access all your bookings', route: '../profile/BookingDashboard' },
   { label: 'Info', route: '../profile/info' },
 ];
 

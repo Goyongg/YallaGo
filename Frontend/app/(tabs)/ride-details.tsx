@@ -1,4 +1,4 @@
-// app/ride-details.tsx - Enhanced with comments and stopovers
+// app/ride-details.tsx - FIXED to use /bookings endpoint for passengers
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -65,6 +65,41 @@ interface RideData {
   waypoints?: any[];
 }
 
+// NEW: Interface for detailed booking data from /bookings endpoint
+interface DetailedBookingData {
+  bookingId: string;
+  rideId: string;
+  startLocation: string;
+  endLocation: string;
+  departureTime: {
+    _seconds: number;
+    _nanoseconds: number;
+  };
+  status: string;
+  seatsBooked: number;
+  // Driver info
+  name?: string;
+  phoneNumber?: string;
+  averageRating?: number;
+  // Vehicle info
+  make?: string;
+  model?: string;
+  color?: string;
+  plateNumber?: string;
+  // Additional data
+  comments?: string;
+  waypoints?: any[];
+  polyline?: string;
+  coordinates?: {
+    _latitude: number;
+    _longitude: number;
+  };
+  endGeo?: {
+    _latitude: number;
+    _longitude: number;
+  };
+}
+
 // Safety utility functions
 const safeString = (value: any): string => {
   if (value === null || value === undefined) return '';
@@ -122,6 +157,50 @@ const RideDetailsScreen = () => {
     }
   }, [homeLoading, upcomingData, userData, rideId]);
 
+  // NEW: Function to fetch detailed booking data for passengers
+  const fetchDetailedBookingData = async (bookingId: string): Promise<DetailedBookingData | null> => {
+    try {
+      console.log('🚗 🔍 Fetching detailed booking data for ride details:', bookingId);
+      
+      const user = auth().currentUser;
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const idToken = await user.getIdToken();
+      const response = await axios.get<DetailedBookingData[]>(`${BASE_URL}/bookings`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+        timeout: 10000,
+      });
+
+      console.log('🚗 📋 All bookings from /bookings endpoint (ride-details):', response.data);
+      
+      if (!response.data || !Array.isArray(response.data)) {
+        console.error('🚗 ❌ Invalid booking response format');
+        return null;
+      }
+
+      // Find the specific booking by bookingId
+      const targetBooking = response.data.find((booking: DetailedBookingData) => 
+        booking.bookingId === bookingId
+      );
+
+      if (!targetBooking) {
+        console.error('🚗 ❌ Booking not found in /bookings response:', bookingId);
+        return null;
+      }
+
+      console.log('🚗 ✅ Found detailed booking data for ride details:', targetBooking);
+      return targetBooking;
+
+    } catch (error) {
+      console.error('🚗 ❌ Error fetching detailed booking data for ride details:', error);
+      return null;
+    }
+  };
+
   const loadRideDetails = async () => {
     try {
       setLoading(true);
@@ -152,7 +231,8 @@ const RideDetailsScreen = () => {
       if (userData.role === 'driver') {
         await processDriverRideData(targetItem);
       } else {
-        await processPassengerBookingData(targetItem);
+        // 🔧 NEW: Use detailed booking data for passengers
+        await processPassengerBookingDataDetailed(targetItem);
       }
 
     } catch (err: any) {
@@ -198,7 +278,7 @@ const RideDetailsScreen = () => {
       processCoordinatesAndPolyline(rideItem);
 
       // Process stopovers from waypoints
-      processStopovers(rideItem.waypoints);
+      processStopovers(rideItem.waypoints || []);
 
       // Set passengers from bookings
       if (rideItem.bookings && Array.isArray(rideItem.bookings)) {
@@ -222,7 +302,99 @@ const RideDetailsScreen = () => {
     }
   };
 
-  const processPassengerBookingData = async (bookingItem: any) => {
+  // 🔧 NEW: Enhanced passenger booking processing using detailed data
+  const processPassengerBookingDataDetailed = async (bookingItem: any) => {
+    try {
+      console.log('🚗 Processing passenger booking with detailed data fetch...');
+      
+      // First, try to get detailed data from /bookings endpoint
+      const detailedBooking = await fetchDetailedBookingData(bookingItem.bookingId);
+      
+      if (detailedBooking) {
+        console.log('🚗 ✅ Using detailed booking data');
+        
+        // Parse departure time from detailed booking
+        let departureTime: Date;
+        if (detailedBooking.departureTime && detailedBooking.departureTime._seconds) {
+          departureTime = new Date(detailedBooking.departureTime._seconds * 1000);
+        } else {
+          departureTime = new Date();
+        }
+
+        // Set ride data with ALL detailed information
+        const ride: RideData = {
+          rideId: bookingItem.bookingId,
+          from: safeString(detailedBooking.startLocation) || 'Unknown',
+          to: safeString(detailedBooking.endLocation) || 'Unknown',
+          departureTime,
+          status: safeString(detailedBooking.status) || 'confirmed',
+          coordinates: detailedBooking.coordinates,
+          endGeo: detailedBooking.endGeo,
+          polyline: detailedBooking.polyline,
+          comments: detailedBooking.comments, // ✅ Now available!
+          waypoints: detailedBooking.waypoints, // ✅ Now available!
+        };
+        setRideData(ride);
+
+        // Process coordinates and polyline from detailed data
+        processCoordinatesAndPolyline(detailedBooking);
+
+        // Process stopovers from detailed waypoints
+        processStopovers(detailedBooking.waypoints || []);
+
+        // Set driver info from detailed booking
+        if (detailedBooking.name) {
+          const driver: DriverInfo = {
+            name: safeString(detailedBooking.name) || 'Unknown Driver',
+            phone: safeString(detailedBooking.phoneNumber) || '',
+            rating: safeNumber(detailedBooking.averageRating),
+          };
+          setDriverInfo(driver);
+        }
+
+        // Set vehicle info from detailed booking
+        if (detailedBooking.make && detailedBooking.model) {
+          const vehicle: VehicleInfo = {
+            make: safeString(detailedBooking.make),
+            model: safeString(detailedBooking.model),
+            color: safeString(detailedBooking.color) || 'Unknown',
+            plateNumber: safeString(detailedBooking.plateNumber) || 'Unknown',
+          };
+          setVehicleInfo(vehicle);
+        }
+
+        // Set status based on detailed booking status
+        if (detailedBooking.status === 'ongoing') {
+          setRideStatus('departed');
+        } else if (detailedBooking.status === 'completed') {
+          setRideStatus('completed');
+        } else {
+          setRideStatus('in-progress');
+        }
+
+        console.log('🚗 ✅ Passenger booking data processed with detailed info:', {
+          from: ride.from,
+          to: ride.to,
+          hasComments: !!ride.comments,
+          hasWaypoints: !!ride.waypoints,
+          hasPolyline: !!ride.polyline
+        });
+
+      } else {
+        console.log('🚗 ⚠️ Falling back to basic booking data');
+        // Fallback to original logic if detailed fetch fails
+        await processPassengerBookingDataBasic(bookingItem);
+      }
+
+    } catch (err) {
+      console.error('🚗 Error processing detailed passenger booking data:', err);
+      // Fallback to basic processing
+      await processPassengerBookingDataBasic(bookingItem);
+    }
+  };
+
+  // Fallback function for basic passenger booking processing
+  const processPassengerBookingDataBasic = async (bookingItem: any) => {
     try {
       // Parse departure time from ride data
       let departureTime: Date;
@@ -239,7 +411,7 @@ const RideDetailsScreen = () => {
         departureTime = new Date(rideDepTime || Date.now());
       }
 
-      // Set ride data with comments and waypoints from the main ride
+      // Set ride data (limited)
       const ride: RideData = {
         rideId: bookingItem.bookingId,
         from: safeString(bookingItem.pickupPoint) || 'Unknown',
@@ -249,38 +421,16 @@ const RideDetailsScreen = () => {
         coordinates: bookingItem.ride?.coordinates,
         endGeo: bookingItem.ride?.endGeo,
         polyline: bookingItem.ride?.polyline,
-        comments: bookingItem.ride?.comments, // Get comments from main ride
-        waypoints: bookingItem.ride?.waypoints, // Get waypoints from main ride
+        comments: bookingItem.ride?.comments,
+        waypoints: bookingItem.ride?.waypoints,
       };
       setRideData(ride);
-
-      // Use the main ride data for polyline, not booking-specific coordinates
-      console.log('🗺️ Passenger booking - checking for polyline data:', {
-        hasRide: !!bookingItem.ride,
-        hasPolyline: !!bookingItem.ride?.polyline,
-        polylineLength: bookingItem.ride?.polyline?.length
-      });
 
       // Process coordinates and polyline from the main ride data
       processCoordinatesAndPolyline(bookingItem.ride || bookingItem);
 
       // Process stopovers from main ride waypoints
-      processStopovers(bookingItem.ride?.waypoints);
-
-      // Only override with booking-specific coordinates if they exist AND no polyline
-      if (bookingItem.bookingStart && bookingItem.bookingEnd && !bookingItem.ride?.polyline) {
-        console.log('🗺️ Using booking-specific coordinates (no polyline available)');
-        const startCoords = {
-          latitude: bookingItem.bookingStart.latitude || bookingItem.bookingStart._latitude || defaultCoordinates[0].latitude,
-          longitude: bookingItem.bookingStart.longitude || bookingItem.bookingStart._longitude || defaultCoordinates[0].longitude,
-        };
-        const endCoords = {
-          latitude: bookingItem.bookingEnd.latitude || bookingItem.bookingEnd._latitude || defaultCoordinates[1].latitude,
-          longitude: bookingItem.bookingEnd.longitude || bookingItem.bookingEnd._longitude || defaultCoordinates[1].longitude,
-        };
-        setRouteCoordinates([startCoords, endCoords]);
-        setPolylineCoords([startCoords, endCoords]); // Simple line for booking-specific route
-      }
+      processStopovers(bookingItem.ride?.waypoints || []);
 
       // Set driver info
       if (bookingItem.driver) {
@@ -312,12 +462,10 @@ const RideDetailsScreen = () => {
         setRideStatus('in-progress');
       }
 
-      console.log('🚗 Passenger booking data processed:', ride);
-      console.log('🚗 Driver info:', driverInfo);
-      console.log('🚗 Vehicle info:', vehicleInfo);
+      console.log('🚗 Passenger booking data processed (basic):', ride);
 
     } catch (err) {
-      console.error('🚗 Error processing passenger booking data:', err);
+      console.error('🚗 Error processing basic passenger booking data:', err);
       throw err;
     }
   };
@@ -377,7 +525,7 @@ const RideDetailsScreen = () => {
     }
   };
 
-  // NEW: Process stopovers from waypoints
+  // Process stopovers from waypoints
   const processStopovers = (waypoints: any[]) => {
     console.log('🛑 Processing waypoints:', waypoints);
     
@@ -398,7 +546,7 @@ const RideDetailsScreen = () => {
     }
   };
 
-  // NEW: Render driver comment section (keeping original design style)
+  // Render driver comment section (keeping original design style)
   const renderDriverComment = () => {
     if (!rideData?.comments) return null;
     
@@ -420,7 +568,7 @@ const RideDetailsScreen = () => {
     );
   };
 
-  // NEW: Render stopovers section (keeping original design style)
+  // Render stopovers section (keeping original design style)
   const renderStopovers = () => {
     if (!stopovers || stopovers.length === 0) return null;
 
@@ -715,6 +863,24 @@ const RideDetailsScreen = () => {
         )}
       </View>
 
+      {/* 🔧 REPOSITIONED: SOS Button for Drivers (separate from action buttons) */}
+      <View className="mx-4 mb-4">
+        <Pressable
+          onPress={handleSOSPress}
+          className="bg-orange-500 py-3 rounded-lg items-center"
+        >
+          <View className="flex-row items-center">
+            <Ionicons name="warning" size={20} color="white" />
+            <Text className="text-white text-base font-[Afacad] font-bold ml-2">
+              Emergency SOS
+            </Text>
+          </View>
+          <Text className="text-red-100 text-sm font-[Afacad] mt-1">
+            Tap in case of emergency
+          </Text>
+        </Pressable>
+      </View>
+
       {/* Driver Action Buttons */}
       <View className="mx-4 mb-4">
         {rideStatus === 'in-progress' && (
@@ -804,7 +970,7 @@ const RideDetailsScreen = () => {
         </View>
       )}
 
-      {/* SOS Button */}
+      {/* SOS Button for Passengers */}
       <View className="mx-4 mb-4">
         <Pressable
           onPress={handleSOSPress}
@@ -863,13 +1029,6 @@ const RideDetailsScreen = () => {
             showsUserLocation={true}
             showsMyLocationButton={false}
           >
-            {/* Current Location Marker */}
-            {/* <Marker
-              coordinate={currentLocation}
-              title="Your Location"
-              pinColor="blue"
-            /> */}
-            
             {/* Route Markers */}
             {routeCoordinates.length > 0 && (
               <>
@@ -941,10 +1100,10 @@ const RideDetailsScreen = () => {
           </View>
         )}
 
-        {/* NEW: Driver Comment Section */}
+        {/* ✅ Driver Comment Section - Now works for both drivers and passengers */}
         {renderDriverComment()}
 
-        {/* NEW: Stopovers Section */}
+        {/* ✅ Stopovers Section - Now works for both drivers and passengers */}
         {renderStopovers()}
 
         {/* Role-specific Content */}

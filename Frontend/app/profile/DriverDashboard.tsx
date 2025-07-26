@@ -137,7 +137,7 @@ const DriverDashboard = () => {
             <Pressable onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color="black" />
             </Pressable>
-            <Text className="text-xl ml-4 font-bold font-[Afacad]">Driver Dashboard</Text>
+            <Text className="text-xl ml-4 font-bold font-[Afacad]">My Rides</Text>
           </View>
           
           {/* Loading indicator */}
@@ -160,7 +160,7 @@ const DriverDashboard = () => {
             <Pressable onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color="black" />
             </Pressable>
-            <Text className="text-xl ml-4 font-bold font-[Afacad]">Driver Dashboard</Text>
+            <Text className="text-xl ml-4 font-bold font-[Afacad]">My Rides</Text>
           </View>
           
           {/* Error message */}
@@ -192,7 +192,7 @@ const DriverDashboard = () => {
           <Pressable onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
-          <Text className="text-xl ml-4 font-bold font-[Afacad]">Driver Dashboard</Text>
+          <Text className="text-xl ml-4 font-bold font-[Afacad]">My Rides</Text>
         </View>
 
         {/* Tabs */}
