@@ -68,22 +68,24 @@ export class RidePassengersService {
         // Notify driver that a new booking has been made
         await this.notifyDriver(bookingData);
 
-        const { clientSecret, paymentId } = await this.paymentsService.createPaymentIntent(firebaseUid, {
-            rideId: createRidePassengerDto.rideId,
-            amount: createRidePassengerDto.bookingPrice,
-        });
+        // ‼️UNCOMMENT THIS ‼️
+        // const { clientSecret, paymentId } = await this.paymentsService.createPaymentIntent(firebaseUid, {
+        //     rideId: createRidePassengerDto.rideId,
+        //     amount: createRidePassengerDto.bookingPrice,
+        // });
 
         // then store paymentIntent ID with the booking
         await bookRef.set({
             ...bookingData,
-            paymentIntentId: paymentId,
-            paymentClientSecret: clientSecret,
+            // paymentIntentId: paymentId,
+            // paymentClientSecret: clientSecret,
         });
 
         return {
             message: "Booking created successfully",
             bookingId: bookingData.bookingId,
-            clientSecret,
+            // ‼️UNCOMMENT THIS ‼️
+            // clientSecret,
         };
     };
 

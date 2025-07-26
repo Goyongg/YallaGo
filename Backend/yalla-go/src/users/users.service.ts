@@ -171,17 +171,14 @@ export class UsersService {
             const bookingData = bookingDoc.data() as {
                 rideId: string;
                 seatsBooked: number;
-                pickupPoint: string; 
-                startGeo: GeoPoint;
-                dropOffPoint: string;
-                endGeo: GeoPoint; 
+                bookingPrice: number;
                 status: string;
             };
 
             // Fetch the ride document linked to this booking
             const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
             // Keep only specific ride fields
-            const cleanRideData = pickFields(rideData, ['coordinates', 'departureTime', 'endGeo'])
+            const cleanRideData = pickFields(rideData, ['coordinates', 'startLocation', 'endGeo', 'endLocation', 'departureTime', 'polyline', 'comments, waypoints'])
 
             // Convert departure time to JS Date
             const departureTime = rideData.departureTime.toDate();
@@ -212,11 +209,8 @@ export class UsersService {
             enrichedBookings.push({
                 bookingId: bookingDoc.id,
                 seatsBooked: bookingData.seatsBooked,
+                bookingPrice: bookingData.bookingPrice,
                 status: bookingData.status,
-                pickupPoint: bookingData.pickupPoint,
-                bookingStart: bookingData.startGeo,
-                dropOffPoint: bookingData.dropOffPoint,
-                bookingEnd: bookingData.endGeo,
                 ride: cleanRideData,
                 driver: cleanDriverData,
                 vehicle: cleanVehicleData
@@ -364,19 +358,31 @@ export class UsersService {
 
         const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
 
-        // // 💳 Capture the authorized payment
-        // try {
-        //     await this.stripe.paymentIntents.capture(bookingData.paymentIntentId);
+        // 💳 Capture the authorized payment (only if paymentIntentId exists)
+        if (bookingData.paymentIntentId) {
+            try {
+                const paymentIntent = await this.stripe.paymentIntents.retrieve(bookingData.paymentIntentId);
 
-        //     // Update payment Firestore document
-        //     await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
-        //         status: PaymentStatus.PAID,
-        //         completedAt: this.firebase.FieldValue.serverTimestamp(),
-        //     });
-        // } catch (err) {
-        //     console.error(`❌ Failed to capture payment for booking ${bookingId}`, err.message);
-        //     throw new Error('Payment capture failed. Booking cannot be confirmed.');
-        // }
+                if (paymentIntent.status === 'requires_capture') {
+                    await this.stripe.paymentIntents.capture(bookingData.paymentIntentId);
+
+                    await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
+                        status: PaymentStatus.PAID,
+                        completedAt: this.firebase.FieldValue.serverTimestamp(),
+                    });
+                } 
+                else {
+                    console.log(`ℹ️ PaymentIntent ${paymentIntent.id} not ready for capture: status is '${paymentIntent.status}'`);
+                }
+            } 
+            catch (err) {
+                console.error(`❌ Failed to capture payment for booking ${bookingId}`, err.message);
+                throw new Error('Payment capture failed. Booking cannot be confirmed.');
+            }
+        } 
+        else {
+            console.log(`ℹ️ No PaymentIntent found for booking ${bookingId}, skipping payment capture.`);
+        }
 
         // Update the status field of this booking to CONFIRMED
         bookingRef.update({ status: BookingStatus.CONFIRMED })
@@ -409,28 +415,30 @@ export class UsersService {
         // Retrieve the corresponding ride details using the rideId from the booking
         const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
 
-        // // 💳 Cancel the PaymentIntent to release the authorization
-        // try {
-        //     await this.stripe.paymentIntents.cancel(bookingData.paymentIntentId);
+        // 💳 Cancel the PaymentIntent (only if paymentIntentId exists)
+        if (bookingData.paymentIntentId) {
+            try {
+                const paymentIntent = await this.stripe.paymentIntents.retrieve(bookingData.paymentIntentId);
 
-        //     await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
-        //         status: PaymentStatus.CANCELLED,
-        //         cancelledAt: this.firebase.FieldValue.serverTimestamp(),
-        //     });
-        // } catch (err) {
-        //     console.error(`❌ Failed to cancel payment for booking ${bookingId}`, err.message);
-        //     // Proceed anyway — this is non-critical for booking logic
-        // }
+                if (paymentIntent.status === 'requires_capture') {
+                    await this.stripe.paymentIntents.cancel(bookingData.paymentIntentId);
 
-        // Update the booking's status to CANCELLED in the database
-        bookingRef.update({ status: BookingStatus.CANCELLED })
-
-        // Notify passenger
-        await this.notifyPassenger(
-            bookingData.passengerId,
-            '❌ Booking Declined',
-            `Unfortunately, your booking request from ${rideData.startLocation} to ${rideData.endLocation} was declined by the driver.`
-        );
+                    await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
+                        status: PaymentStatus.CANCELLED,
+                        cancelledAt: this.firebase.FieldValue.serverTimestamp(),
+                    });
+                } 
+                else {
+                    console.log(`ℹ️ PaymentIntent ${paymentIntent.id} not cancelled — status is '${paymentIntent.status}'`);
+                }
+            } 
+            catch (err) {
+                console.error(`❌ Failed to cancel payment for booking ${bookingId}`, err.message);
+            }
+        } 
+        else {
+            console.log(`ℹ️ No PaymentIntent found for booking ${bookingId}, skipping payment cancellation.`);
+        }
 
         // Calculate the new available seat count by adding back the cancelled seats
         const newSeats = bookingData.seatsBooked + rideData.availableSeats;
