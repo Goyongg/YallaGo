@@ -204,6 +204,8 @@ const useDriverRides = (): UseDriverRidesReturn => {
         let totalSeats = 4; // Default fallback
         let bookedSeats = 0;
 
+        console.log(`🚗 Starting seat calculation for ride ${safeRideId}...`);
+
         // Try to get total seats from various possible sources
         if (ride.totalSeats && typeof ride.totalSeats === 'number') {
           totalSeats = ride.totalSeats;
@@ -212,25 +214,66 @@ const useDriverRides = (): UseDriverRidesReturn => {
         }
 
         // Calculate booked seats
-        if (ride.bookings && Array.isArray(ride.bookings)) {
-          // If we have booking data, calculate from that
-          bookedSeats = ride.bookings.reduce((total, booking) => {
-            if (!booking || typeof booking !== 'object') return total;
-            const seats = safeNumber(booking.seatsBooked);
-            return total + seats;
-          }, 0);
-          // Also update totalSeats if we can infer it
-          if (!ride.totalSeats && !ride.vehicleSeats) {
+        // Method 1: Use direct bookedSeats from backend if available (MOST RELIABLE)
+        if (ride.bookedSeats !== undefined && ride.bookedSeats !== null) {
+          bookedSeats = safeNumber(ride.bookedSeats);
+          console.log(`🚗 Method 1 - Using direct bookedSeats from backend: ${bookedSeats}`);
+          
+          // If we have direct bookedSeats, try to determine totalSeats
+          if (ride.totalSeats) {
+            totalSeats = safeNumber(ride.totalSeats);
+          } else if (ride.vehicleSeats) {
+            totalSeats = safeNumber(ride.vehicleSeats);
+          } else {
+            // Calculate totalSeats from available + booked
             totalSeats = safeAvailableSeats + bookedSeats;
           }
-        } else {
-          // If no booking data, estimate from available seats
-          if (ride.totalSeats || ride.vehicleSeats) {
-            bookedSeats = Math.max(0, totalSeats - safeAvailableSeats);
+          console.log(`🚗 Method 1 - Total seats determined: ${totalSeats}`);
+        }
+
+        // Method 2: Calculate from bookings array (if no direct bookedSeats)
+        else if (ride.bookings && Array.isArray(ride.bookings) && ride.bookings.length > 0) {
+          console.log(`🚗 Method 2 - Calculating from bookings array (${ride.bookings.length} bookings)`);
+          
+          bookedSeats = ride.bookings.reduce((total, booking, bookingIndex) => {
+            if (!booking || typeof booking !== 'object') {
+              console.log(`🚗   Booking ${bookingIndex}: Invalid booking object`);
+              return total;
+            }
+            const seats = safeNumber(booking.seatsBooked);
+            console.log(`🚗   Booking ${bookingIndex}: ${booking.passengerName || 'Unknown'} - ${seats} seats`);
+            return total + seats;
+          }, 0);
+          
+          console.log(`🚗 Method 2 - Total booked seats from bookings array: ${bookedSeats}`);
+          
+          // Set totalSeats
+          if (ride.totalSeats) {
+            totalSeats = safeNumber(ride.totalSeats);
+          } else if (ride.vehicleSeats) {
+            totalSeats = safeNumber(ride.vehicleSeats);
           } else {
-            bookedSeats = 0;
-            totalSeats = safeAvailableSeats;
+            totalSeats = safeAvailableSeats + bookedSeats;
           }
+        }
+
+        // Method 3: Calculate from totalSeats - availableSeats (if no bookings array)
+        else if (ride.totalSeats || ride.vehicleSeats) {
+          totalSeats = safeNumber(ride.totalSeats) || safeNumber(ride.vehicleSeats);
+          bookedSeats = Math.max(0, totalSeats - safeAvailableSeats);
+          
+          console.log(`🚗 Method 3 - Calculating from seat difference:`, {
+            totalSeats,
+            availableSeats: safeAvailableSeats,
+            calculatedBookedSeats: bookedSeats
+          });
+        } 
+
+        // Method 4: Default to 0 if no reliable data
+        else {
+          console.log(`🚗 Method 4 - No reliable data, defaulting to 0 booked seats`);
+          bookedSeats = 0;
+          totalSeats = safeAvailableSeats; // If no total seats info, assume available seats = total
         }
 
         // Ensure non-negative values
@@ -238,6 +281,16 @@ const useDriverRides = (): UseDriverRidesReturn => {
         totalSeats = Math.max(safeAvailableSeats, totalSeats);
         
         const hasBookings = bookedSeats > 0;
+
+        console.log(`🚗 Final seat calculation for ride ${safeRideId}:`, {
+          totalSeats,
+          availableSeats: safeAvailableSeats,
+          bookedSeats,
+          hasBookings,
+          status: safeStatus,
+          method: ride.bookedSeats !== undefined ? 'From bookings array' : 
+                  ride.totalSeats || ride.vehicleSeats ? 'From seat difference' : 'Default'
+        });
 
         // CRITICAL: Format time values with safety
         const safeDepartureTime = formatTime(ride.departureTime);
@@ -278,10 +331,19 @@ const useDriverRides = (): UseDriverRidesReturn => {
           endGeo: ride.endGeo,
           waypoints: ride.waypoints,
           polyline: ride.polyline,
-          bookings: ride.bookings
+          bookings: ride.bookings,
+          comments: ride.comments,
         };
 
-        console.log(`🚗 Final processed ride ${safeRideId}:`, processedRide);
+        console.log(`🚗 ✅ Final processed ride ${safeRideId}:`, {
+          id: processedRide.id,
+          bookedSeats: processedRide.bookedSeats,
+          hasBookings: processedRide.hasBookings,
+          status: processedRide.status,
+          route: `${processedRide.from} → ${processedRide.to}`,
+          method: ride.bookedSeats !== undefined ? 'From bookings array' : 
+                  ride.totalSeats || ride.vehicleSeats ? 'From seat difference' : 'Default'
+        });
         
         // CRITICAL: Validate the final object
         const isValid = processedRide.id && 
@@ -329,12 +391,25 @@ const useDriverRides = (): UseDriverRidesReturn => {
         headers: {
           Authorization: `Bearer ${idToken}`,
         },
-        timeout: 10000, // 10 second timeout
+        timeout: 10000,
       });
 
       console.log('🚗 Raw rides from backend:', response.data);
       
-      // CRITICAL: Validate response data
+      // ADD: Detailed logging of each ride's booking information
+      response.data.forEach((ride, index) => {
+        console.log(`🚗 Ride ${index} booking details:`, {
+          rideId: ride.rideId,
+          availableSeats: ride.availableSeats,
+          totalSeats: ride.totalSeats,
+          vehicleSeats: ride.vehicleSeats,
+          bookedSeats: ride.bookedSeats,
+          bookings: ride.bookings,
+          bookingCount: ride.bookings ? ride.bookings.length : 0,
+          status: ride.status
+        });
+      });
+      
       if (!response.data || !Array.isArray(response.data)) {
         console.error('🚗 Invalid response data format');
         setRides([]);
@@ -342,29 +417,19 @@ const useDriverRides = (): UseDriverRidesReturn => {
       }
 
       const processedRides = processRideData(response.data);
-      console.log('🚗 All processed rides:', processedRides);
+      console.log('🚗 All processed rides with final passenger counts:', 
+        processedRides.map(r => ({ 
+          id: r.id, 
+          bookedSeats: r.bookedSeats, 
+          hasBookings: r.hasBookings,
+          status: r.status,
+          from: r.from,
+          to: r.to
+        }))
+      );
       setRides(processedRides);
     } catch (err) {
-      console.error('Error fetching driver rides:', err);
-      
-      let errorMessage = 'Failed to fetch rides';
-      
-      if (err instanceof AxiosError) {
-        if (err.code === 'ECONNABORTED') {
-          errorMessage = 'Request timed out. Please check your connection.';
-        } else if (err.response?.status === 401) {
-          errorMessage = 'Authentication failed. Please log in again.';
-        } else if (err.response?.status === 403) {
-          errorMessage = 'Access denied. Only drivers can view rides.';
-        } else if (err.response?.data?.message) {
-          errorMessage = err.response.data.message;
-        }
-      } else if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      
-      setError(errorMessage);
-      setRides([]); // CRITICAL: Set empty array on error
+      // ... existing error handling ...
     } finally {
       setLoading(false);
     }

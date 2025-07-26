@@ -1,4 +1,4 @@
-// app/booking-details.tsx - New page specifically for passenger booking details
+// app/booking-details.tsx - Enhanced with comments and stopovers
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -63,11 +63,6 @@ const BookingDetailsScreen = () => {
   
   const { bookingId } = params;
   
-  // const [currentLocation, setCurrentLocation] = useState({
-  //   latitude: 25.2048, // Default to Dubai
-  //   longitude: 55.2708,
-  // });
-  
   // Default coordinates (Dubai area)
   const defaultCoordinates = [
     { latitude: 25.2048, longitude: 55.2708 }, // Start
@@ -76,6 +71,11 @@ const BookingDetailsScreen = () => {
   
   const [routeCoordinates, setRouteCoordinates] = useState(defaultCoordinates);
   const [polylineCoords, setPolylineCoords] = useState<{ latitude: number; longitude: number }[]>([]);
+  
+  // Add stopovers state
+  const [stopovers, setStopovers] = useState<
+    { id: string; location: string; coordinates: { latitude: number; longitude: number } }[]
+  >([]);
   
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -223,6 +223,27 @@ const BookingDetailsScreen = () => {
     }
   };
 
+  // NEW: Process stopovers from waypoints
+  const processStopovers = (waypoints: any[]) => {
+    console.log('🛑 Processing waypoints:', waypoints);
+    
+    if (Array.isArray(waypoints) && waypoints.length > 0) {
+      const formattedStopovers = waypoints.map((wp: any, index: number) => ({
+        id: `stopover-${index}`,
+        location: wp.label || `Stopover ${index + 1}`,
+        coordinates: {
+          latitude: wp.coordinates?.lat ?? wp.coordinates?._latitude ?? 0,
+          longitude: wp.coordinates?.lng ?? wp.coordinates?._longitude ?? 0,
+        },
+      }));
+      setStopovers(formattedStopovers);
+      console.log('🛑 Stopovers parsed:', formattedStopovers);
+    } else {
+      setStopovers([]);
+      console.log('🛑 No stopovers to process');
+    }
+  };
+
   // Fetch booking details from /bookings endpoint
   const fetchBookingDetails = async () => {
     try {
@@ -263,6 +284,9 @@ const BookingDetailsScreen = () => {
       
       setBookingData(targetBooking);
       processCoordinatesAndPolyline(targetBooking);
+      
+      // NEW: Process stopovers from waypoints
+      processStopovers(targetBooking.waypoints);
 
     } catch (err: any) {
       console.error('📋 Error fetching booking details:', err);
@@ -280,6 +304,54 @@ const BookingDetailsScreen = () => {
       setLoading(false);
     }
   }, [bookingId]);
+
+  // NEW: Render driver comment section (keeping original design style)
+  const renderDriverComment = () => {
+    if (!bookingData?.comments) return null;
+    
+    return (
+      <View className="mx-4 mb-6">
+        <Text className="text-lg font-semibold font-[Afacad] mb-3">
+          Driver's Note
+        </Text>
+        <View className="bg-gray-100 rounded-xl p-4">
+          <View className="flex-row items-start">
+            <Ionicons name="chatbubble-outline" size={16} color="#00BD5F" style={{ marginTop: 2, marginRight: 8 }} />
+            <Text className="text-base text-gray-700 font-[Afacad] italic flex-1">
+              "{safeString(bookingData.comments)}"
+            </Text>
+          </View>
+        </View>
+        <View className="h-px bg-gray-200 mt-6" />
+      </View>
+    );
+  };
+
+  // NEW: Render stopovers section (keeping original design style)
+  const renderStopovers = () => {
+    if (!stopovers || stopovers.length === 0) return null;
+
+    return (
+      <View className="mx-4 mb-6">
+        <Text className="text-lg font-semibold font-[Afacad] mb-3">
+          Trip Stopovers ({stopovers.length})
+        </Text>
+        <View className="bg-orange-50 rounded-xl p-4">
+          {stopovers.map((stopover, index) => (
+            <View key={stopover.id || index} className="flex-row items-center mb-3 last:mb-0">
+              <View className="w-3 h-3 rounded-full bg-orange-400 mr-3" />
+              <View className="flex-1">
+                <Text className="text-base font-medium font-[Afacad]">
+                  {stopover.location}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+        <View className="h-px bg-gray-200 mt-6" />
+      </View>
+    );
+  };
 
   const handleCallPress = (phoneNumber: string, name: string) => {
     const safeName = safeString(name) || 'Driver';
@@ -478,13 +550,6 @@ const BookingDetailsScreen = () => {
             showsUserLocation={true}
             showsMyLocationButton={false}
           >
-            {/* Current Location Marker */}
-            {/* <Marker
-              coordinate={currentLocation}
-              title="Your Location"
-              pinColor="blue"
-            /> */}
-            
             {/* Route Markers */}
             <Marker
               coordinate={routeCoordinates[0]}
@@ -496,6 +561,20 @@ const BookingDetailsScreen = () => {
               title="Destination"
               pinColor="red"
             />
+
+            {/* Stopover Markers */}
+            {stopovers.map((stopover) => (
+              <Marker
+                key={stopover.id}
+                coordinate={stopover.coordinates}
+                title={stopover.location}
+                description="Stopover"
+              >
+                <View className="bg-orange-400 rounded-full p-2">
+                  <Ionicons name="pause" size={10} color="white" />
+                </View>
+              </Marker>
+            ))}
             
             {/* Route Polyline */}
             {polylineCoords.length > 0 && (
@@ -532,21 +611,11 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
 
-        {/* Comments if available */}
-        {bookingData.comments && (
-          <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
-            <View className="p-4 border-b border-gray-200">
-              <Text className="text-lg font-bold font-[Afacad] text-black">
-                Ride Notes
-              </Text>
-            </View>
-            <View className="p-4">
-              <Text className="text-base font-[Afacad] text-gray-700">
-                {safeString(bookingData.comments)}
-              </Text>
-            </View>
-          </View>
-        )}
+        {/* NEW: Driver Comment Section */}
+        {renderDriverComment()}
+
+        {/* NEW: Stopovers Section */}
+        {renderStopovers()}
 
         {/* Driver Info */}
         {bookingData.name && (

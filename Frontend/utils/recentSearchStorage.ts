@@ -17,8 +17,8 @@ export const saveRecentSearch = async (search: RecentSearch) => {
     // Add new search at the beginning
     searches.unshift(search);
 
-    // Limit to last 5
-    if (searches.length > 5) searches = searches.slice(0, 5);
+    // Limit to last 3 searches
+    if (searches.length > 3) searches = searches.slice(0, 3);
 
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(searches));
   } catch (err) {

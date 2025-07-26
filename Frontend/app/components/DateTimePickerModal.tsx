@@ -73,7 +73,7 @@ const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({
   return (
     <Modal transparent visible={visible} animationType="slide">
       <TouchableWithoutFeedback onPress={onClose}>
-        <View className="flex-1 justify-end">
+        <View className="flex-1 justify-end bg-black/30">
           <TouchableWithoutFeedback>
             <View className="bg-white rounded-t-3xl px-4 pt-4 pb-8">
               {/* Header */}

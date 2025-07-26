@@ -1,8 +1,9 @@
-// settings.tsx - UI Design Only (No Logic)
+// settings.tsx - Updated with Clear Recent Searches functionality
 import React, { useState } from 'react';
-import { View, Text, Pressable, Switch, ScrollView } from 'react-native';
+import { View, Text, Pressable, Switch, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { clearRecentSearches } from '../../utils/recentSearchStorage';
 
 // Language configuration for UI display
 const LANGUAGES = {
@@ -16,6 +17,36 @@ const SettingsScreen = () => {
   // Simple state for UI toggles (no real functionality)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState<'en' | 'ar'>('en');
+  const [clearingSearches, setClearingSearches] = useState(false);
+
+  const handleClearRecentSearches = async () => {
+    Alert.alert(
+      'Clear Recent Searches',
+      'Are you sure you want to clear all your recent searches? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setClearingSearches(true);
+              await clearRecentSearches();
+              Alert.alert('Success', 'Recent searches have been cleared successfully!');
+            } catch (error) {
+              console.error('Error clearing recent searches:', error);
+              Alert.alert('Error', 'Failed to clear recent searches. Please try again.');
+            } finally {
+              setClearingSearches(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   return (
     <View className="flex-1 bg-white">
@@ -102,10 +133,39 @@ const SettingsScreen = () => {
           </Text>
         </View>
 
+        {/* Data & Privacy Section */}
+        <View className="mb-8">
+          <Text className="text-lg font-bold font-[Afacad] mb-4 text-gray-800">Data & Privacy</Text>
+          
+          {/* Clear Recent Searches */}
+          <Pressable 
+            onPress={handleClearRecentSearches}
+            disabled={clearingSearches}
+            className={`bg-gray-50 rounded-lg p-4 mb-3 ${
+              clearingSearches ? 'opacity-50' : ''
+            }`}
+          >
+            <View className="flex-row items-center justify-between">
+              <View className="flex-1 mr-4">
+                <View className="flex-row items-center mb-1">
+                  <Ionicons name="refresh" size={20} color="#FF6B6B" />
+                  <Text className="text-base font-[Afacad] font-semibold ml-2">Clear Recent Searches</Text>
+                </View>
+                <Text className="text-sm font-[Afacad] text-gray-600">
+                  Remove all saved search history from your device
+                </Text>
+              </View>
+              {clearingSearches ? (
+                <View className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
+              )}
+            </View>
+          </Pressable>
+        </View>
+
         {/* Additional Options */}
         <View className="mb-8">
-          {/* <Text className="text-lg font-bold font-[Afacad] mb-4 text-gray-800">More Options</Text> */}
-          
           {/* Help & Support */}
           <Pressable 
             onPress={() => console.log('Help & Support pressed')}

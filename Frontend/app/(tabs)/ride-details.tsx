@@ -1,4 +1,4 @@
-// app/ride-details.tsx - Fixed to use single data source with polyline
+// app/ride-details.tsx - Enhanced with comments and stopovers
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -60,6 +60,9 @@ interface RideData {
     _longitude?: number;
   };
   polyline?: string;
+  // Add comments and waypoints
+  comments?: string;
+  waypoints?: any[];
 }
 
 // Safety utility functions
@@ -81,11 +84,6 @@ const RideDetailsScreen = () => {
   const { rideId, userRole } = params;
   const { userData, upcomingData, loading: homeLoading, refetch } = useHomeUserData();
   
-  const [currentLocation, setCurrentLocation] = useState({
-    latitude: 25.2048, // Default to Dubai
-    longitude: 55.2708,
-  });
-  
   // Default coordinates (Dubai area)
   const defaultCoordinates = [
     { latitude: 25.2048, longitude: 55.2708 }, // Start
@@ -94,6 +92,11 @@ const RideDetailsScreen = () => {
   
   const [routeCoordinates, setRouteCoordinates] = useState(defaultCoordinates);
   const [polylineCoords, setPolylineCoords] = useState<{ latitude: number; longitude: number }[]>([]);
+  
+  // Add stopovers state
+  const [stopovers, setStopovers] = useState<
+    { id: string; location: string; coordinates: { latitude: number; longitude: number } }[]
+  >([]);
   
   const [passengers, setPassengers] = useState<PassengerInfo[]>([]);
   const [driverInfo, setDriverInfo] = useState<DriverInfo | null>(null);
@@ -176,7 +179,7 @@ const RideDetailsScreen = () => {
         departureTime = new Date(rideItem.departureTime || Date.now());
       }
 
-      // Set ride data
+      // Set ride data with comments and waypoints
       const ride: RideData = {
         rideId: rideItem.rideId,
         from: safeString(rideItem.startLocation) || 'Unknown',
@@ -186,20 +189,31 @@ const RideDetailsScreen = () => {
         coordinates: rideItem.coordinates,
         endGeo: rideItem.endGeo,
         polyline: rideItem.polyline,
+        comments: rideItem.comments, // Add comments
+        waypoints: rideItem.waypoints, // Add waypoints
       };
       setRideData(ride);
 
-      // 🗺️ Process coordinates and polyline
+      // Process coordinates and polyline
       processCoordinatesAndPolyline(rideItem);
 
+      // Process stopovers from waypoints
+      processStopovers(rideItem.waypoints);
+
       // Set passengers from bookings
+      // In ride-details.tsx - Replace the filtering logic with:
       if (rideItem.bookings && Array.isArray(rideItem.bookings)) {
+        console.log('🚗 Processing driver bookings for passenger list');
+        
+        // Since backend already filters to confirmed bookings, trust all bookings in the array
         const passengerList: PassengerInfo[] = rideItem.bookings.map((booking: any) => ({
           name: safeString(booking.passengerName) || 'Unknown Passenger',
           phone: safeString(booking.phoneNumber) || '',
           seatsBooked: safeNumber(booking.seatsBooked),
         }));
+        
         setPassengers(passengerList);
+        console.log('🚗 Final passenger list for details page:', passengerList.length, 'passengers');
       }
 
       // Set ride status
@@ -231,16 +245,47 @@ const RideDetailsScreen = () => {
         departureTime = new Date(rideDepTime || Date.now());
       }
 
-      // Set ride data
+      // ✅ FIX: Extract locations correctly from ride data
+      let fromLocation = '';
+      let toLocation = '';
+      
+      // Check ride object first (most reliable for passengers)
+      if (bookingItem.ride?.startLocation && bookingItem.ride?.endLocation) {
+        fromLocation = safeString(bookingItem.ride.startLocation);
+        toLocation = safeString(bookingItem.ride.endLocation);
+        console.log('🚗 Using ride.startLocation/endLocation:', { fromLocation, toLocation });
+      }
+      // Fallback to booking-level fields if ride fields aren't available
+      else if (bookingItem.pickupPoint && bookingItem.dropOffPoint) {
+        fromLocation = safeString(bookingItem.pickupPoint);
+        toLocation = safeString(bookingItem.dropOffPoint);
+        console.log('🚗 Using pickupPoint/dropOffPoint:', { fromLocation, toLocation });
+      }
+      // Additional fallback to booking startLocation/endLocation
+      else if (bookingItem.startLocation && bookingItem.endLocation) {
+        fromLocation = safeString(bookingItem.startLocation);
+        toLocation = safeString(bookingItem.endLocation);
+        console.log('🚗 Using booking startLocation/endLocation:', { fromLocation, toLocation });
+      }
+      // Final fallback
+      else {
+        fromLocation = 'Your pickup location';
+        toLocation = 'Your destination';
+        console.log('🚗 Using fallback locations');
+      }
+
+      // ✅ FIX: Use the extracted locations in the ride data object
       const ride: RideData = {
         rideId: bookingItem.bookingId,
-        from: safeString(bookingItem.pickupPoint) || 'Unknown',
-        to: safeString(bookingItem.dropOffPoint) || 'Unknown',
+        from: fromLocation,  // ← Fixed: use extracted location
+        to: toLocation,      // ← Fixed: use extracted location
         departureTime,
         status: safeString(bookingItem.status) || 'confirmed',
         coordinates: bookingItem.ride?.coordinates,
         endGeo: bookingItem.ride?.endGeo,
         polyline: bookingItem.ride?.polyline,
+        comments: bookingItem.ride?.comments,
+        waypoints: bookingItem.ride?.waypoints,
       };
       setRideData(ride);
 
@@ -254,7 +299,10 @@ const RideDetailsScreen = () => {
       // Process coordinates and polyline from the main ride data
       processCoordinatesAndPolyline(bookingItem.ride || bookingItem);
 
-      // 🔧 OPTIONAL: Only override with booking-specific coordinates if they exist AND no polyline
+      // Process stopovers from main ride waypoints
+      processStopovers(bookingItem.ride?.waypoints);
+
+      // Only override with booking-specific coordinates if they exist AND no polyline
       if (bookingItem.bookingStart && bookingItem.bookingEnd && !bookingItem.ride?.polyline) {
         console.log('🗺️ Using booking-specific coordinates (no polyline available)');
         const startCoords = {
@@ -299,9 +347,19 @@ const RideDetailsScreen = () => {
         setRideStatus('in-progress');
       }
 
-      console.log('🚗 Passenger booking data processed:', ride);
-      console.log('🚗 Driver info:', driverInfo);
-      console.log('🚗 Vehicle info:', vehicleInfo);
+      console.log('🚗 Passenger booking data processed successfully:', {
+        rideId: ride.rideId,
+        from: ride.from,
+        to: ride.to,
+        status: ride.status,
+        hasDriver: !!driverInfo,
+        hasVehicle: !!vehicleInfo
+      });
+
+      // Add these debug logs right after extracting locations:
+      console.log('🚗 DEBUG - Full ride object:', JSON.stringify(bookingItem.ride, null, 2));
+      console.log('🚗 DEBUG - Comments from ride:', bookingItem.ride?.comments);
+      console.log('🚗 DEBUG - Waypoints from ride:', bookingItem.ride?.waypoints);
 
     } catch (err) {
       console.error('🚗 Error processing passenger booking data:', err);
@@ -309,7 +367,7 @@ const RideDetailsScreen = () => {
     }
   };
 
-  // 🗺️ NEW: Process coordinates and polyline (same logic as driver-ride-details.tsx)
+  // Process coordinates and polyline (same logic as driver-ride-details.tsx)
   const processCoordinatesAndPolyline = (rideInfo: any) => {
     console.log('🗺️ Processing ride info for coordinates:', rideInfo);
     
@@ -331,7 +389,7 @@ const RideDetailsScreen = () => {
         console.log('📍 Route coordinates set from ride data:', [startCoords, endCoords]);
         setRouteCoordinates([startCoords, endCoords]);
         
-        // 🔧 FIX: Set simple line first, then try to parse polyline
+        // Set simple line first, then try to parse polyline
         setPolylineCoords([startCoords, endCoords]);
       } else {
         console.warn('🗺️ Invalid coordinates found, using defaults');
@@ -344,7 +402,7 @@ const RideDetailsScreen = () => {
       setPolylineCoords(defaultCoordinates);
     }
     
-    // 🔧 FIX: Parse polyline AFTER setting basic coordinates
+    // Parse polyline AFTER setting basic coordinates
     if (rideInfo.polyline) {  
       try {
         console.log('🗺️ Attempting to parse polyline:', rideInfo.polyline.substring(0, 100) + '...');
@@ -362,6 +420,75 @@ const RideDetailsScreen = () => {
     } else {
       console.log('🗺️ No polyline data available');
     }
+  };
+
+  // NEW: Process stopovers from waypoints
+  const processStopovers = (waypoints: any[]) => {
+    console.log('🛑 Processing waypoints:', waypoints);
+    
+    if (Array.isArray(waypoints) && waypoints.length > 0) {
+      const formattedStopovers = waypoints.map((wp: any, index: number) => ({
+        id: `stopover-${index}`,
+        location: wp.label || `Stopover ${index + 1}`,
+        coordinates: {
+          latitude: wp.coordinates?.lat ?? wp.coordinates?._latitude ?? 0,
+          longitude: wp.coordinates?.lng ?? wp.coordinates?._longitude ?? 0,
+        },
+      }));
+      setStopovers(formattedStopovers);
+      console.log('🛑 Stopovers parsed:', formattedStopovers);
+    } else {
+      setStopovers([]);
+      console.log('🛑 No stopovers to process');
+    }
+  };
+
+  // NEW: Render driver comment section (keeping original design style)
+  const renderDriverComment = () => {
+    if (!rideData?.comments) return null;
+    
+    return (
+      <View className="mx-4 mb-6">
+        <Text className="text-lg font-semibold font-[Afacad] mb-3">
+          Driver's Note
+        </Text>
+        <View className="bg-gray-100 rounded-xl p-4">
+          <View className="flex-row items-start">
+            <Ionicons name="chatbubble-outline" size={16} color="#00BD5F" style={{ marginTop: 2, marginRight: 8 }} />
+            <Text className="text-base text-gray-700 font-[Afacad] italic flex-1">
+              "{safeString(rideData.comments)}"
+            </Text>
+          </View>
+        </View>
+        <View className="h-px bg-gray-200 mt-6" />
+      </View>
+    );
+  };
+
+  // NEW: Render stopovers section (keeping original design style)
+  const renderStopovers = () => {
+    if (!stopovers || stopovers.length === 0) return null;
+
+    return (
+      <View className="mx-4 mb-6">
+        <Text className="text-lg font-semibold font-[Afacad] mb-3">
+          Trip Stopovers ({stopovers.length})
+        </Text>
+        <View className="bg-orange-50 rounded-xl p-4">
+          {stopovers.map((stopover, index) => (
+            <View key={stopover.id || index} className="flex-row items-center mb-3 last:mb-0">
+              <View className="w-3 h-3 rounded-full bg-orange-400 mr-3" />
+              <View className="flex-1">
+                <Text className="text-base font-medium font-[Afacad]">
+                  {stopover.location}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+        <View className="h-px bg-gray-200 mt-6" />
+      </View>
+    );
   };
 
   const handleCallPress = (phoneNumber: string, name: string) => {
@@ -472,22 +599,28 @@ const RideDetailsScreen = () => {
                 
                 setRideStatus('completed');
                 
-                // 📝 MANDATORY REVIEW: Show review modal immediately after ride completion
-                // Driver must review passengers, Passenger must review driver
-                setTimeout(() => {
-                  if (userRole === 'driver' && passengers.length > 0) {
-                    // Driver reviews first passenger (can be extended for multiple passengers)
-                    setReviewTarget({ name: passengers[0].name, id: passengers[0].phone });
-                    setShowReviewModal(true);
-                  } else if (userRole === 'passenger' && driverInfo) {
-                    // Passenger reviews driver
-                    setReviewTarget({ name: driverInfo.name, id: driverInfo.phone });
-                    setShowReviewModal(true);
-                  }
-                }, 500);
-                
-                // Refresh data
-                refetch();
+                // ✅ FIX: Show review modal IMMEDIATELY without timeout
+                // Don't wait for data refresh that might cause the page to break
+                if (userRole === 'driver' && passengers.length > 0) {
+                  // Driver reviews first passenger (can be extended for multiple passengers)
+                  setReviewTarget({ name: passengers[0].name, id: passengers[0].phone });
+                  setShowReviewModal(true);
+                } else if (userRole === 'passenger' && driverInfo) {
+                  // Passenger reviews driver
+                  setReviewTarget({ name: driverInfo.name, id: driverInfo.phone });
+                  setShowReviewModal(true);
+                } else {
+                  // ✅ FIX: If no review needed, navigate back immediately
+                  Alert.alert('Success', 'Ride completed successfully!', [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        refetch(); // Refresh data
+                        router.replace('/(tabs)/home'); // Navigate back
+                      }
+                    }
+                  ]);
+                }
                 
               } catch (error: any) {
                 console.error('Error ending ride:', error);
@@ -527,10 +660,16 @@ const RideDetailsScreen = () => {
     setShowReviewModal(false);
     setReviewTarget(null);
     
-    // Navigate back to home after review is completed
-    setTimeout(() => {
-      router.replace('/(tabs)/home');
-    }, 500);
+    // Show success message and navigate back
+    Alert.alert('Thank you!', 'Your review has been submitted successfully.', [
+      {
+        text: 'OK',
+        onPress: () => {
+          refetch(); // Refresh data
+          router.replace('/(tabs)/home'); // Navigate back to home
+        }
+      }
+    ]);
   };
 
   const handleLeaveReview = () => {
@@ -640,7 +779,7 @@ const RideDetailsScreen = () => {
           <Pressable
             onPress={handleStartRide}
             disabled={loading}
-            className="bg-blue-500 py-4 rounded-lg mb-3 items-center"
+            className="bg-green-500 py-4 rounded-lg mb-3 items-center"
           >
             <Text className="text-white text-lg font-[Afacad] font-semibold">
               {loading ? 'Starting...' : 'Start Ride'}
@@ -743,7 +882,6 @@ const RideDetailsScreen = () => {
 
       {/* Passenger Action Buttons */}
       <View className="mx-4 mb-4">
-        {/* Remove manual review button since review is now mandatory after ride completion */}
         {rideStatus === 'completed' && !showReviewModal && (
           <View className="bg-gray-100 py-4 rounded-lg items-center">
             <Text className="text-gray-600 text-lg font-[Afacad]">
@@ -784,11 +922,11 @@ const RideDetailsScreen = () => {
             showsMyLocationButton={false}
           >
             {/* Current Location Marker */}
-            <Marker
+            {/* <Marker
               coordinate={currentLocation}
               title="Your Location"
               pinColor="blue"
-            />
+            /> */}
             
             {/* Route Markers */}
             {routeCoordinates.length > 0 && (
@@ -805,6 +943,20 @@ const RideDetailsScreen = () => {
                 />
               </>
             )}
+
+            {/* Stopover Markers */}
+            {stopovers.map((stopover) => (
+              <Marker
+                key={stopover.id}
+                coordinate={stopover.coordinates}
+                title={stopover.location}
+                description="Stopover"
+              >
+                <View className="bg-orange-400 rounded-full p-2">
+                  <Ionicons name="pause" size={10} color="white" />
+                </View>
+              </Marker>
+            ))}
             
             {/* Route Polyline - Show detailed route if available */}
             {polylineCoords.length > 0 && (
@@ -846,6 +998,12 @@ const RideDetailsScreen = () => {
             </View>
           </View>
         )}
+
+        {/* NEW: Driver Comment Section */}
+        {renderDriverComment()}
+
+        {/* NEW: Stopovers Section */}
+        {renderStopovers()}
 
         {/* Role-specific Content */}
         {userRole === 'driver' ? renderDriverView() : renderPassengerView()}

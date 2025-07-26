@@ -11,9 +11,21 @@ const DriverLicense = () => {
   const [licenseNumber, setLicenseNumber] = useState(registrationData.license);
   const [loading, setLoading] = useState(false);
 
-  const isValid = licenseNumber.trim().length > 0;
+  // Simple validation: at least 6 digits
+  const isValid = licenseNumber.trim().length >= 6;
+
+  const handleLicenseChange = (text: string) => {
+    // Only allow numbers - filter out everything else
+    const numbersOnly = text.replace(/[^0-9]/g, '');
+    setLicenseNumber(numbersOnly);
+  };
 
   const handleSubmit = async () => {
+    if (licenseNumber.trim().length < 6) {
+      Alert.alert("Invalid License", "License number must be at least 6 digits");
+      return;
+    }
+
     const finalData = {
       ...registrationData,
       license: licenseNumber.trim(),
@@ -52,17 +64,25 @@ const DriverLicense = () => {
         </Text>
 
         <Text className="text-base text-gray-600 mb-6">
-          Please enter your valid UAE driver’s license number. Further ID verification may be required later.
+          Please enter your valid UAE driver's license number. Further ID verification may be required later.
         </Text>
 
         <TextInput
           className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-          placeholder="License Number"
+          placeholder="License Number (numbers only)"
           value={licenseNumber}
-          onChangeText={setLicenseNumber}
-          autoCapitalize="characters"
+          onChangeText={handleLicenseChange}
+          keyboardType="numeric"
+          maxLength={10}
           placeholderTextColor="#A0AEC0"
         />
+        
+        {/* Simple validation hint */}
+        {licenseNumber.length > 0 && licenseNumber.length < 6 && (
+          <Text className="text-orange-500 text-sm mt-2">
+            License number must be at least 6 digits
+          </Text>
+        )}
       </View>
 
       {/* Submit Button */}

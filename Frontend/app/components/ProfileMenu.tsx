@@ -6,10 +6,10 @@ import { ProfileMenuProps } from '../../interfaces/interfaces';
 
 const allMenuItems = [
   { label: 'Manage Profile', route: '../profile/manage' },
-  { label: 'Driver Dashboard', route: '../profile/DriverDashboard', driverOnly: true }, // Added driverOnly flag
-  { label: 'Booking Requests', route: '../profile/BookingRequests', driverOnly: true },
+  { label: 'My Rides', route: '../profile/DriverDashboard', driverOnly: true }, // Added driverOnly flag
+  { label: 'Passenger Requests', route: '../profile/BookingRequests', driverOnly: true },
   { label: 'Gifts and discounts', sub: 'Enter promo code', route: '../profile/gifts' },
-  { label: 'Booking Dashboard', sub: 'Access all your bookings', route: '../profile/BookingDashboard' },
+  { label: 'My Bookings', sub: 'Access all your bookings', route: '../profile/BookingDashboard' },
   { label: 'Info', route: '../profile/info' },
 ];
 
@@ -34,7 +34,7 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, r
   return (
     <Modal transparent animationType="slide" visible={visible} onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <View className="flex-1 justify-end">
+        <View className="flex-1 justify-end bg-black/30">
           <TouchableWithoutFeedback>
             <View className="bg-white rounded-t-3xl pt-6 pb-12 px-6">
               {/* Close Button */}

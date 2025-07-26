@@ -363,6 +363,7 @@ export interface DriverRideResponse {
   status: 'in-progress' | 'departed' | 'completed' | 'cancelled' | 'booked';
   // Add these fields that might come from backend
   vehicleSeats?: number; // From vehicle data
+  bookedSeats?: number;
   bookings?: Array<{
     passengerName: string;
     seatsBooked: number;
@@ -399,6 +400,7 @@ export interface ProcessedDriverRide {
   hasBookings: boolean; // Whether ride has any passenger bookings
   status: string;
   date: string; // For grouping history (YYYY-MM-DD format)
+  comments?: string;
   // Add coordinate fields for map display
   coordinates?: {
     latitude?: number;

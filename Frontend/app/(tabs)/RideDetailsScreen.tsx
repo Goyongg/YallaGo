@@ -1,32 +1,16 @@
+// RideDetailsScreen.tsx - ENHANCED: Direct profile fetch for gender verification
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 import auth from '@react-native-firebase/auth';
+import axios from 'axios';
 import { Platform } from 'react-native';
 import { BASE_URL } from '@/config';
+import useHomeUserData from '../../hooks/useHomeUserData';
 
 const { width } = Dimensions.get('window');
-
-interface Stopover {
-  id: string;
-  location: string;
-  coordinates: {
-    _latitude: number;
-    _longitude: number;
-  };
-  estimatedArrival?: any;
-  estimatedDeparture?: any;
-  duration?: number;
-}
-
-interface RidePreferences {
-  allowsSmoking?: boolean;
-  petsAllowed?: boolean;
-  musicPreference?: string;
-  luggageSpace?: 'small' | 'medium' | 'large';
-}
 
 const RideDetailsScreen = () => {
   const router = useRouter();
@@ -34,14 +18,110 @@ const RideDetailsScreen = () => {
   const [passengerCount, setPassengerCount] = useState(1);
   const [isBooking, setIsBooking] = useState(false);
   const [vehicleInfo, setVehicleInfo] = useState<any>(null);
-  const [stopovers, setStopovers] = useState<Stopover[]>([]);
-  const [ridePreferences, setRidePreferences] = useState<RidePreferences>({});
+  const [userGenderFromProfile, setUserGenderFromProfile] = useState<string | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
-  // Extract user gender from params
-  const userGender = params.userGender as string;
+  // Get user data from home hook
+  const { userData } = useHomeUserData();
+
+  // ENHANCED: Direct profile fetch function
+  const fetchUserProfile = async () => {
+    try {
+      setProfileLoading(true);
+      console.log('🔍 Fetching user profile directly for gender verification...');
+      
+      const user = auth().currentUser;
+      if (!user) {
+        console.log('❌ No authenticated user found');
+        return;
+      }
+
+      const idToken = await user.getIdToken();
+      const response = await axios.get(`${BASE_URL}/users/profile`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+        timeout: 10000,
+      });
+
+      console.log('✅ Direct profile fetch response:', response.data);
+      
+      // Handle different response structures
+      let profileData = response.data;
+      if (profileData.user) {
+        profileData = profileData.user;
+      }
+
+      console.log('🔍 Profile data structure:', JSON.stringify(profileData, null, 2));
+      console.log('🔍 Gender from direct profile fetch:', profileData.gender);
+      
+      if (profileData.gender) {
+        setUserGenderFromProfile(profileData.gender);
+        console.log('✅ Successfully extracted gender from profile:', profileData.gender);
+      } else {
+        console.log('⚠️ No gender field in profile data');
+        setUserGenderFromProfile('prefer_not_to_say');
+      }
+
+    } catch (error: any) {
+      console.error('❌ Error fetching user profile:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+      // Set fallback
+      setUserGenderFromProfile('prefer_not_to_say');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  // Fetch profile on component mount
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  // ENHANCED: Multi-source gender detection with detailed logging
+  const getUserGender = () => {
+    console.log('🔍 === GENDER DETECTION DEBUG ===');
+    console.log('🔍 Sources available:');
+    console.log('🔍 1. userData from home hook:', userData?.gender);
+    console.log('🔍 2. userGenderFromProfile (direct fetch):', userGenderFromProfile);
+    console.log('🔍 3. params.userGender:', params.userGender);
+    
+    // Priority 1: Direct profile fetch (most reliable)
+    if (userGenderFromProfile && userGenderFromProfile !== 'prefer_not_to_say') {
+      console.log('🔍 ✅ Using gender from direct profile fetch:', userGenderFromProfile);
+      return userGenderFromProfile;
+    }
+    
+    // Priority 2: User data from home hook
+    if (userData?.gender && userData.gender !== 'prefer_not_to_say') {
+      console.log('🔍 ✅ Using gender from userData:', userData.gender);
+      return userData.gender;
+    }
+    
+    // Priority 3: Params from search (fallback)
+    if (params.userGender && params.userGender !== 'prefer_not_to_say') {
+      console.log('🔍 ✅ Using gender from params:', params.userGender);
+      return params.userGender as string;
+    }
+    
+    // Priority 4: Default fallback
+    console.log('🔍 ❌ No reliable gender found, using default');
+    return 'prefer_not_to_say';
+  };
+
+  const userGender = getUserGender();
   const isFemale = userGender?.toLowerCase() === 'female';
 
-  // Extract parameters with better type safety
+  console.log('🚗 === FINAL GENDER RESULT ===');
+  console.log('🚗 Final userGender:', userGender);
+  console.log('🚗 isFemale:', isFemale);
+  console.log('🚗 profileLoading:', profileLoading);
+
+  // Extract ride parameters
   const rideDetails = {
     rideId: params.rideId as string,
     departureTime: params.departureTime as string,
@@ -54,20 +134,19 @@ const RideDetailsScreen = () => {
     driverRating: parseFloat(params.driverRating as string) || 0,
     availableSeats: parseInt(params.availableSeats as string) || 1,
     femaleOnly: params.femaleOnly === '1',
-    // Additional params that might be passed from search results
+    // Additional params
     fromLat: parseFloat(params.fromLat as string) || 25.1972,
     fromLng: parseFloat(params.fromLng as string) || 55.2744,
     toLat: parseFloat(params.toLat as string) || 25.2532,
     toLng: parseFloat(params.toLng as string) || 55.3657,
-    // Vehicle information from search results
+    // Vehicle information
     vehicleMake: params.vehicleMake as string,
     vehicleModel: params.vehicleModel as string,
     vehicleColor: params.vehicleColor as string,
     vehiclePlateNumber: params.vehiclePlateNumber as string,
-    // Driver comment and ride data
+    // Driver comment
     driverComment: params.driverComment as string,
-
-    // Parse polyline back from stringyfied version after getting passed from router
+    // Parse polyline
     polyline: (() => {
       try {
         return params.polyline ? JSON.parse(params.polyline as string) : [];
@@ -77,126 +156,62 @@ const RideDetailsScreen = () => {
       }
     })(),
   };
-  
-  console.log('FROM:', rideDetails.fromLat, rideDetails.fromLng);
-  console.log('TO:', rideDetails.toLat, rideDetails.toLng);
-  console.log('Driver Comment:', rideDetails.driverComment);
 
-  // Check if user can book this ride
-  const canBookRide = !rideDetails.femaleOnly || isFemale;
-
-  // Parse stopovers and preferences from params
-  useEffect(() => {
-    try {
-      if (params.stopovers) {
-        const parsedStopovers = JSON.parse(params.stopovers as string);
-        // Convert waypoints structure to stopover structure for consistency
-        const convertedStopovers = parsedStopovers.map((waypoint: any, index: number) => ({
-          id: `waypoint-${index}`,
-          location: waypoint.label || 'Unknown location',
-          coordinates: {
-            _latitude: waypoint.coordinates?.lat || 0,
-            _longitude: waypoint.coordinates?.lng || 0,
-          },
-          estimatedArrival: waypoint.estimatedArrival,
-          estimatedDeparture: waypoint.estimatedDeparture,
-          duration: waypoint.duration,
-        }));
-        setStopovers(convertedStopovers);
-        console.log('Parsed and converted stopovers:', convertedStopovers);
-      }
-    } catch (error) {
-      console.error('Error parsing stopovers:', error);
-      setStopovers([]);
-    }
-
-    try {
-      if (params.ridePreferences) {
-        const parsedPreferences = JSON.parse(params.ridePreferences as string);
-        setRidePreferences(parsedPreferences || {});
-        console.log('Parsed preferences:', parsedPreferences);
-      }
-    } catch (error) {
-      console.error('Error parsing ride preferences:', error);
-      setRidePreferences({});
-    }
-  }, [params.stopovers, params.ridePreferences]);
-
-  // Set vehicle info if available
-  useEffect(() => {
-    if (rideDetails.vehicleMake && rideDetails.vehicleModel) {
-      setVehicleInfo({
-        make: rideDetails.vehicleMake,
-        model: rideDetails.vehicleModel,
-        color: rideDetails.vehicleColor,
-        plateNumber: rideDetails.vehiclePlateNumber,
-      });
-    }
-  }, []);
-
-  // Format time from various timestamp formats
-  const formatTime = (timestamp: any) => {
-    if (!timestamp) return 'N/A';
+  // ENHANCED: Gender check with comprehensive logging
+  const canBookRide = (() => {
+    console.log('🚗 === BOOKING ELIGIBILITY CHECK ===');
+    console.log('🚗 rideDetails.femaleOnly:', rideDetails.femaleOnly);
+    console.log('🚗 userGender:', userGender);
+    console.log('🚗 isFemale:', isFemale);
+    console.log('🚗 profileLoading:', profileLoading);
     
-    try {
-      let date: Date;
-      
-      if (timestamp && typeof timestamp === 'object' && timestamp._seconds) {
-        date = new Date(timestamp._seconds * 1000);
-      } else if (timestamp && typeof timestamp === 'object' && timestamp.toDate) {
-        date = timestamp.toDate();
-      } else if (timestamp && typeof timestamp === 'object' && timestamp.seconds) {
-        date = new Date(timestamp.seconds * 1000);
-      } else if (typeof timestamp === 'string') {
-        date = new Date(timestamp);
-      } else {
-        return 'N/A';
-      }
-      
-      return date.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        hour12: false 
-      });
-    } catch (error) {
-      console.error('Error formatting time:', error);
-      return 'N/A';
+    // If still loading profile, don't allow booking yet
+    if (profileLoading) {
+      console.log('🚗 ⏳ Profile still loading - booking disabled temporarily');
+      return false;
     }
-  };
-
-  // Create route coordinates from the passed coordinates
-  const routeCoordinates = [
-    { latitude: rideDetails.fromLat, longitude: rideDetails.fromLng },
-    { latitude: rideDetails.toLat, longitude: rideDetails.toLng },
-  ];
-
-  // Calculate map region to show both points
-  const mapRegion = {
-    latitude: (rideDetails.fromLat + rideDetails.toLat) / 2,
-    longitude: (rideDetails.fromLng + rideDetails.toLng) / 2,
-    latitudeDelta: Math.abs(rideDetails.fromLat - rideDetails.toLat) + 0.05,
-    longitudeDelta: Math.abs(rideDetails.fromLng - rideDetails.toLng) + 0.05,
-  };
-
-  // Format the current date for display
-  const formatDate = () => {
-    const today = new Date();
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                   'July', 'August', 'September', 'October', 'November', 'December'];
     
-    return `${days[today.getDay()]}, ${today.getDate()} ${months[today.getMonth()]}`;
-  };
+    if (!rideDetails.femaleOnly) {
+      // Non-female-only ride: anyone can book
+      console.log('🚗 ✅ Non-female-only ride - booking allowed');
+      return true;
+    }
+    
+    if (rideDetails.femaleOnly && isFemale) {
+      // Female-only ride and user is female: can book
+      console.log('🚗 ✅ Female-only ride + Female user - booking allowed');
+      return true;
+    }
+    
+    // Female-only ride but user is not female: cannot book
+    console.log('🚗 ❌ Female-only ride + Non-female user - booking blocked');
+    console.log('🚗 Gender breakdown:', {
+      rawGender: userGender,
+      normalizedGender: userGender?.toLowerCase(),
+      isFemaleCheck: userGender?.toLowerCase() === 'female'
+    });
+    return false;
+  })();
 
-  // Book ride function that calls the backend
+  console.log('🚗 === FINAL BOOKING RESULT ===');
+  console.log('🚗 canBookRide:', canBookRide);
+
   const handleBookRide = async () => {
-    // Check gender restriction first
+    // Enhanced gender restriction check
     if (!canBookRide) {
-      Alert.alert(
-        'Booking Restricted', 
-        'This is a female-only ride. Only female users can book this ride.',
-        [{ text: 'OK' }]
-      );
+      console.log('🚗 Booking blocked - showing detailed gender restriction alert');
+      
+      let alertMessage = `This is a female-only ride. Only female users can book this ride.\n\n`;
+      alertMessage += `Your profile gender: ${userGender}\n`;
+      alertMessage += `Required: female\n\n`;
+      
+      if (profileLoading) {
+        alertMessage += `Note: Profile is still loading. Please wait and try again.`;
+      } else if (userGender === 'prefer_not_to_say') {
+        alertMessage += `Tip: You may need to update your gender in your profile settings.`;
+      }
+      
+      Alert.alert('Booking Restricted', alertMessage, [{ text: 'OK' }]);
       return;
     }
 
@@ -208,24 +223,20 @@ const RideDetailsScreen = () => {
     try {
       setIsBooking(true);
 
-      // Get authentication token
       const token = await auth().currentUser?.getIdToken();
       if (!token) {
         Alert.alert('Authentication Error', 'Please log in to book rides');
         return;
       }
 
-      // Simplified booking payload - only send required fields
       const bookingPayload = {
         rideId: rideDetails.rideId,
         seatsBooked: passengerCount,
-        bookingPrice: (rideDetails.price * passengerCount), // Changed from 'price' to 'bookingPrice'
-        pricePerSeat: rideDetails.price, // Price per individual seat
+        bookingPrice: rideDetails.price,
       };
 
-      console.log('Booking ride with payload:', bookingPayload);
+      console.log('🚗 Booking ride with payload:', bookingPayload);
 
-      // Use correct endpoint /bookings
       const response = await fetch(`${BASE_URL}/bookings`, {
         method: 'POST',
         headers: {
@@ -244,24 +255,15 @@ const RideDetailsScreen = () => {
       const result = await response.json();
       console.log('Booking successful:', result);
 
-      // Show success message and stay on the same page
       Alert.alert(
         'Booking Successful! 🎉', 
         `Your ride has been booked successfully.\n\nBooking ID: ${result.bookingId || 'N/A'}\nSeats booked: ${passengerCount}\nTotal cost: ${((rideDetails.price || 0) * passengerCount).toFixed(1)} AED`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              console.log('Booking completed, staying on current page');
-            }
-          }
-        ]
+        [{ text: 'OK' }]
       );
 
     } catch (error: any) {
       console.error('Booking failed:', error);
       
-      // Better error handling with more specific messages
       let errorMessage = 'Unable to book the ride. Please try again.';
       
       if (error.message.includes('Booked seats cannot be more than available seats')) {
@@ -278,6 +280,18 @@ const RideDetailsScreen = () => {
     }
   };
 
+  // Set vehicle info if available
+  useEffect(() => {
+    if (rideDetails.vehicleMake && rideDetails.vehicleModel) {
+      setVehicleInfo({
+        make: rideDetails.vehicleMake,
+        model: rideDetails.vehicleModel,
+        color: rideDetails.vehicleColor,
+        plateNumber: rideDetails.vehiclePlateNumber,
+      });
+    }
+  }, []);
+
   const increasePassengers = () => {
     if (passengerCount < rideDetails.availableSeats) {
       setPassengerCount(prev => prev + 1);
@@ -290,10 +304,30 @@ const RideDetailsScreen = () => {
     }
   };
 
-  // Format departure date from the ride details
+  // Create route coordinates
+  const routeCoordinates = [
+    { latitude: rideDetails.fromLat, longitude: rideDetails.fromLng },
+    { latitude: rideDetails.toLat, longitude: rideDetails.toLng },
+  ];
+
+  const mapRegion = {
+    latitude: (rideDetails.fromLat + rideDetails.toLat) / 2,
+    longitude: (rideDetails.fromLng + rideDetails.toLng) / 2,
+    latitudeDelta: Math.abs(rideDetails.fromLat - rideDetails.toLat) + 0.05,
+    longitudeDelta: Math.abs(rideDetails.fromLng - rideDetails.toLng) + 0.05,
+  };
+
+  const formatDate = () => {
+    const today = new Date();
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                   'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    return `${days[today.getDay()]}, ${today.getDate()} ${months[today.getMonth()]}`;
+  };
+
   const formatRideDate = () => {
     try {
-      // If we have date info from search, use it; otherwise use current date
       if (params.date) {
         const rideDate = new Date(params.date as string);
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -306,94 +340,7 @@ const RideDetailsScreen = () => {
       console.log('Error formatting ride date:', error);
     }
     
-    return formatDate(); // Fallback to current date
-  };
-
-  // Render stopovers section
-  const renderStopovers = () => {
-    if (!stopovers || stopovers.length === 0) return null;
-
-    return (
-      <View className="mx-4 mb-4">
-        <Text className="text-lg font-semibold font-[Afacad] mb-3">
-          Trip Stopovers ({stopovers.length})
-        </Text>
-        <View className="bg-orange-50 rounded-xl p-4">
-          {stopovers.map((stopover, index) => (
-            <View key={stopover.id || index} className="flex-row items-center mb-3 last:mb-0">
-              <View className="w-3 h-3 rounded-full bg-orange-400 mr-3" />
-              <View className="flex-1">
-                <Text className="text-base font-medium font-[Afacad]">
-                  {stopover.location}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </View>
-        <View className="h-px bg-gray-200 mt-6" />
-      </View>
-    );
-  };
-
-  // Render driver comment section
-  const renderDriverComment = () => {
-    if (!rideDetails.driverComment) return null;
-    
-    return (
-      <View className="mx-4 mb-6">
-        <Text className="text-lg font-semibold font-[Afacad] mb-3">
-          Driver's Note
-        </Text>
-        <View className="bg-gray-100 rounded-xl p-4">
-          <View className="flex-row items-start">
-            <Ionicons name="chatbubble-outline" size={16} color="#00BD5F" style={{ marginTop: 2, marginRight: 8 }} />
-            <Text className="text-base text-gray-700 font-[Afacad] italic flex-1">
-              "{rideDetails.driverComment}"
-            </Text>
-          </View>
-        </View>
-        <View className="h-px bg-gray-200 mt-6" />
-      </View>
-    );
-  };
-
-  // Render ride preferences
-  const renderRidePreferences = () => {
-    const preferences = [];
-    
-    if (ridePreferences.allowsSmoking) preferences.push({ icon: 'cloud-outline', text: 'Smoking OK', color: '#F59E0B' });
-    if (ridePreferences.petsAllowed) preferences.push({ icon: 'paw-outline', text: 'Pets OK', color: '#8B5CF6' });
-    if (ridePreferences.musicPreference) preferences.push({ icon: 'musical-notes-outline', text: ridePreferences.musicPreference, color: '#06B6D4' });
-    if (ridePreferences.luggageSpace) {
-      const luggageText = ridePreferences.luggageSpace === 'large' ? 'Large luggage' : 
-                         ridePreferences.luggageSpace === 'medium' ? 'Medium luggage' : 'Small luggage only';
-      preferences.push({ icon: 'bag-outline', text: luggageText, color: '#10B981' });
-    }
-
-    if (preferences.length === 0) return null;
-
-    return (
-      <View className="mx-4 mb-6">
-        <Text className="text-lg font-semibold font-[Afacad] mb-3">
-          Ride Preferences
-        </Text>
-        <View className="bg-gray-50 rounded-xl p-4">
-          <View className="flex-row flex-wrap">
-            {preferences.map((pref, index) => (
-              <View 
-                key={index}
-                className="flex-row items-center bg-white px-3 py-2 rounded-full mr-2 mb-2 shadow-sm"
-              >
-                <Ionicons name={pref.icon as any} size={16} color={pref.color} />
-                <Text className="text-sm text-gray-700 font-[Afacad] ml-2">
-                  {pref.text}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-    );
+    return formatDate();
   };
 
   return (
@@ -414,6 +361,18 @@ const RideDetailsScreen = () => {
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* Profile Loading Indicator */}
+        {profileLoading && (
+          <View className="mx-4 mb-4 p-3 bg-blue-100 rounded-lg">
+            <View className="flex-row items-center">
+              <ActivityIndicator size="small" color="#00BD5F" style={{ marginRight: 8 }} />
+              <Text className="text-blue-600 font-[Afacad]">
+                Loading your profile...
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Map Section */}
         <View className="mx-4 mb-4">
           <MapView
@@ -455,28 +414,10 @@ const RideDetailsScreen = () => {
                 <Ionicons name="location" size={12} color="white" />
               </View>
             </Marker>
-
-            {/* Stopover Markers */}
-            {stopovers.map((stopover, index) => (
-              <Marker
-                key={stopover.id || index}
-                coordinate={{
-                  latitude: stopover.coordinates._latitude,
-                  longitude: stopover.coordinates._longitude,
-                }}
-                title={stopover.location}
-                description="Stopover"
-              >
-                <View className="bg-orange-400 rounded-full p-2">
-                  <Ionicons name="pause" size={10} color="white" />
-                </View>
-              </Marker>
-            ))}
           </MapView>
           
           <Text className="text-md text-gray-600 mt-2 font-[Afacad]">
             Check the trip route on the map 🗺️
-            {stopovers.length > 0 && ` • ${stopovers.length} stopover${stopovers.length !== 1 ? 's' : ''}`}
           </Text>
         </View>
 
@@ -489,23 +430,19 @@ const RideDetailsScreen = () => {
             </Text>
           </View>
 
-          {/* Trip timeline matching RideResultCard structure */}
           <View className="flex-row items-center justify-start">
-            {/* Left: Time & Duration */}
             <View className="items-end pr-2">
               <Text className="text-lg font-bold font-[Afacad]">{rideDetails.departureTime}</Text>
               <Text className="text-sm text-gray-500 font-[Afacad]">{rideDetails.duration}</Text>
               <Text className="text-lg font-bold mt-1 font-[Afacad]">{rideDetails.arrivalTime}</Text>
             </View>
 
-            {/* Center: Line & Circles */}
             <View className="items-center mx-2">
               <Ionicons name="ellipse" size={10} color="#00BD5F" />
               <View className="w-px h-12 bg-[#00BD5F]" />
               <Ionicons name="ellipse" size={10} color="#00BD5F" />
             </View>
 
-            {/* Right: Locations with descriptions */}
             <View className="ml-2 flex-1">
               <View className="mb-1">
                 <Text className="text-base font-semibold font-[Afacad]" numberOfLines={1}>
@@ -530,15 +467,6 @@ const RideDetailsScreen = () => {
 
         {/* Divider */}
         <View className="h-px bg-gray-200 mx-4 mb-4" />
-
-        {/* Stopovers Section */}
-        {renderStopovers()}
-
-        {/* Driver Comment Section */}
-        {renderDriverComment()}
-
-        {/* Ride Preferences Section */}
-        {renderRidePreferences()}
 
         {/* Driver Info */}
         <View className="mx-4 mb-6">
@@ -568,13 +496,11 @@ const RideDetailsScreen = () => {
               </View>
             </View>
             
-            {/* Verified badge */}
             <View className="bg-green-100 rounded-full p-2">
               <Ionicons name="checkmark-circle" size={20} color="#00BD5F" />
             </View>
           </View>
           
-          {/* Additional info row for verified status and seats */}
           {vehicleInfo && (
             <View className="flex-row items-center mt-2 ml-15">
               <View className="flex-row items-center">
@@ -597,7 +523,7 @@ const RideDetailsScreen = () => {
         {/* Divider */}
         <View className="h-px bg-gray-200 mx-4 mb-4" />
 
-        {/* Female Only Badge */}
+        {/* Female Only Badge with Enhanced Display */}
         {rideDetails.femaleOnly && (
           <View className="mx-4 mb-4">
             <View className="bg-pink-100 px-3 py-2 rounded-lg self-start">
@@ -613,7 +539,6 @@ const RideDetailsScreen = () => {
           <View className="bg-gray-50 rounded-xl p-4">
             <Text className="text-lg font-semibold font-[Afacad] mb-3">Booking Details</Text>
             
-            {/* Passenger Counter */}
             <View className="flex-row items-center justify-between mb-4">
               <Text className="text-base font-[Afacad]">Number of passengers:</Text>
               <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
@@ -645,7 +570,6 @@ const RideDetailsScreen = () => {
               </View>
             </View>
 
-            {/* Price Breakdown */}
             <View className="border-t border-gray-200 pt-3">
               <View className="flex-row justify-between items-center mb-2">
                 <Text className="text-sm text-gray-600 font-[Afacad]">
@@ -677,7 +601,7 @@ const RideDetailsScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Bottom Book Button - Enhanced with gender restriction */}
+      {/* Bottom Book Button - ENHANCED with better gender restriction feedback */}
       <View className="bg-white px-4 py-4 border-t border-gray-200">
         {canBookRide ? (
           <Pressable 
@@ -708,7 +632,7 @@ const RideDetailsScreen = () => {
               </Text>
             </View>
             <Text className="text-gray-500 text-sm font-[Afacad] mt-1">
-              This ride is restricted to female passengers only
+              Your profile gender: {userGender} • Required: female
             </Text>
           </View>
         )}

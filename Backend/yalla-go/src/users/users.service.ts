@@ -141,6 +141,7 @@ export class UsersService {
                         const userData = await this.firebaseUserService.fetchUserData(bookingData.passengerId);
 
                         bookings.push({
+                            passengerId: bookingData.passengerId,
                             passengerName: userData.name,
                             seatsBooked: bookingData.seatsBooked,
                             phoneNumber: userData.phoneNumber
@@ -181,7 +182,7 @@ export class UsersService {
             // Fetch the ride document linked to this booking
             const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
             // Keep only specific ride fields
-            const cleanRideData = pickFields(rideData, ['coordinates', 'startLocation', 'endGeo', 'endLocation', 'departureTime', 'polyline', 'comments, waypoints'])
+            const cleanRideData = pickFields(rideData, ['coordinates', 'startLocation', 'endGeo', 'endLocation', 'departureTime', 'polyline', 'comments', 'waypoints'])
 
             // Convert departure time to JS Date
             const departureTime = rideData.departureTime.toDate();

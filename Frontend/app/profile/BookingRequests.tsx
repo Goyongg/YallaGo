@@ -13,7 +13,7 @@ const BookingRequests = () => {
   const router = useRouter();
   const hasFetchedRef = useRef(false);
 
-  // Fetch booking requests function - moved from home.tsx
+  // Fetch booking requests function - updated for new field names
   const fetchBookingRequests = async () => {
     try {
       setLoading(true);
@@ -30,7 +30,7 @@ const BookingRequests = () => {
         headers: {
           Authorization: `Bearer ${idToken}`,
         },
-        timeout: 10000, // 10 second timeout
+        timeout: 50000, // 10 second timeout
       });
       
       console.log('📋 Booking requests response:', response.data);
@@ -82,6 +82,10 @@ const BookingRequests = () => {
       if (!user) return;
       
       const idToken = await user.getIdToken();
+      
+      console.log('🔄 Attempting to accept booking:', bookingId);
+      console.log('🔄 Using URL:', `${BASE_URL}/users/accept-booking?bookingId=${bookingId}`);
+      
       const response = await axios.patch(
         `${BASE_URL}/users/accept-booking?bookingId=${bookingId}`,
         {},
@@ -92,11 +96,28 @@ const BookingRequests = () => {
         }
       );
       
+      console.log('✅ Accept booking response:', response.data);
       Alert.alert('Success', `Booking from ${passengerName} accepted!`);
       fetchBookingRequests(); // Refresh the list
-    } catch (err) {
-      console.error('Error accepting booking:', err);
-      Alert.alert('Error', 'Failed to accept booking');
+    } catch (err: any) {
+      console.error('❌ Error accepting booking:', err);
+      console.error('❌ Error response:', err.response?.data);
+      console.error('❌ Error status:', err.response?.status);
+      console.error('❌ Error config URL:', err.config?.url);
+      
+      // More detailed error message
+      let errorMessage = 'Failed to accept booking';
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.status === 404) {
+        errorMessage = 'Booking not found or endpoint unavailable';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access denied - you may not have permission to accept this booking';
+      } else if (err.response?.status === 400) {
+        errorMessage = 'Invalid booking request';
+      }
+      
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -106,6 +127,9 @@ const BookingRequests = () => {
       if (!user) return;
       
       const idToken = await user.getIdToken();
+      
+      console.log('🔄 Attempting to decline booking:', bookingId);
+      
       const response = await axios.patch(
         `${BASE_URL}/users/decline-booking?bookingId=${bookingId}`,
         {},
@@ -116,11 +140,23 @@ const BookingRequests = () => {
         }
       );
       
+      console.log('✅ Decline booking response:', response.data);
       Alert.alert('Success', 'Booking declined');
       fetchBookingRequests(); // Refresh the list
-    } catch (err) {
-      console.error('Error declining booking:', err);
-      Alert.alert('Error', 'Failed to decline booking');
+    } catch (err: any) {
+      console.error('❌ Error declining booking:', err);
+      console.error('❌ Error response:', err.response?.data);
+      console.error('❌ Error status:', err.response?.status);
+      
+      // More detailed error message
+      let errorMessage = 'Failed to decline booking';
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.status === 404) {
+        errorMessage = 'Booking not found or endpoint unavailable';
+      }
+      
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -147,7 +183,7 @@ const BookingRequests = () => {
           <Pressable onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
-          <Text className="text-xl ml-4 font-bold font-[Afacad]">Booking Requests</Text>
+          <Text className="text-xl ml-4 font-bold font-[Afacad]">Passenger Requests</Text>
         </View>
 
         {/* Subtitle */}
@@ -171,7 +207,7 @@ const BookingRequests = () => {
           {loading && !refreshing && (
             <View className="flex-1 justify-center items-center mt-20">
               <ActivityIndicator size="large" color="#00BD5F" />
-              <Text className="mt-4 text-gray-500 font-[Afacad]">Loading booking requests...</Text>
+              <Text className="mt-4 text-gray-500 font-[Afacad]">Loading passengers booking requests...</Text>
             </View>
           )}
 
@@ -182,12 +218,18 @@ const BookingRequests = () => {
                 Pending Requests ({bookingRequests.length})
               </Text>
               
-              {bookingRequests.map((request, index) => (
-                <View key={request.bookingId || index} className="bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200">
+              {bookingRequests.map((request, index) => {
+                // DEBUG: Log the request structure to see what fields are available
+                console.log('📋 Request object structure:', JSON.stringify(request, null, 2));
+                console.log('📋 Available keys:', Object.keys(request));
+                console.log('📋 bookingId value:', request.bookingId);
+                
+                return (
+                <View key={request.bookingId || request.id || index} className="bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200">
                   <View className="flex-row items-center justify-between mb-3">
                     <View className="flex-1">
                       <Text className="text-lg font-[Afacad] font-semibold text-black">
-                        {request.name}
+                        {request.name || 'Passenger'}
                       </Text>
                       <View className="flex-row items-center mt-1">
                         <Ionicons name="star" size={16} color="#FFD700" />
@@ -195,16 +237,17 @@ const BookingRequests = () => {
                           {request.averageRating?.toFixed(1) || '0.0'}
                         </Text>
                         <Text className="text-sm text-gray-600 font-[Afacad] ml-3">
-                          • {request.seatsBooked} seat{request.seatsBooked > 1 ? 's' : ''}
+                          • {request.seatsBooked || 1} seat{(request.seatsBooked || 1) > 1 ? 's' : ''}
                         </Text>
                       </View>
                     </View>
                   </View>
                   
+                  {/* UPDATED: Use startLocation and endLocation instead of pickup/dropoff */}
                   <View className="flex-row items-center mb-3">
                     <Ionicons name="location-outline" size={16} color="#666" />
                     <Text className="text-sm text-gray-600 font-[Afacad] ml-2 flex-1" numberOfLines={1}>
-                      {request.pickupPoint} → {request.dropOffPoint}
+                      {request.startLocation || 'Unknown pickup'} → {request.endLocation || 'Unknown destination'}
                     </Text>
                   </View>
                   
@@ -217,23 +260,44 @@ const BookingRequests = () => {
                       </Text>
                     </View>
                   )}
+
+                  {/* Show booking price if available */}
+                  {request.pricePerSeat && (
+                    <View className="flex-row items-center mb-3">
+                      <Ionicons name="cash-outline" size={16} color="#666" />
+                      <Text className="text-sm text-gray-600 font-[Afacad] ml-2">
+                        {request.pricePerSeat} AED per seat • Total: {(request.pricePerSeat * (request.seatsBooked || 1)).toFixed(0)} AED
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Show booking status if available */}
+                  {request.status && (
+                    <View className="flex-row items-center mb-3">
+                      <Ionicons name="information-circle-outline" size={16} color="#666" />
+                      <Text className="text-sm text-gray-600 font-[Afacad] ml-2 capitalize">
+                        Status: {request.status}
+                      </Text>
+                    </View>
+                  )}
                   
                   <View className="flex-row justify-end mt-3 space-x-3">
                     <Pressable
-                      onPress={() => declineBooking(request.bookingId)}
+                      onPress={() => declineBooking(request.bookingId || request.id)}
                       className="bg-red-500 px-5 py-3 rounded-lg"
                     >
                       <Text className="text-white font-[Afacad] font-medium">Decline</Text>
                     </Pressable>
                     <Pressable
-                      onPress={() => acceptBooking(request.bookingId, request.name)}
+                      onPress={() => acceptBooking(request.bookingId || request.id, request.name || 'Passenger')}
                       className="bg-green-500 px-5 py-3 rounded-lg ml-3"
                     >
                       <Text className="text-white font-[Afacad] font-medium">Accept</Text>
                     </Pressable>
                   </View>
                 </View>
-              ))}
+              );
+              })}
             </View>
           )}
 
@@ -242,7 +306,7 @@ const BookingRequests = () => {
             <View className="flex-1 justify-center items-center mt-20">
               <Ionicons name="clipboard-outline" size={64} color="#9CA3AF" />
               <Text className="text-center text-gray-400 mt-4 font-[Afacad] text-lg">
-                No booking requests
+                No passenger booking requests
               </Text>
               <Text className="text-center text-gray-400 mt-2 font-[Afacad]">
                 When passengers request to book your rides, they'll appear here
