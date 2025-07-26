@@ -5,7 +5,6 @@ import { RecentSearch } from '../../interfaces/interfaces';
 import { useRouter } from 'expo-router';
 import auth from '@react-native-firebase/auth';
 import { Platform } from 'react-native';
-import { clearRecentSearches } from '../../utils/recentSearchStorage';
 import { BASE_URL } from '@/config';
 
 const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSearches }) => {
@@ -137,26 +136,9 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
     );
   }
 
-  // Add this function for testing - remove in production
-  const handleClearSearches = async () => {
-    await clearRecentSearches();
-    Alert.alert('Success', 'Recent searches cleared!');
-    // Optionally reload the page or refresh recent searches
-  };
-
   return (
     <View className="px-12 mb-8">
       <Text className="text-2xl font-[Afacad] mb-4">Recent Searches</Text>
-
-      {/* Temporary button for testing - remove in production */}
-      <Pressable 
-        onPress={handleClearSearches}
-        className="bg-red-500 mx-4 py-2 px-4 rounded-lg mb-4"
-      >
-        <Text className="text-white text-center font-[Afacad]">
-          Clear Recent Searches (Temporary)
-        </Text>
-      </Pressable>
 
       {recentSearches.map((item, idx) => (
         <Pressable
