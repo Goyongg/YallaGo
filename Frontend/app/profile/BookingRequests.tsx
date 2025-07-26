@@ -183,7 +183,7 @@ const BookingRequests = () => {
           <Pressable onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
-          <Text className="text-xl ml-4 font-bold font-[Afacad]">Passenger Requests</Text>
+          <Text className="text-xl ml-4 font-bold font-[Afacad]">Booking Requests</Text>
         </View>
 
         {/* Subtitle */}
@@ -207,7 +207,7 @@ const BookingRequests = () => {
           {loading && !refreshing && (
             <View className="flex-1 justify-center items-center mt-20">
               <ActivityIndicator size="large" color="#00BD5F" />
-              <Text className="mt-4 text-gray-500 font-[Afacad]">Loading passenger requests...</Text>
+              <Text className="mt-4 text-gray-500 font-[Afacad]">Loading booking requests...</Text>
             </View>
           )}
 
@@ -306,7 +306,7 @@ const BookingRequests = () => {
             <View className="flex-1 justify-center items-center mt-20">
               <Ionicons name="clipboard-outline" size={64} color="#9CA3AF" />
               <Text className="text-center text-gray-400 mt-4 font-[Afacad] text-lg">
-                No passenger requests
+                No booking requests
               </Text>
               <Text className="text-center text-gray-400 mt-2 font-[Afacad]">
                 When passengers request to book your rides, they'll appear here
