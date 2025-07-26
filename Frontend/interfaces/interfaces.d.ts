@@ -363,6 +363,7 @@ export interface DriverRideResponse {
   status: 'in-progress' | 'departed' | 'completed' | 'cancelled' | 'booked';
   // Add these fields that might come from backend
   vehicleSeats?: number; // From vehicle data
+  bookedSeats?: number;
   bookings?: Array<{
     passengerName: string;
     seatsBooked: number;

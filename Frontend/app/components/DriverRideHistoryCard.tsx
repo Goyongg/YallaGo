@@ -93,7 +93,7 @@ const DriverRideHistoryCard: React.FC<EnhancedDriverHistoryRideCardProps> = ({
       {/* Footer */}
       <View className="flex-col space-y-2">
         {/* Passenger info and earnings */}
-        <View className="flex-row justify-between items-center pb-3">
+        <View className="flex-row justify-between items-center">
           <View className="flex-row items-center flex-wrap">
             <Text className="text-sm text-gray-600 font-[Afacad]">
               🧍 {bookedSeats > 0 ? `${bookedSeats} passenger${bookedSeats > 1 ? 's' : ''}` : 'No passengers'}
