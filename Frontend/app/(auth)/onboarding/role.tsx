@@ -85,9 +85,9 @@ const Role = () => {
           ))}
         </View>
 
-        <Text className="text-sm text-gray-500 pl-1">
+        {/* <Text className="text-sm text-gray-500 pl-1">
           You can become a driver later through account settings.
-        </Text>
+        </Text> */}
       </View>
 
       {/* Bottom Button */}

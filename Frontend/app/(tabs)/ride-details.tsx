@@ -201,13 +201,19 @@ const RideDetailsScreen = () => {
       processStopovers(rideItem.waypoints);
 
       // Set passengers from bookings
+      // In ride-details.tsx - Replace the filtering logic with:
       if (rideItem.bookings && Array.isArray(rideItem.bookings)) {
+        console.log('🚗 Processing driver bookings for passenger list');
+        
+        // Since backend already filters to confirmed bookings, trust all bookings in the array
         const passengerList: PassengerInfo[] = rideItem.bookings.map((booking: any) => ({
           name: safeString(booking.passengerName) || 'Unknown Passenger',
           phone: safeString(booking.phoneNumber) || '',
           seatsBooked: safeNumber(booking.seatsBooked),
         }));
+        
         setPassengers(passengerList);
+        console.log('🚗 Final passenger list for details page:', passengerList.length, 'passengers');
       }
 
       // Set ride status
@@ -239,18 +245,47 @@ const RideDetailsScreen = () => {
         departureTime = new Date(rideDepTime || Date.now());
       }
 
-      // Set ride data with comments and waypoints from the main ride
+      // ✅ FIX: Extract locations correctly from ride data
+      let fromLocation = '';
+      let toLocation = '';
+      
+      // Check ride object first (most reliable for passengers)
+      if (bookingItem.ride?.startLocation && bookingItem.ride?.endLocation) {
+        fromLocation = safeString(bookingItem.ride.startLocation);
+        toLocation = safeString(bookingItem.ride.endLocation);
+        console.log('🚗 Using ride.startLocation/endLocation:', { fromLocation, toLocation });
+      }
+      // Fallback to booking-level fields if ride fields aren't available
+      else if (bookingItem.pickupPoint && bookingItem.dropOffPoint) {
+        fromLocation = safeString(bookingItem.pickupPoint);
+        toLocation = safeString(bookingItem.dropOffPoint);
+        console.log('🚗 Using pickupPoint/dropOffPoint:', { fromLocation, toLocation });
+      }
+      // Additional fallback to booking startLocation/endLocation
+      else if (bookingItem.startLocation && bookingItem.endLocation) {
+        fromLocation = safeString(bookingItem.startLocation);
+        toLocation = safeString(bookingItem.endLocation);
+        console.log('🚗 Using booking startLocation/endLocation:', { fromLocation, toLocation });
+      }
+      // Final fallback
+      else {
+        fromLocation = 'Your pickup location';
+        toLocation = 'Your destination';
+        console.log('🚗 Using fallback locations');
+      }
+
+      // ✅ FIX: Use the extracted locations in the ride data object
       const ride: RideData = {
         rideId: bookingItem.bookingId,
-        from: safeString(bookingItem.pickupPoint) || 'Unknown',
-        to: safeString(bookingItem.dropOffPoint) || 'Unknown',
+        from: fromLocation,  // ← Fixed: use extracted location
+        to: toLocation,      // ← Fixed: use extracted location
         departureTime,
         status: safeString(bookingItem.status) || 'confirmed',
         coordinates: bookingItem.ride?.coordinates,
         endGeo: bookingItem.ride?.endGeo,
         polyline: bookingItem.ride?.polyline,
-        comments: bookingItem.ride?.comments, // Get comments from main ride
-        waypoints: bookingItem.ride?.waypoints, // Get waypoints from main ride
+        comments: bookingItem.ride?.comments,
+        waypoints: bookingItem.ride?.waypoints,
       };
       setRideData(ride);
 
@@ -312,9 +347,19 @@ const RideDetailsScreen = () => {
         setRideStatus('in-progress');
       }
 
-      console.log('🚗 Passenger booking data processed:', ride);
-      console.log('🚗 Driver info:', driverInfo);
-      console.log('🚗 Vehicle info:', vehicleInfo);
+      console.log('🚗 Passenger booking data processed successfully:', {
+        rideId: ride.rideId,
+        from: ride.from,
+        to: ride.to,
+        status: ride.status,
+        hasDriver: !!driverInfo,
+        hasVehicle: !!vehicleInfo
+      });
+
+      // Add these debug logs right after extracting locations:
+      console.log('🚗 DEBUG - Full ride object:', JSON.stringify(bookingItem.ride, null, 2));
+      console.log('🚗 DEBUG - Comments from ride:', bookingItem.ride?.comments);
+      console.log('🚗 DEBUG - Waypoints from ride:', bookingItem.ride?.waypoints);
 
     } catch (err) {
       console.error('🚗 Error processing passenger booking data:', err);

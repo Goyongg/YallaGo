@@ -106,6 +106,7 @@ const Home = () => {
               from={upcomingRide.from}
               to={upcomingRide.to}
               userRole={upcomingRide.userRole}
+              status={upcomingRide.status}
               vehicle={upcomingRide.vehicle}
               passengerCount={upcomingRide.passengerCount}
             />

@@ -245,18 +245,18 @@ const RideDetailsScreen = () => {
       console.log('Booking successful:', result);
 
       // Show success message and stay on the same page
-      Alert.alert(
-        'Booking Successful! 🎉', 
-        `Your ride has been booked successfully.\n\nBooking ID: ${result.bookingId || 'N/A'}\nSeats booked: ${passengerCount}\nTotal cost: ${((rideDetails.price || 0) * passengerCount).toFixed(1)} AED`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              console.log('Booking completed, staying on current page');
-            }
-          }
-        ]
-      );
+      // Alert.alert(
+      //   'Booking Successful! 🎉', 
+      //   `Your ride has been booked successfully.\n\nBooking ID: ${result.bookingId || 'N/A'}\nSeats booked: ${passengerCount}\nTotal cost: ${((rideDetails.price || 0) * passengerCount).toFixed(1)} AED`,
+      //   [
+      //     {
+      //       text: 'OK',
+      //       onPress: () => {
+      //         console.log('Booking completed, staying on current page');
+      //       }
+      //     }
+      //   ]
+      // );
 
     } catch (error: any) {
       console.error('Booking failed:', error);
