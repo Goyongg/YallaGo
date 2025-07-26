@@ -1,4 +1,4 @@
-// Enhanced manage.tsx - Individual field editing with country code phone input
+// Enhanced manage.tsx - Added driving license field for drivers
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
@@ -25,6 +25,7 @@ interface ProfileData {
   phoneNumber: string;
   gender: string;
   kycStatus: string;
+  licenseNumber?: string; // Added driving license field (backend field name)
 }
 
 const GENDER_OPTIONS = [
@@ -32,6 +33,46 @@ const GENDER_OPTIONS = [
   { label: 'Female', value: 'female' },
   { label: 'Prefer not to say', value: 'prefer_not_to_say' }
 ];
+
+// Driving License validation function
+const validateDrivingLicense = (license: string): { isValid: boolean; error?: string } => {
+  const cleanLicense = license.trim();
+
+  // Check if empty (optional field)
+  if (!cleanLicense) {
+    return { isValid: true }; // Empty is valid since it's optional
+  }
+
+  // Remove any spaces for validation
+  const normalizedLicense = cleanLicense.replace(/\s/g, '');
+
+  // Check if it contains only digits
+  const licenseRegex = /^\d+$/;
+  if (!licenseRegex.test(normalizedLicense)) {
+    return {
+      isValid: false,
+      error: 'Driving license can only contain numbers'
+    };
+  }
+
+  // Check minimum length (adjust based on your country's license format)
+  if (normalizedLicense.length < 5) {
+    return {
+      isValid: false,
+      error: 'Driving license number is too short'
+    };
+  }
+
+  // Check maximum length (adjust based on your country's license format)
+  if (normalizedLicense.length > 20) {
+    return {
+      isValid: false,
+      error: 'Driving license number is too long'
+    };
+  }
+
+  return { isValid: true };
+};
 
 // Reusable Phone Input Component for Manage Profile
 const PhoneInputForProfile = ({ 
@@ -127,7 +168,8 @@ const ManageProfile = () => {
     email: '',
     phoneNumber: '',
     gender: 'prefer_not_to_say',
-    kycStatus: 'pending'
+    kycStatus: 'pending',
+    licenseNumber: '' // Added driving license field (backend field name)
   });
 
   // Individual editing states
@@ -141,6 +183,9 @@ const ManageProfile = () => {
   const [selectedCountryCode, setSelectedCountryCode] = useState<CountryCode>(
     COUNTRY_CODES.find(country => country.code === 'AE') || COUNTRY_CODES[0]
   );
+
+  // Driving license validation state
+  const [licenseError, setLicenseError] = useState('');
 
   const hasFetchedRef = useRef(false);
 
@@ -176,7 +221,8 @@ const ManageProfile = () => {
         email: profile.email || user.email || '',
         phoneNumber: profile.phoneNumber || '',
         gender: profile.gender || 'prefer_not_to_say',
-        kycStatus: profile.kycStatus || 'pending'
+        kycStatus: profile.kycStatus || 'pending',
+        licenseNumber: profile.licenseNumber || '' // Added driving license field (backend field name)
       });
 
       // Parse existing phone number to extract country code
@@ -197,7 +243,8 @@ const ManageProfile = () => {
           email: auth().currentUser?.email || '',
           phoneNumber: '',
           gender: 'prefer_not_to_say',
-          kycStatus: 'pending'
+          kycStatus: 'pending',
+          licenseNumber: '' // Added driving license field (backend field name)
         });
       }
     }
@@ -215,10 +262,13 @@ const ManageProfile = () => {
       }
       setPhoneError('');
     } else {
-      setTempValue(profileData[field]);
+      setTempValue(profileData[field] || '');
     }
     if (field === 'gender') {
       setShowGenderPicker(true);
+    }
+    if (field === 'licenseNumber') {
+      setLicenseError('');
     }
   };
 
@@ -227,12 +277,22 @@ const ManageProfile = () => {
     setTempValue('');
     setShowGenderPicker(false);
     setPhoneError('');
+    setLicenseError('');
   };
 
   const handlePhoneChange = (value: string) => {
     setTempValue(value);
     if (phoneError) {
       setPhoneError('');
+    }
+  };
+
+  const handleLicenseChange = (value: string) => {
+    // Only allow digits
+    const numericValue = value.replace(/[^0-9]/g, '');
+    setTempValue(numericValue);
+    if (licenseError) {
+      setLicenseError('');
     }
   };
 
@@ -243,6 +303,16 @@ const ManageProfile = () => {
       return false;
     }
     setPhoneError('');
+    return true;
+  };
+
+  const validateLicense = (): boolean => {
+    const validation = validateDrivingLicense(tempValue);
+    if (!validation.isValid) {
+      setLicenseError(validation.error || 'Invalid driving license');
+      return false;
+    }
+    setLicenseError('');
     return true;
   };
 
@@ -267,6 +337,8 @@ const ManageProfile = () => {
         break;
       case 'phoneNumber':
         return validatePhone();
+      case 'licenseNumber':
+        return validateLicense();
     }
     return true;
   };
@@ -284,10 +356,16 @@ const ManageProfile = () => {
 
       const idToken = await user.getIdToken();
       
-      let finalValue = value;
+      let finalValue: string | number = value;
       if (field === 'phoneNumber') {
         // Format phone with country code
         finalValue = formatPhoneWithCountryCode(selectedCountryCode.dialCode, value.trim());
+      } else if (field === 'licenseNumber') {
+        // Convert license number to number for backend
+        finalValue = parseInt(value.trim(), 10);
+        if (isNaN(finalValue)) {
+          throw new Error('Invalid license number format');
+        }
       }
 
       const updateData = {
@@ -315,6 +393,7 @@ const ManageProfile = () => {
       setTempValue('');
       setShowGenderPicker(false);
       setPhoneError('');
+      setLicenseError('');
       
       Alert.alert('Success', `${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully`);
       
@@ -324,9 +403,30 @@ const ManageProfile = () => {
     } catch (error: any) {
       console.error(`Error updating ${field}:`, error);
       
+      // Enhanced error logging for debugging
+      console.error('Full error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers,
+          data: error.config?.data
+        }
+      });
+      
       let errorMessage = `Failed to update ${field}`;
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data) {
+        // If data is an object, stringify it
+        errorMessage = typeof error.response.data === 'string' 
+          ? error.response.data 
+          : JSON.stringify(error.response.data);
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -442,7 +542,7 @@ const ManageProfile = () => {
     label: string,
     value: string,
     icon: string,
-    keyboardType: 'default' | 'email-address' | 'phone-pad' = 'default'
+    keyboardType: 'default' | 'email-address' | 'phone-pad' | 'numeric' = 'default'
   ) => {
     const isEditing = editingField === field;
     const displayValue = value || 'Not set';
@@ -484,6 +584,76 @@ const ManageProfile = () => {
                         }`}
                         onPress={() => saveField(field, tempValue)}
                         disabled={isSaving || !!phoneError || !tempValue.trim()}
+                      >
+                        {isSaving ? (
+                          <ActivityIndicator size="small" color="white" />
+                        ) : (
+                          <Text className="text-sm font-semibold font-[Afacad] text-white">Save</Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : (
+                  <Text className="text-base font-[Afacad] text-gray-800">
+                    {displayValue}
+                  </Text>
+                )}
+              </View>
+            </View>
+            
+            {!isEditing && (
+              <Pressable 
+                onPress={() => startEditing(field)} 
+                disabled={isSaving}
+                className="w-8 h-8 rounded-full bg-green-50 justify-center items-center"
+              >
+                <Ionicons name="create-outline" size={16} color="#00BD5F" />
+              </Pressable>
+            )}
+          </View>
+        </View>
+      );
+    }
+
+    if (field === 'licenseNumber') {
+      return (
+        <View className="mx-5 py-5 border-b border-gray-50">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center flex-1">
+              <View className="w-10 h-10 rounded-full bg-gray-100 justify-center items-center mr-4">
+                <Ionicons name={icon as any} size={18} color="#6B7280" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold font-[Afacad] text-gray-500 mb-1">{label}</Text>
+                {isEditing ? (
+                  <View className="mt-2">
+                    <TextInput
+                      className="bg-gray-50 p-3 rounded-xl border border-gray-200 font-[Afacad] text-base text-gray-800"
+                      value={tempValue}
+                      onChangeText={handleLicenseChange}
+                      onBlur={validateLicense}
+                      placeholder="Enter driving license number"
+                      keyboardType="numeric"
+                      autoFocus
+                      placeholderTextColor="#A0AEC0"
+                    />
+                    {licenseError && (
+                      <Text className="text-red-500 text-sm mt-1">{licenseError}</Text>
+                    )}
+                    <View className="flex-row gap-3 mt-3">
+                      <Pressable
+                        className="px-4 py-2 bg-gray-100 rounded-lg"
+                        onPress={cancelEditing}
+                        disabled={isSaving}
+                      >
+                        <Text className="text-sm font-semibold font-[Afacad] text-gray-600">Cancel</Text>
+                      </Pressable>
+                      <Pressable
+                        className={`px-4 py-2 rounded-lg flex-row items-center ${
+                          !licenseError ? 'bg-green-500' : 'bg-gray-300'
+                        }`}
+                        onPress={() => saveField(field, tempValue)}
+                        disabled={isSaving || !!licenseError}
                       >
                         {isSaving ? (
                           <ActivityIndicator size="small" color="white" />
@@ -699,6 +869,9 @@ const ManageProfile = () => {
           {renderField('email', 'Email', profileData.email, 'mail-outline', 'email-address')}
           {renderField('phoneNumber', 'Phone Number', profileData.phoneNumber, 'call-outline', 'phone-pad')}
           {renderField('gender', 'Gender', profileData.gender, 'people-outline')}
+          
+          {/* Driving License Field - Only show for drivers */}
+          {isDriver && renderField('licenseNumber', 'Driving License', profileData.licenseNumber || '', 'card-outline', 'numeric')}
           
           {/* Verification Section */}
           <View className="mx-5 py-5">
