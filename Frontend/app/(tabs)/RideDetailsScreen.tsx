@@ -232,7 +232,7 @@ const RideDetailsScreen = () => {
       const bookingPayload = {
         rideId: rideDetails.rideId,
         seatsBooked: passengerCount,
-        pricePerSeat: rideDetails.price,
+        bookingPrice: rideDetails.price,
       };
 
       console.log('🚗 Booking ride with payload:', bookingPayload);
@@ -531,10 +531,6 @@ const RideDetailsScreen = () => {
                 👩 Female-only ride
               </Text>
             </View>
-            {/* Debug info for female-only rides */}
-            <Text className="text-xs text-gray-400 mt-2 font-[Afacad]">
-              Your profile: {userGender} • Can book: {canBookRide ? 'Yes' : 'No'}
-            </Text>
           </View>
         )}
 

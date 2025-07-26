@@ -5,6 +5,9 @@ import RideResultCard from '../components/RideResultCard';
 import RideSearchForm from '../components/RideSearchForm';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import useHomeUserData from '../../hooks/useHomeUserData';
+import auth from '@react-native-firebase/auth';
+import axios from 'axios';
+import { BASE_URL } from '@/config';
 
 // Updated interface to match backend data structure
 interface Waypoint {
@@ -36,10 +39,10 @@ interface EnrichedRideResult {
     pricePerSeat: number;
     availableSeats: number;
     femaleOnly?: boolean;
-    waypoints?: Waypoint[]; // Changed from stopovers to waypoints
+    waypoints?: Waypoint[];
     polyline?: string;
     // New fields for comments and stopovers - using correct field name from logs
-    comments?: string; // Changed from driverComment to comments
+    comments?: string;
     allowsSmoking?: boolean;
     petsAllowed?: boolean;
     musicPreference?: string;
@@ -65,6 +68,7 @@ const SearchResultsScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [expandedRides, setExpandedRides] = useState<Set<string>>(new Set());
+  const [userGenderFromProfile, setUserGenderFromProfile] = useState<string | null>(null);
   
   // Search form state
   const [femaleOnly, setFemaleOnly] = useState(false);
@@ -73,11 +77,59 @@ const SearchResultsScreen = () => {
 
   // Get user data to access gender
   const { userData, loading: userDataLoading } = useHomeUserData();
-  
-  console.log('🔍 SearchResultsScreen Debug:');
-  console.log('🔍 - userDataLoading:', userDataLoading);
-  console.log('🔍 - userData:', userData);
-  console.log('🔍 - User gender:', userData?.gender);
+
+  // Fetch user profile for reliable gender detection
+  const fetchUserProfile = async () => {
+    try {
+      const user = auth().currentUser;
+      if (!user) return;
+
+      const idToken = await user.getIdToken();
+      const response = await axios.get(`${BASE_URL}/users/profile`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+        timeout: 10000,
+      });
+
+      let profileData = response.data;
+      if (profileData.user) {
+        profileData = profileData.user;
+      }
+
+      if (profileData.gender) {
+        setUserGenderFromProfile(profileData.gender);
+      } else {
+        setUserGenderFromProfile('prefer_not_to_say');
+      }
+
+    } catch (error: any) {
+      setUserGenderFromProfile('prefer_not_to_say');
+    }
+  };
+
+  // Multi-source gender detection
+  const getUserGender = () => {
+    // Priority 1: Direct profile fetch (most reliable)
+    if (userGenderFromProfile && userGenderFromProfile !== 'prefer_not_to_say') {
+      return userGenderFromProfile;
+    }
+    
+    // Priority 2: User data from home hook
+    if (userData?.gender && userData.gender !== 'prefer_not_to_say') {
+      return userData.gender;
+    }
+    
+    // Priority 3: Params from search (fallback)
+    if (params.userGender && params.userGender !== 'prefer_not_to_say') {
+      return params.userGender as string;
+    }
+    
+    // Priority 4: Default fallback
+    return 'prefer_not_to_say';
+  };
+
+  const finalUserGender = getUserGender();
 
   // Extract search parameters
   const searchParams = {
@@ -93,7 +145,10 @@ const SearchResultsScreen = () => {
     userGender: params.userGender as string,
   };
 
-  console.log('🔍 SearchResultsScreen - userGender from params:', searchParams.userGender);
+  // Fetch profile on component mount
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
 
   useEffect(() => {
     // Initialize search form state with current search params
@@ -106,20 +161,6 @@ const SearchResultsScreen = () => {
     // Parse search results from params
     try {
       const searchResults = params.searchResults ? JSON.parse(params.searchResults as string) : [];
-      console.log('Raw search results:', searchResults);
-      
-      // Log the first ride's data structure for debugging
-      if (searchResults.length > 0) {
-        console.log('First enriched ride data:', searchResults[0]);
-        if (searchResults[0].ride) {
-          console.log('First ride departureTime:', searchResults[0].ride.departureTime);
-          console.log('First driver data:', searchResults[0].driver);
-          console.log('First vehicle data:', searchResults[0].vehicle);
-          console.log('Driver comment:', searchResults[0].ride.comments); // Fixed field name
-          console.log('Waypoints:', searchResults[0].ride.waypoints); // Changed from stopovers to waypoints
-        }
-      }
-      
       setRides(searchResults);
     } catch (error) {
       console.error('Error parsing search results:', error);
@@ -241,50 +282,6 @@ const SearchResultsScreen = () => {
     }
   };
 
-  // Component to render waypoints (stopovers)
-  const renderStopovers = (waypoints: Waypoint[] | undefined, rideId: string) => {
-    if (!waypoints || waypoints.length === 0) return null;
-
-    const isExpanded = expandedRides.has(rideId);
-    const displayedWaypoints = isExpanded ? waypoints : waypoints.slice(0, 2);
-
-    return (
-      <View className="mt-3 pt-3 border-t border-gray-200">
-        <Text className="text-sm font-semibold text-gray-700 font-[Afacad] mb-2">
-          Stopovers ({waypoints.length})
-        </Text>
-        
-        {displayedWaypoints.map((waypoint, index) => (
-          <View key={index} className="flex-row items-center mb-2">
-            <View className="w-2 h-2 rounded-full bg-orange-400 mr-3" />
-            <View className="flex-1">
-              <Text className="text-sm font-medium font-[Afacad]">
-                {waypoint.label}
-              </Text>
-              {waypoint.estimatedArrival && (
-                <Text className="text-xs text-gray-500 font-[Afacad]">
-                  Stop at {formatTime(waypoint.estimatedArrival)}
-                  {waypoint.duration && ` • ${waypoint.duration}min stop`}
-                </Text>
-              )}
-            </View>
-          </View>
-        ))}
-        
-        {waypoints.length > 2 && (
-          <Pressable 
-            onPress={() => toggleRideExpansion(rideId)}
-            className="mt-1"
-          >
-            <Text className="text-xs text-[#00BD5F] font-[Afacad] font-medium">
-              {isExpanded ? 'Show less' : `Show ${waypoints.length - 2} more stopovers`}
-            </Text>
-          </Pressable>
-        )}
-      </View>
-    );
-  };
-
   // Component to render driver preferences/comments
   const renderRidePreferences = (ride: EnrichedRideResult['ride']) => {
     const preferences = [];
@@ -298,13 +295,10 @@ const SearchResultsScreen = () => {
       preferences.push({ icon: 'bag-outline', text: luggageText, color: '#10B981' });
     }
 
-    if (preferences.length === 0) return null; // Removed comment check - don't show comment content on card
+    if (preferences.length === 0) return null;
 
     return (
       <View className="mt-3 pt-3 border-t border-gray-200">
-        {/* Removed Driver Comment section - only show in RideDetailsScreen */}
-
-        {/* Preferences */}
         {preferences.length > 0 && (
           <View>
             <Text className="text-sm font-semibold text-gray-700 font-[Afacad] mb-2">
@@ -330,8 +324,6 @@ const SearchResultsScreen = () => {
   };
 
   const { weekday, monthDay, year } = formatDate(searchParams.date);
-
-  console.log('🔍 SearchResultsScreen - User gender:', userData?.gender);
 
   if (isLoading) {
     return (
@@ -483,15 +475,12 @@ const SearchResultsScreen = () => {
                         </Text>
                       </View>
                     )}
-                    {ride.comments && ( // Fixed field name
+                    {ride.comments && (
                       <View className="bg-blue-100 px-2 py-1 rounded-full mr-2 mb-1">
                         <Text className="text-xs text-blue-600 font-[Afacad] font-medium">Has note</Text>
                       </View>
                     )}
                   </View>
-
-                  {/* Render Waypoints - Removed from card, only show in details */}
-                  {/* {renderStopovers(ride.waypoints, ride.rideId)} */}
 
                   {/* Render Ride Preferences and Comments */}
                   {renderRidePreferences(ride)}
@@ -544,7 +533,7 @@ const SearchResultsScreen = () => {
                             vehicleModel: vehicle?.model,
                             vehicleColor: vehicle?.color,
                             vehiclePlateNumber: vehicle?.plateNumber,
-                            userGender: searchParams.userGender,
+                            userGender: finalUserGender,
                             // Pass additional ride data
                             driverComment: ride.comments,
                             stopovers: JSON.stringify(ride.waypoints || []),
@@ -602,7 +591,7 @@ const SearchResultsScreen = () => {
                   setPassengerCount={setPassengerCount}
                   date={date}
                   setDate={setDate}
-                  userGender={userData?.gender}
+                  userGender={finalUserGender}
                   // Pass current search locations to pre-populate the form
                   initialFrom={searchParams.from}
                   initialTo={searchParams.to}
