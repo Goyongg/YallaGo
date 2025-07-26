@@ -58,7 +58,16 @@ export class UsersService {
 
         const response = pickFields(userData, homepageFields);
 
-        const upcomingInfo = await this.getUpcomingInfo(userData, firebaseUid);
+        let upcomingInfo: any[] = [];
+
+        try {
+        upcomingInfo = await this.getUpcomingInfo(userData, firebaseUid);
+        } 
+        catch (err: any) {
+        console.warn(`[getHomePageInfo] getUpcomingInfo() failed: ${err.message}`);
+        // Always return empty array on failure to avoid frontend 404s
+        upcomingInfo = [];
+        }
 
         return { response, upcomingInfo }; 
     }
@@ -71,7 +80,18 @@ export class UsersService {
         // Check if the user is a driver
         if (userData.role === 'driver') {
             // Fetch all rides created by this driver
-            const rides = await this.firebaseDriverService.getRideByDriver(firebaseUid);
+            let rides: any[] = [];
+            try {
+            rides = await this.firebaseDriverService.getRideByDriver(firebaseUid);
+            } catch (err) {
+            console.warn(`[getUpcomingInfo] No rides found for driver ${firebaseUid}. Returning empty array.`);
+            return []; // ✅ prevent throwing or breaking getHomePageInfo
+            }
+
+            if (!rides || rides.length === 0) {
+            console.log(`[getUpcomingInfo] Driver ${firebaseUid} has no upcoming rides.`);
+            return []; // ✅ no 404, just empty
+            }
 
             // Will hold rides happening soon or departed
             const upcomingRides: typeof rides = [];
@@ -151,17 +171,14 @@ export class UsersService {
             const bookingData = bookingDoc.data() as {
                 rideId: string;
                 seatsBooked: number;
-                pickupPoint: string; 
-                startGeo: GeoPoint;
-                dropOffPoint: string;
-                endGeo: GeoPoint; 
+                bookingPrice: number;
                 status: string;
             };
 
             // Fetch the ride document linked to this booking
             const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
             // Keep only specific ride fields
-            const cleanRideData = pickFields(rideData, ['coordinates', 'departureTime', 'endGeo'])
+            const cleanRideData = pickFields(rideData, ['coordinates', 'startLocation', 'endGeo', 'endLocation', 'departureTime', 'polyline', 'comments, waypoints'])
 
             // Convert departure time to JS Date
             const departureTime = rideData.departureTime.toDate();
@@ -192,11 +209,8 @@ export class UsersService {
             enrichedBookings.push({
                 bookingId: bookingDoc.id,
                 seatsBooked: bookingData.seatsBooked,
+                bookingPrice: bookingData.bookingPrice,
                 status: bookingData.status,
-                pickupPoint: bookingData.pickupPoint,
-                bookingStart: bookingData.startGeo,
-                dropOffPoint: bookingData.dropOffPoint,
-                bookingEnd: bookingData.endGeo,
                 ride: cleanRideData,
                 driver: cleanDriverData,
                 vehicle: cleanVehicleData
@@ -321,7 +335,7 @@ export class UsersService {
                     // Select only the required user fields (name and average rating)
                     const cleanUserData = pickFields(userData, ['name', 'averageRating'])
                     // Get seats booked
-                    const cleanBookingData = pickFields(booking.data(), ['seatsBooked'])
+                    const cleanBookingData = pickFields(booking.data(), ['bookingId', 'seatsBooked'])
                     // Get start and end location
                     const rideData = await this.firebaseDriverService.fetchRideData(booking.data().rideId);
                     const cleanRideData = pickFields(rideData, ['startLocation', 'endLocation']);
@@ -344,18 +358,30 @@ export class UsersService {
 
         const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
 
-        // 💳 Capture the authorized payment
-        try {
-            await this.stripe.paymentIntents.capture(bookingData.paymentIntentId);
+        // 💳 Capture the authorized payment (only if paymentIntentId exists)
+        if (bookingData.paymentIntentId) {
+            try {
+                const paymentIntent = await this.stripe.paymentIntents.retrieve(bookingData.paymentIntentId);
 
-            // Update payment Firestore document
-            await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
-                status: PaymentStatus.PAID,
-                completedAt: this.firebase.FieldValue.serverTimestamp(),
-            });
-        } catch (err) {
-            console.error(`❌ Failed to capture payment for booking ${bookingId}`, err.message);
-            throw new Error('Payment capture failed. Booking cannot be confirmed.');
+                if (paymentIntent.status === 'requires_capture') {
+                    await this.stripe.paymentIntents.capture(bookingData.paymentIntentId);
+
+                    await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
+                        status: PaymentStatus.PAID,
+                        completedAt: this.firebase.FieldValue.serverTimestamp(),
+                    });
+                } 
+                else {
+                    console.log(`ℹ️ PaymentIntent ${paymentIntent.id} not ready for capture: status is '${paymentIntent.status}'`);
+                }
+            } 
+            catch (err) {
+                console.error(`❌ Failed to capture payment for booking ${bookingId}`, err.message);
+                throw new Error('Payment capture failed. Booking cannot be confirmed.');
+            }
+        } 
+        else {
+            console.log(`ℹ️ No PaymentIntent found for booking ${bookingId}, skipping payment capture.`);
         }
 
         // Update the status field of this booking to CONFIRMED
@@ -389,28 +415,30 @@ export class UsersService {
         // Retrieve the corresponding ride details using the rideId from the booking
         const rideData = await this.firebaseDriverService.fetchRideData(bookingData.rideId);
 
-        // 💳 Cancel the PaymentIntent to release the authorization
-        try {
-            await this.stripe.paymentIntents.cancel(bookingData.paymentIntentId);
+        // 💳 Cancel the PaymentIntent (only if paymentIntentId exists)
+        if (bookingData.paymentIntentId) {
+            try {
+                const paymentIntent = await this.stripe.paymentIntents.retrieve(bookingData.paymentIntentId);
 
-            await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
-                status: PaymentStatus.CANCELLED,
-                cancelledAt: this.firebase.FieldValue.serverTimestamp(),
-            });
-        } catch (err) {
-            console.error(`❌ Failed to cancel payment for booking ${bookingId}`, err.message);
-            // Proceed anyway — this is non-critical for booking logic
+                if (paymentIntent.status === 'requires_capture') {
+                    await this.stripe.paymentIntents.cancel(bookingData.paymentIntentId);
+
+                    await this.firebase.firestore.collection('payments').doc(bookingData.paymentIntentId).update({
+                        status: PaymentStatus.CANCELLED,
+                        cancelledAt: this.firebase.FieldValue.serverTimestamp(),
+                    });
+                } 
+                else {
+                    console.log(`ℹ️ PaymentIntent ${paymentIntent.id} not cancelled — status is '${paymentIntent.status}'`);
+                }
+            } 
+            catch (err) {
+                console.error(`❌ Failed to cancel payment for booking ${bookingId}`, err.message);
+            }
+        } 
+        else {
+            console.log(`ℹ️ No PaymentIntent found for booking ${bookingId}, skipping payment cancellation.`);
         }
-
-        // Update the booking's status to CANCELLED in the database
-        bookingRef.update({ status: BookingStatus.CANCELLED })
-
-        // Notify passenger
-        await this.notifyPassenger(
-            bookingData.passengerId,
-            '❌ Booking Declined',
-            `Unfortunately, your booking request from ${rideData.startLocation} to ${rideData.endLocation} was declined by the driver.`
-        );
 
         // Calculate the new available seat count by adding back the cancelled seats
         const newSeats = bookingData.seatsBooked + rideData.availableSeats;
