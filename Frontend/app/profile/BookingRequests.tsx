@@ -30,7 +30,7 @@ const BookingRequests = () => {
         headers: {
           Authorization: `Bearer ${idToken}`,
         },
-        timeout: 10000, // 10 second timeout
+        timeout: 50000, // 10 second timeout
       });
       
       console.log('📋 Booking requests response:', response.data);

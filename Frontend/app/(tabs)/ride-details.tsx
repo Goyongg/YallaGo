@@ -599,21 +599,28 @@ const RideDetailsScreen = () => {
                 
                 setRideStatus('completed');
                 
-                // Show review modal immediately after ride completion
-                setTimeout(() => {
-                  if (userRole === 'driver' && passengers.length > 0) {
-                    // Driver reviews first passenger (can be extended for multiple passengers)
-                    setReviewTarget({ name: passengers[0].name, id: passengers[0].phone });
-                    setShowReviewModal(true);
-                  } else if (userRole === 'passenger' && driverInfo) {
-                    // Passenger reviews driver
-                    setReviewTarget({ name: driverInfo.name, id: driverInfo.phone });
-                    setShowReviewModal(true);
-                  }
-                }, 500);
-                
-                // Refresh data
-                refetch();
+                // ✅ FIX: Show review modal IMMEDIATELY without timeout
+                // Don't wait for data refresh that might cause the page to break
+                if (userRole === 'driver' && passengers.length > 0) {
+                  // Driver reviews first passenger (can be extended for multiple passengers)
+                  setReviewTarget({ name: passengers[0].name, id: passengers[0].phone });
+                  setShowReviewModal(true);
+                } else if (userRole === 'passenger' && driverInfo) {
+                  // Passenger reviews driver
+                  setReviewTarget({ name: driverInfo.name, id: driverInfo.phone });
+                  setShowReviewModal(true);
+                } else {
+                  // ✅ FIX: If no review needed, navigate back immediately
+                  Alert.alert('Success', 'Ride completed successfully!', [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        refetch(); // Refresh data
+                        router.replace('/(tabs)/home'); // Navigate back
+                      }
+                    }
+                  ]);
+                }
                 
               } catch (error: any) {
                 console.error('Error ending ride:', error);
@@ -653,10 +660,16 @@ const RideDetailsScreen = () => {
     setShowReviewModal(false);
     setReviewTarget(null);
     
-    // Navigate back to home after review is completed
-    setTimeout(() => {
-      router.replace('/(tabs)/home');
-    }, 500);
+    // Show success message and navigate back
+    Alert.alert('Thank you!', 'Your review has been submitted successfully.', [
+      {
+        text: 'OK',
+        onPress: () => {
+          refetch(); // Refresh data
+          router.replace('/(tabs)/home'); // Navigate back to home
+        }
+      }
+    ]);
   };
 
   const handleLeaveReview = () => {

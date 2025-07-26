@@ -272,6 +272,7 @@ const RideSearchForm: React.FC<ExtendedRideSearchFormProps> = ({
           passengerCount: passengerCount,
           femaleOnly: femaleOnly ? '1' : '0',
           searchResults: JSON.stringify(searchResults), // Pass the enriched results
+          userGender: userGender,
         },
       });
 

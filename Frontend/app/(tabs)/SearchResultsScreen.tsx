@@ -72,8 +72,13 @@ const SearchResultsScreen = () => {
   const [date, setDate] = useState('');
 
   // Get user data to access gender
-  const { userData } = useHomeUserData();
+  const { userData, loading: userDataLoading } = useHomeUserData();
   
+  console.log('🔍 SearchResultsScreen Debug:');
+  console.log('🔍 - userDataLoading:', userDataLoading);
+  console.log('🔍 - userData:', userData);
+  console.log('🔍 - User gender:', userData?.gender);
+
   // Extract search parameters
   const searchParams = {
     from: params.from as string || 'Unknown',
@@ -85,7 +90,10 @@ const SearchResultsScreen = () => {
     fromLng: parseFloat(params.fromLng as string),
     toLat: parseFloat(params.toLat as string),
     toLng: parseFloat(params.toLng as string),
+    userGender: params.userGender as string,
   };
+
+  console.log('🔍 SearchResultsScreen - userGender from params:', searchParams.userGender);
 
   useEffect(() => {
     // Initialize search form state with current search params
@@ -536,7 +544,7 @@ const SearchResultsScreen = () => {
                             vehicleModel: vehicle?.model,
                             vehicleColor: vehicle?.color,
                             vehiclePlateNumber: vehicle?.plateNumber,
-                            userGender: userData?.gender,
+                            userGender: searchParams.userGender,
                             // Pass additional ride data
                             driverComment: ride.comments,
                             stopovers: JSON.stringify(ride.waypoints || []),
