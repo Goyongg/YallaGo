@@ -1,4 +1,4 @@
-// app/(tabs)/driver-ride-details.tsx - FIXED version with ONLY comments and stopovers added
+// app/(tabs)/driver-ride-details.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -19,6 +19,7 @@ import useDriverRides from '../../hooks/useDriverRides';
 import useRideActions from '../../hooks/useRideActions';
 import { BASE_URL } from '@/config';
 import { ProcessedDriverRide } from '@/interfaces/interfaces';
+import SOSButton from '../components/SOSButton';
 
 interface PassengerInfo {
   name: string;
@@ -653,6 +654,22 @@ const DriverRideDetailsScreen = () => {
             </View>
           )}
         </View>
+
+        {/* SOS Button for Driver */}
+        <SOSButton
+          rideId={rideData?.id || ''}
+          userRole="driver"
+          rideStatus={rideData?.status || ''}
+          rideData={{
+            coordinates: rideData?.coordinates,
+            from: rideData?.from,
+            to: rideData?.to
+          }}
+          onSOSActivated={() => {
+            console.log('📞 Driver activated SOS on driver-ride-details page');
+            // Optional: Add driver-specific actions like notifying all passengers
+          }}
+        />
 
         {/* Action Buttons */}
         <View className="mx-4 mb-4">

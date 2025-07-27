@@ -1,4 +1,4 @@
-// app/booking-details.tsx - Enhanced with comments and stopovers
+// app/(tabs)/booking-details.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -16,7 +16,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import auth from '@react-native-firebase/auth';
 import axios from 'axios';
 import { BASE_URL } from '@/config';
+import SOSButton from '../components/SOSButton';
 
+// ... (keep all existing interfaces and utility functions exactly the same)
 interface BookingData {
   bookingId: string;
   rideId: string;
@@ -223,7 +225,7 @@ const BookingDetailsScreen = () => {
     }
   };
 
-  // NEW: Process stopovers from waypoints
+  // Process stopovers from waypoints
   const processStopovers = (waypoints: any[]) => {
     console.log('🛑 Processing waypoints:', waypoints);
     
@@ -285,7 +287,7 @@ const BookingDetailsScreen = () => {
       setBookingData(targetBooking);
       processCoordinatesAndPolyline(targetBooking);
       
-      // NEW: Process stopovers from waypoints
+      // Process stopovers from waypoints
       processStopovers(targetBooking.waypoints);
 
     } catch (err: any) {
@@ -305,7 +307,7 @@ const BookingDetailsScreen = () => {
     }
   }, [bookingId]);
 
-  // NEW: Render driver comment section (keeping original design style)
+  // Render driver comment section
   const renderDriverComment = () => {
     if (!bookingData?.comments) return null;
     
@@ -327,7 +329,7 @@ const BookingDetailsScreen = () => {
     );
   };
 
-  // NEW: Render stopovers section (keeping original design style)
+  // Render stopovers section
   const renderStopovers = () => {
     if (!stopovers || stopovers.length === 0) return null;
 
@@ -374,25 +376,6 @@ const BookingDetailsScreen = () => {
             Linking.openURL(url).catch(err => 
               Alert.alert('Error', 'Unable to make phone call')
             );
-          }
-        },
-      ]
-    );
-  };
-
-  const handleSOSPress = () => {
-    Alert.alert(
-      'Emergency SOS',
-      'This feature will contact emergency services and notify your emergency contacts.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Call Emergency', 
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('SOS Activated', 'Emergency services have been notified.');
-            const emergencyNumber = '999'; // UAE emergency number
-            Linking.openURL(`tel:${emergencyNumber}`);
           }
         },
       ]
@@ -611,10 +594,10 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
 
-        {/* NEW: Driver Comment Section */}
+        {/* Driver Comment Section */}
         {renderDriverComment()}
 
-        {/* NEW: Stopovers Section */}
+        {/* Stopovers Section */}
         {renderStopovers()}
 
         {/* Driver Info */}
@@ -671,23 +654,20 @@ const BookingDetailsScreen = () => {
           </View>
         )}
 
-        {/* SOS Button */}
-        <View className="mx-4 mb-4">
-          <Pressable
-            onPress={handleSOSPress}
-            className="bg-red-500 py-4 rounded-lg items-center border-2 border-red-600"
-          >
-            <View className="flex-row items-center">
-              <Ionicons name="warning" size={24} color="white" />
-              <Text className="text-white text-lg font-[Afacad] font-bold ml-2">
-                Emergency SOS
-              </Text>
-            </View>
-            <Text className="text-red-100 text-sm font-[Afacad] mt-1">
-              Tap in case of emergency
-            </Text>
-          </Pressable>
-        </View>
+        {/* FIXED: SOS Button with proper props */}
+        <SOSButton
+          rideId={bookingData?.rideId || bookingData?.bookingId || ''}
+          userRole="passenger" // Since this is a booking details page, user is typically a passenger
+          rideStatus={bookingData?.status || ''}
+          rideData={{
+            coordinates: bookingData?.coordinates,
+            from: bookingData?.startLocation,
+            to: bookingData?.endLocation
+          }}
+          onSOSActivated={() => {
+            console.log('📞 SOS activated on booking-details page');
+          }}
+        />
       </ScrollView>
     </SafeAreaView>
   );

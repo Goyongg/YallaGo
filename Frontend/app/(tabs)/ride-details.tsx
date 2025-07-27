@@ -1,4 +1,4 @@
-// app/ride-details.tsx - Enhanced with comments and stopovers
+// app/(tabs)/ride-details.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -20,6 +20,7 @@ import axios from 'axios';
 import ReviewModal from '../components/ReviewModal';
 import useHomeUserData from '../../hooks/useHomeUserData';
 import { BASE_URL } from '@/config';
+import SOSButton from '../components/SOSButton';
 
 interface PassengerInfo {
   name: string;
@@ -637,25 +638,6 @@ const RideDetailsScreen = () => {
     }
   };
 
-  const handleSOSPress = () => {
-    Alert.alert(
-      'Emergency SOS',
-      'This feature will contact emergency services and notify your emergency contacts.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Call Emergency', 
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('SOS Activated', 'Emergency services have been notified.');
-            const emergencyNumber = '999'; // UAE emergency number
-            Linking.openURL(`tel:${emergencyNumber}`);
-          }
-        },
-      ]
-    );
-  };
-
   const handleReviewComplete = () => {
     setShowReviewModal(false);
     setReviewTarget(null);
@@ -773,6 +755,22 @@ const RideDetailsScreen = () => {
         )}
       </View>
 
+      {/* Reusable SOS Button for Driver */}
+      <SOSButton
+        rideId={rideData?.rideId || ''}
+        userRole="driver"
+        rideStatus={rideData?.status || ''}
+        rideData={{
+          coordinates: rideData?.coordinates,
+          from: rideData?.from,
+          to: rideData?.to
+        }}
+        onSOSActivated={() => {
+          console.log('📞 Driver activated SOS on ride-details page');
+          // Optional: Notify passengers or additional actions
+        }}
+      />
+
       {/* Driver Action Buttons */}
       <View className="mx-4 mb-4">
         {rideStatus === 'in-progress' && (
@@ -862,23 +860,21 @@ const RideDetailsScreen = () => {
         </View>
       )}
 
-      {/* SOS Button */}
-      <View className="mx-4 mb-4">
-        <Pressable
-          onPress={handleSOSPress}
-          className="bg-red-500 py-4 rounded-lg items-center border-2 border-red-600"
-        >
-          <View className="flex-row items-center">
-            <Ionicons name="warning" size={24} color="white" />
-            <Text className="text-white text-lg font-[Afacad] font-bold ml-2">
-              Emergency SOS
-            </Text>
-          </View>
-          <Text className="text-red-100 text-sm font-[Afacad] mt-1">
-            Tap in case of emergency
-          </Text>
-        </Pressable>
-      </View>
+      {/* Reusable SOS Button */}
+      <SOSButton
+        rideId={rideData?.rideId || ''}
+        userRole="passenger"
+        rideStatus={rideData?.status || ''}
+        rideData={{
+          coordinates: rideData?.coordinates,
+          from: rideData?.from,
+          to: rideData?.to
+        }}
+        onSOSActivated={() => {
+          console.log('📞 Passenger activated SOS on ride-details page');
+          // Optional: Add any additional logging or analytics
+        }}
+      />
 
       {/* Passenger Action Buttons */}
       <View className="mx-4 mb-4">
