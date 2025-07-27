@@ -258,6 +258,8 @@ const RideDetailsScreen = () => {
           rideId: rideDetails.rideId,
           seats: passengerCount.toString(),
           price: rideDetails.price.toString(),
+          from: rideDetails.from, // 👈
+          to: rideDetails.to,     // 👈
         },
       });
     } catch (error: any) {

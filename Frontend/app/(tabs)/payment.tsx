@@ -7,12 +7,14 @@ import auth from '@react-native-firebase/auth';
 import { BASE_URL } from '@/config';
 
 const PaymentScreen = () => {
-  const { clientSecret, paymentIntentId, rideId, seats, price } = useLocalSearchParams<{
+  const { clientSecret, paymentIntentId, rideId, seats, price, from, to } = useLocalSearchParams<{
     clientSecret: string;
     paymentIntentId: string;
     rideId: string;
     seats: string;
     price: string;
+    from: string;
+    to: string;
   }>();
   const [cardDetails, setCardDetails] = useState<CardFieldInput.Details | null>(null);
   const { confirmPayment, loading } = useConfirmPayment();
@@ -104,6 +106,19 @@ const PaymentScreen = () => {
       marginBottom: 20,
       backgroundColor: '#FAFAFA',
     }}>
+      <Text style={{ fontSize: 16, fontWeight: '500', marginBottom: 8 }}>
+        From:
+      </Text>
+      <Text style={{ fontSize: 14, color: '#666', marginBottom: 8 }}>
+        {from || 'N/A'}
+      </Text>
+
+      <Text style={{ fontSize: 16, fontWeight: '500', marginBottom: 8 }}>
+        To:
+      </Text>
+      <Text style={{ fontSize: 14, color: '#666', marginBottom: 16 }}>
+        {to || 'N/A'}
+      </Text>
       <Text style={{ fontSize: 16, fontWeight: '500', marginBottom: 8 }}>
         Seats Booked:
       </Text>
