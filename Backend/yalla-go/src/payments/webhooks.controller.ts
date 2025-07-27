@@ -25,10 +25,11 @@ export class WebhooksController {
     let event;
     try {
       event = this.stripe.webhooks.constructEvent(
-        req.body,
+        (req as any).rawBody,
         sig,
         process.env.STRIPE_WEBHOOK_SECRET!
       );
+
     } catch (err) {
       console.error('❌ Webhook signature verification failed.', err.message);
       return res.status(400).send(`Webhook Error: ${err.message}`);

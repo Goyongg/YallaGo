@@ -51,12 +51,11 @@ export class PaymentsService {
             currency: paymentIntent.currency,
             status: PaymentStatus.PENDING,
             createdAt: this.firebase.FieldValue.serverTimestamp(),
-            stripeTransactionId: paymentIntent.id,
         });
 
         return {
             clientSecret: paymentIntent.client_secret,
-            paymentId: paymentIntent.id,
+            paymentIntentId: paymentIntent.id,
         };
     }
 

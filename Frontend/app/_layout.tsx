@@ -11,6 +11,7 @@ import axios from "axios";
 import auth from '@react-native-firebase/auth';
 import { getDeviceToken } from "@/services/firebaseMessagingService";
 import { AuthProvider } from "@/context/AuthContext";
+import { StripeProvider } from '@stripe/stripe-react-native';
 
 export default function Layout() {
   const [fontsLoaded] = useFonts({
@@ -96,8 +97,10 @@ export default function Layout() {
   // );
   // return <Slot />;
   return (
-    <AuthProvider>
-      <Slot />
-    </AuthProvider>
+    <StripeProvider publishableKey="pk_test_51RlOSqIhreO7mcIa3AKYmJwSUAO74sTMHlpIy5DWZv7Vq5iEbQ9nPQll223qdbiS0SF296wJ8GrhySBjkcGEWE3Z00aDu1XP1k">
+      <AuthProvider>
+        <Slot />
+      </AuthProvider>
+    </StripeProvider>
   );
 }

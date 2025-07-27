@@ -403,7 +403,6 @@ export class UsersService {
         if(rideData.status === RideStatus.IN_PROGRESS){
             rideRef.update({ status: RideStatus.BOOKED})
         }
-        
         const newSeatsBooked = rideData.bookedSeats + bookingData.seatsBooked
         rideRef.update({ bookedSeats: newSeatsBooked})
         
@@ -443,6 +442,9 @@ export class UsersService {
         else {
             console.log(`ℹ️ No PaymentIntent found for booking ${bookingId}, skipping payment cancellation.`);
         }
+
+        // ❗ Update booking status to CANCELLED
+        await bookingRef.update({ status: BookingStatus.CANCELLED });
 
         // Calculate the new available seat count by adding back the cancelled seats
         const newSeats = bookingData.seatsBooked + rideData.availableSeats;

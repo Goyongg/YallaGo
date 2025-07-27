@@ -12,8 +12,13 @@ console.log(Object.keys(process.env));
 // Craete an Express server
 const server = express();
 
-// ✅ Required: preserve raw body for Stripe webhook
-server.post('/webhooks/stripe', bodyParser.raw({ type: 'application/json' }));
+// ✅ Raw body parsing ONLY for Stripe
+server.use('/webhooks/stripe', bodyParser.raw({
+  type: 'application/json',
+  verify: (req, res, buf) => {
+    (req as any).rawBody = buf;
+  }
+}));
 
 // Keep a reference to avoid re-creating Nest on every request
 let nestAppInitialized = false;
@@ -22,6 +27,16 @@ let nestAppInitialized = false;
 // This fucntions initializes the app module and returns the instance
 export const createNestServer = async (expressInstance) => {
   const app = await NestFactory.create(AppModule, new ExpressAdapter(expressInstance));
+  
+  // ✅ Apply JSON body parser to all routes — middleware in AppModule handles Stripe
+  app.use((req, res, next) => {
+    if (req.originalUrl === '/webhooks/stripe') {
+      next(); // 🚫 skip json parser for Stripe
+    } else {
+      bodyParser.json()(req, res, next); // ✅ apply to everything else
+    }
+  });
+
   await app.init();
   return app; // ✅ This line is critical
 };
