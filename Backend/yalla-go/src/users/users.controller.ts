@@ -37,8 +37,6 @@ export class UsersController {
         const firebaseUid = req.user.uid; // get uid from request
         console.log(firebaseUid);
 
-        // await this.userService.saveDeviceToken(firebaseUid, fcmToken)
-        // console.log(`Device Token: ${fcmToken}`);
         console.log(`[${new Date().toISOString()}] /users/home hit`);
 
         return await this.userService.getHomePageInfo(firebaseUid);
