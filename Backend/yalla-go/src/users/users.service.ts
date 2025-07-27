@@ -50,116 +50,89 @@ export class UsersService {
         this.stripe = new Stripe(secretKey, { apiVersion: '2025-06-30.basil' });
     }
 
-    // fetch homepage user data based on role
-    async getHomePageInfo(firebaseUid: string) {
-        const userData = await this.firebaseUserService.fetchUserData(firebaseUid);
-
-        const homepageFields = ['userId', 'name', 'gender', 'role', 'averageRating', 'ecoPoints'];
-
-        const response = pickFields(userData, homepageFields);
-
-        let upcomingInfo: any[] = [];
-
+    private async getUpcomingRide(firebaseUid: string, now: Date, oneHourFromNow: Date) {
+        // Fetch all rides created by this driver
+        let rides: any[] = [];
         try {
-        upcomingInfo = await this.getUpcomingInfo(userData, firebaseUid);
-        } 
-        catch (err: any) {
-        console.warn(`[getHomePageInfo] getUpcomingInfo() failed: ${err.message}`);
-        // Always return empty array on failure to avoid frontend 404s
-        upcomingInfo = [];
+        rides = await this.firebaseDriverService.getRideByDriver(firebaseUid);
+        } catch (err) {
+        console.warn(`[getUpcomingInfo] No rides found for driver ${firebaseUid}. Returning empty array.`);
+        return []; // ✅ prevent throwing or breaking getHomePageInfo
         }
 
-        return { response, upcomingInfo }; 
+        if (!rides || rides.length === 0) {
+        console.log(`[getUpcomingInfo] Driver ${firebaseUid} has no upcoming rides.`);
+        return []; // ✅ no 404, just empty
+        }
+
+        // Will hold rides happening soon or departed
+        const upcomingRides: typeof rides = [];
+
+        // Loop through each ride
+        for (const ride of rides) {
+            // Convert Firestore Timestamp to JS Date
+            const departureTime = ride.departureTime.toDate();
+            const status = ride.status;
+            // Check if departure is within the next hour and status is in-progress
+            const matchesTimeWindow = departureTime >= now && departureTime <= oneHourFromNow;
+            const isInProgressAndInTimeWindow = matchesTimeWindow && (status === RideStatus.IN_PROGRESS || status === RideStatus.BOOKED);
+            // Check if status is DEPARTED
+            const isDeparted = status === RideStatus.DEPARTED;
+
+            if (isInProgressAndInTimeWindow || isDeparted) {
+                upcomingRides.push(ride);
+            }
+        }
+
+        // Array to collect enriched ride info
+        const enrichedRides: any[] = [];
+
+        // Loop through each upcoming ride
+        for (const ride of upcomingRides) {
+            // Remove fields you don't want to expose to clients
+            const rideData = omitFields(ride, ['availableSeats','distanceMeters','driverId','durationSeconds','g','pricePerSeat','vehicleId']);
+
+            // Fetch all bookings for this ride
+            const bookingsSnapshot = await this.firebase.firestore
+            .collection('bookings')
+            .where('rideId', '==', ride.rideId)
+            .get();
+
+            const bookings: any[] = [];
+
+            // Loop through bookings to enrich each with passenger data
+            for (const bookingDoc of bookingsSnapshot.docs) {
+                const bookingData = bookingDoc.data() as {
+                    passengerId: string;
+                    seatsBooked: number;
+                    status: string;
+                };
+
+                // Only send ongoing/confirmed bookings
+                if (bookingData.status === BookingStatus.ONGOING || bookingData.status === BookingStatus.CONFIRMED) {
+                    const userData = await this.firebaseUserService.fetchUserData(bookingData.passengerId);
+
+                    bookings.push({
+                        passengerId: bookingData.passengerId,
+                        passengerName: userData.name,
+                        seatsBooked: bookingData.seatsBooked,
+                        phoneNumber: userData.phoneNumber
+                    });
+                }
+            }
+
+            // Add the enriched ride (with bookings) to the list
+            enrichedRides.push({
+            ...rideData,
+            bookings
+            });
+        }
+
+        // Return enriched rides for driver
+        return enrichedRides;
     }
 
-    async getUpcomingInfo(userData: any, firebaseUid: string) {
-        const now = new Date();
-        // Define 1 hour from now
-        const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
-
-        // Check if the user is a driver
-        if (userData.role === 'driver') {
-            // Fetch all rides created by this driver
-            let rides: any[] = [];
-            try {
-            rides = await this.firebaseDriverService.getRideByDriver(firebaseUid);
-            } catch (err) {
-            console.warn(`[getUpcomingInfo] No rides found for driver ${firebaseUid}. Returning empty array.`);
-            return []; // ✅ prevent throwing or breaking getHomePageInfo
-            }
-
-            if (!rides || rides.length === 0) {
-            console.log(`[getUpcomingInfo] Driver ${firebaseUid} has no upcoming rides.`);
-            return []; // ✅ no 404, just empty
-            }
-
-            // Will hold rides happening soon or departed
-            const upcomingRides: typeof rides = [];
-
-            // Loop through each ride
-            for (const ride of rides) {
-                // Convert Firestore Timestamp to JS Date
-                const departureTime = ride.departureTime.toDate();
-                const status = ride.status;
-                // Check if departure is within the next hour and status is in-progress
-                const matchesTimeWindow = departureTime >= now && departureTime <= oneHourFromNow;
-                const isInProgressAndInTimeWindow = matchesTimeWindow && (status === RideStatus.IN_PROGRESS || status === RideStatus.BOOKED);
-                // Check if status is DEPARTED
-                const isDeparted = status === RideStatus.DEPARTED;
-
-                if (isInProgressAndInTimeWindow || isDeparted) {
-                    upcomingRides.push(ride);
-                }
-            }
-
-            // Array to collect enriched ride info
-            const enrichedRides: any[] = [];
-
-            // Loop through each upcoming ride
-            for (const ride of upcomingRides) {
-                // Remove fields you don't want to expose to clients
-                const rideData = omitFields(ride, ['availableSeats','distanceMeters','driverId','durationSeconds','g','pricePerSeat','vehicleId']);
-
-                // Fetch all bookings for this ride
-                const bookingsSnapshot = await this.firebase.firestore
-                .collection('bookings')
-                .where('rideId', '==', ride.rideId)
-                .get();
-
-                const bookings: any[] = [];
-
-                // Loop through bookings to enrich each with passenger data
-                for (const bookingDoc of bookingsSnapshot.docs) {
-                    const bookingData = bookingDoc.data() as {
-                        passengerId: string;
-                        seatsBooked: number;
-                        status: string;
-                    };
-
-                    // Only send ongoing/confirmed bookings
-                    if (bookingData.status === BookingStatus.ONGOING || bookingData.status === BookingStatus.CONFIRMED) {
-                        const userData = await this.firebaseUserService.fetchUserData(bookingData.passengerId);
-
-                        bookings.push({
-                            passengerId: bookingData.passengerId,
-                            passengerName: userData.name,
-                            seatsBooked: bookingData.seatsBooked,
-                            phoneNumber: userData.phoneNumber
-                        });
-                    }
-                }
-
-                // Add the enriched ride (with bookings) to the list
-                enrichedRides.push({
-                ...rideData,
-                bookings
-                });
-            }
-
-            // Return enriched rides for driver
-            return enrichedRides;
-        }
-
+    private async getUpcomingBooking(firebaseUid: string, now: Date, oneHourFromNow: Date) {
         // If the user has a booking, treat them as passenger
         // Fetch all bookings for this passenger
         const upcomingBookings = await this.firebase.firestore
@@ -221,9 +194,43 @@ export class UsersService {
             });
         }
 
-        
         // Return enriched bookings for passenger
         return enrichedBookings;
+    }
+
+    // fetch homepage user data based on role
+    async getHomePageInfo(firebaseUid: string) {
+        const userData = await this.firebaseUserService.fetchUserData(firebaseUid);
+
+        const homepageFields = ['userId', 'name', 'gender', 'role', 'averageRating', 'ecoPoints'];
+
+        const response = pickFields(userData, homepageFields);
+
+        let upcomingInfo: any[] = [];
+
+        try {
+        upcomingInfo = await this.getUpcomingInfo(userData, firebaseUid);
+        } 
+        catch (err: any) {
+        console.warn(`[getHomePageInfo] getUpcomingInfo() failed: ${err.message}`);
+        // Always return empty array on failure to avoid frontend 404s
+        upcomingInfo = [];
+        }
+
+        return { response, upcomingInfo }; 
+    }
+
+    async getUpcomingInfo(userData: any, firebaseUid: string) {
+        const now = new Date();
+        // Define 1 hour from now
+        const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+
+        // Check if the user is a driver
+        if (userData.role === 'driver') {
+            return this.getUpcomingRide(firebaseUid, now, oneHourFromNow);
+        }
+
+        return this.getUpcomingBooking(firebaseUid, now, oneHourFromNow);
     }
 
     async getUserProfile(firebaseUid: string) {
@@ -445,6 +452,13 @@ export class UsersService {
 
         // ❗ Update booking status to CANCELLED
         await bookingRef.update({ status: BookingStatus.CANCELLED });
+
+        // Notify passenger
+        await this.notifyPassenger(
+            bookingData.passengerId,
+            '❌ Booking Declined',
+            `Unfortunately, your booking request from ${rideData.startLocation} to ${rideData.endLocation} was declined by the driver.`
+        );
 
         // Calculate the new available seat count by adding back the cancelled seats
         const newSeats = bookingData.seatsBooked + rideData.availableSeats;
