@@ -357,28 +357,40 @@ export class RidesService {
         if (candidates.length === 0) {
             return [];
         }
-
+        
         // Step 2: filter rides by endpoint, seats, date
         const filtered = candidates.filter(ride => {
             // Don't show driver's own ride on search
             //if (ride.driverId === firebaseUid) return false;
 
-            // Don't include rides that are departed, completed, or cancelled
-            if (![RideStatus.IN_PROGRESS, RideStatus.BOOKED].includes(ride.status)) return false;
-
-            // Filter by available seats
-            if (ride.availableSeats < searchRidesDto.requestedSeats) return false;
-
-            // Filter female-only preference
-            if (searchRidesDto.femaleOnly) { 
-                // only include rides that have femaleOnly === true
-                if (!ride.femaleOnly) return false;
+            // Exclude rides that are not in-progress or booked
+            if (![RideStatus.IN_PROGRESS, RideStatus.BOOKED].includes(ride.status)) {
+                console.log('Rejected due to status');
+                return false;
             }
 
-            // Filter by date (assuming departureTime is Firestore Timestamp)
+            // Exclude rides that don't have enough available seats
+            if (ride.availableSeats < searchRidesDto.requestedSeats) {
+                console.log('Rejected due to seats');
+                return false;
+            }
+
+            // Exclude female-only rides unless the search explicitly requested them
+            if (ride.femaleOnly && !searchRidesDto.femaleOnly) {
+                // Ride is female-only, but search did not ask for it
+                return false;
+            }
+
+            // Convert Firestore Timestamp to UAE-local date string
             const rideDate = ride.departureTime.toDate();
-            const rideDateString = rideDate.toISOString().split('T')[0];
-            if (rideDateString !== searchRidesDto.date) return false;
+            const rideDateString = rideDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Dubai' });
+
+            if (rideDateString !== searchRidesDto.date) {
+                console.log('Rejected due to date mismatch');
+                console.log('Ride date (UAE):', rideDateString);
+                console.log('Search date:', searchRidesDto.date);
+                return false;
+            }
 
             // Filter by end location radius (haversine)
             // with toleranceKm from ride's destination
@@ -393,10 +405,15 @@ export class RidesService {
                 }
             );
 
-            if (distanceToEnd > toleranceKm) return false;
+            if (distanceToEnd > toleranceKm) {
+                console.log('Rejected due to destination distance:', distanceToEnd);
+                return false;
+            }
 
             return true;
         });
+
+        console.log('Final matched rides count:', filtered.length);
 
         // if no rides match the filters, return empty result
         if (filtered.length === 0) {
