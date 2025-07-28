@@ -1,0 +1,33 @@
+{
+  "cli": {
+    "version": ">= 16.17.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "autoIncrement": false,
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID": "AIzaSyA-Y2fbV85Sawfa-VG3lcFpAxMMHdIdZdw",
+        "EXPO_PUBLIC_GOOGLE_API_KEY_IOS": "AIzaSyDdS4-P1mmIRDOzOtg5jBH3FzHOKkkimy8"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_API_KEY_ANDROID": "AIzaSyA-Y2fbV85Sawfa-VG3lcFpAxMMHdIdZdw",
+        "EXPO_PUBLIC_GOOGLE_API_KEY_IOS": "AIzaSyDdS4-P1mmIRDOzOtg5jBH3FzHOKkkimy8"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
