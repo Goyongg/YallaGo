@@ -44,13 +44,13 @@ const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({ visible, onCl
     let month = baseDate.getMonth();
     let year = baseDate.getFullYear();
 
-    if (selectedHour < 4) {
-      const correctedDate = new Date(baseDate);
-      correctedDate.setDate(correctedDate.getDate() + 1);
-      day = correctedDate.getDate();
-      month = correctedDate.getMonth();
-      year = correctedDate.getFullYear();
-    }
+    // if (selectedHour < 4) {
+    //   const correctedDate = new Date(baseDate);
+    //   correctedDate.setDate(correctedDate.getDate() + 1);
+    //   day = correctedDate.getDate();
+    //   month = correctedDate.getMonth();
+    //   year = correctedDate.getFullYear();
+    // }
 
     const selected = new Date(year, month, day, selectedHour, selectedMinute, 0);
     onConfirm(selected);

@@ -225,8 +225,14 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
     setRecommendedPrice(null);
 
     try {
-      const dateStr = dateTime.toISOString().split('T')[0];
-      const timeStr = dateTime.toTimeString().slice(0, 5);
+      // ✅ Adjust date for early morning time (00:00–03:59)
+      const [hours] = dateTime.toTimeString().split(':').map(Number);
+      let adjustedDate = new Date(dateTime);
+      if (hours >= 0 && hours < 4) {
+        adjustedDate.setDate(adjustedDate.getDate() + 1);
+      }
+      const dateStr = adjustedDate.toISOString().split('T')[0];
+      const timeStr = dateTime.toTimeString().slice(0, 5)
 
       // Filter valid stopovers
       const validStopovers = stopovers.filter(stopover => 
@@ -353,9 +359,15 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
       Alert.alert(t('errors.authTitle'), t('errors.authMessage'));
       return;
     }
-
-    const dateStr = dateTime.toISOString().split('T')[0];
-    const timeStr = dateTime.toTimeString().slice(0, 5);
+    
+    // ✅ Adjust date for early morning time (00:00–03:59)
+    const adjustedDate = new Date(dateTime);
+    const hours = adjustedDate.getHours();
+    if (hours >= 0 && hours < 4) {
+      adjustedDate.setDate(adjustedDate.getDate() + 1);
+    }
+    const dateStr = adjustedDate.toISOString().split('T')[0];
+    const timeStr = adjustedDate.toTimeString().slice(0, 5);
 
     // NEW: Check for ride conflicts before creating
     const conflictCheck = await checkRideConflict(dateStr, timeStr);

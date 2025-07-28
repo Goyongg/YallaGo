@@ -4,7 +4,7 @@
     "cancelled": "Cancelled"
   },
   "summary": {
-    "passengers": "{{count}} passenger{{count > 1 ? 's' : ''}}",
+    "passengers": "{{count}} passenger(s)",
     "noPassengers": "No passengers",
     "earned": "Earned {{amount}} AED"
   }
