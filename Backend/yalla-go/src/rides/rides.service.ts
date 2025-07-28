@@ -375,10 +375,19 @@ export class RidesService {
                 return false;
             }
 
-            // Exclude female-only rides unless the search explicitly requested them
-            if (ride.femaleOnly && !searchRidesDto.femaleOnly) {
-                // Ride is female-only, but search did not ask for it
-                return false;
+            if (searchRidesDto.femaleOnly) {
+                // If the user explicitly wants female-only rides, exclude all others
+                if (!ride.femaleOnly) {
+                    console.log('Rejected: ride is not female-only but user requested it');
+                    return false;
+                }
+            } 
+            else {
+                // If the user didn't request female-only, exclude rides that are female-only
+                if (ride.femaleOnly) {
+                    console.log('Rejected: ride is female-only but user did not request it');
+                    return false;
+                }
             }
 
             // Convert Firestore Timestamp to UAE-local date string
