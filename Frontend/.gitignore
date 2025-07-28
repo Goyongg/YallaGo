@@ -83,6 +83,7 @@ ios/DerivedData/
 
 # Firebase / Google config
 *.plist
+*.json
 
 # Ignore only specific JSON files
 Frontend/app.json
