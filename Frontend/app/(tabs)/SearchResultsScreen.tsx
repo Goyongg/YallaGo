@@ -537,7 +537,7 @@ const SearchResultsScreen = () => {
                             userGender: finalUserGender,
                             // Pass additional ride data
                             driverComment: ride.comments,
-                            stopovers: JSON.stringify(ride.waypoints || []),
+                            waypoints: JSON.stringify(ride.waypoints || []),
                             ridePreferences: JSON.stringify({
                               allowsSmoking: ride.allowsSmoking,
                               petsAllowed: ride.petsAllowed,

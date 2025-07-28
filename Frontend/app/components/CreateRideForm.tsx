@@ -228,15 +228,33 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
       const dateStr = dateTime.toISOString().split('T')[0];
       const timeStr = dateTime.toTimeString().slice(0, 5);
 
-      // Updated payload to match RidePlanDto from backend
+      // Filter valid stopovers
+      const validStopovers = stopovers.filter(stopover => 
+        stopover.name.trim() !== '' && 
+        stopover.coordinates.lat !== 0 && 
+        stopover.coordinates.lng !== 0
+      );
+
+      // Prepare waypoints in the correct format for backend
+      const waypoints = validStopovers.length > 0 ? validStopovers.map(stopover => ({
+        coordinates: {
+          lat: stopover.coordinates.lat,
+          lng: stopover.coordinates.lng
+        },
+        label: stopover.name
+      })) : undefined;
+
+      // Updated payload to include waypoints
       const pricePayload = {
         startPoint: { lat: fromLocation.lat, lng: fromLocation.lng },
         endPoint: { lat: toLocation.lat, lng: toLocation.lng },
         date: dateStr,
         time: timeStr,
+        waypoints: waypoints, // Added waypoints to the payload
       };
 
       console.log('Getting price recommendation for:', pricePayload);
+      console.log('Including waypoints:', waypoints);
 
       const response = await fetch(`${BASE_URL}/rides/recommend-price`, {
         method: 'POST',
@@ -269,12 +287,12 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
 
   // Auto-calculate price when all required data is available
   useEffect(() => {
-    if (fromLocation && toLocation && dateTime) {
+  if (fromLocation && toLocation && dateTime) {
       getRecommendedPrice();
     } else {
       setRecommendedPrice(null);
     }
-  }, [fromLocation, toLocation, dateTime]);
+  }, [fromLocation, toLocation, dateTime, stopovers]);
 
   // Ride Conflict Check
   const checkRideConflict = async (date: string, time: string) => {
