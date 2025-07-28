@@ -86,9 +86,7 @@ ios/DerivedData/
 *.json
 
 # Ignore only specific JSON files
-Frontend/app.json
-Frontend/eas.json
-Frontend/google-services.json
+!app.json
 
 # But NOT the ones in Frontend/locales
 !Frontend/locales/

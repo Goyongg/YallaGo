@@ -66,9 +66,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 *.hprof
 
 # Ignore only specific JSON files
-/Frontend/app.json
-/Frontend/eas.json
-/Frontend/google-services.json
+!Frontend/app.json
 
 # But NOT the ones in Frontend/locales
 !/Frontend/locales/
