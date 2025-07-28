@@ -12,6 +12,11 @@ import locationPicker from '../locales/en/(modals)/location-picker.json';
 
 // (tabs)
 import Home from '../locales/en/(tabs)/home.json';
+import SearchResultsScreen from '../locales/en/(tabs)/SearchResultsScreen.json';
+import RideDetailsScreen from '../locales/en/(tabs)/RideDetailsScreen.json';
+import RideDetails from '../locales/en/(tabs)/rideDetails.json';
+import driverRideDetails from '../locales/en/(tabs)/driverRideDetails.json';
+import bookingDetails from '../locales/en/(tabs)/bookingDetails.json';
 
 // components
 import BookingHistoryCard from '../locales/en/components/BookingHistoryCard.json';
@@ -56,6 +61,11 @@ export default {
 
   // (tabs)
   '(tabs)/home': Home,
+  '(tabs)/SearchResultsScreen': SearchResultsScreen,
+  '(tabs)/RideDetailsScreen': RideDetailsScreen,
+  '(tabs)/ride-details': RideDetails,
+  '(tabs)/driverRideDetails': driverRideDetails,
+  '(tabs)/bookingDetails': bookingDetails,
 
   // components
   'components/BookingHistoryCard': BookingHistoryCard,

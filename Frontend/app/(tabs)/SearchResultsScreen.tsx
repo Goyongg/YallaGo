@@ -8,6 +8,7 @@ import useHomeUserData from '../../hooks/useHomeUserData';
 import auth from '@react-native-firebase/auth';
 import axios from 'axios';
 import { BASE_URL } from '@/config';
+import { useTranslation } from 'react-i18next';
 
 // Updated interface to match backend data structure
 interface Waypoint {
@@ -61,6 +62,8 @@ interface EnrichedRideResult {
 }
 
 const SearchResultsScreen = () => {
+  const { t } = useTranslation('(tabs)/SearchResultsScreen');
+
   const router = useRouter();
   const params = useLocalSearchParams();
   
@@ -302,7 +305,7 @@ const SearchResultsScreen = () => {
         {preferences.length > 0 && (
           <View>
             <Text className="text-sm font-semibold text-gray-700 font-[Afacad] mb-2">
-              Ride Preferences
+              {t('ridePreferences')}
             </Text>
             <View className="flex-row flex-wrap">
               {preferences.map((pref, index) => (
@@ -329,7 +332,7 @@ const SearchResultsScreen = () => {
     return (
       <View className="flex-1 bg-white pt-[70px] items-center justify-center">
         <ActivityIndicator size="large" color="#00BD5F" />
-        <Text className="mt-4 text-lg font-[Afacad] text-gray-600">Loading results...</Text>
+        <Text className="mt-4 text-lg font-[Afacad] text-gray-600">{t('loading')}</Text>
       </View>
     );
   }
@@ -353,8 +356,8 @@ const SearchResultsScreen = () => {
                 {searchParams.from} → {searchParams.to}
               </Text>
               <Text className="text-md text-gray-500 font-[Afacad]" numberOfLines={1} ellipsizeMode="tail">
-                {weekday} {monthDay}, {searchParams.passengerCount} passenger(s)
-                {searchParams.femaleOnly && ' • Female-only'}
+                {weekday} {monthDay}, {searchParams.passengerCount} {t('passenger', { count: searchParams.passengerCount })}
+                {searchParams.femaleOnly && ` • ${t('femaleOnly')}`}
               </Text>
             </View>
           </View>
@@ -365,7 +368,7 @@ const SearchResultsScreen = () => {
 
         {/* Results Count */}
         <Text className="text-md text-gray-600 mb-2 font-[Afacad]">
-          {rides.length === 0 ? 'No rides found' : `${rides.length} ride${rides.length !== 1 ? 's' : ''} found`}
+          {rides.length === 0 ? t('noResults') : t('resultsFound', { count: rides.length })}
         </Text>
 
         {/* List of Results or Empty State */}
@@ -379,18 +382,16 @@ const SearchResultsScreen = () => {
               <View className="bg-gray-100 rounded-full p-6 mb-4">
                 <Ionicons name="car-outline" size={48} color="#9CA3AF" />
               </View>
-              <Text className="text-xl font-[Afacad] text-gray-800 mb-2">No rides found</Text>
+              <Text className="text-xl font-[Afacad] text-gray-800 mb-2">{t('noResults')}</Text>
               <Text className="text-md text-gray-500 text-center mb-6 px-4 font-[Afacad]">
-                Sorry, there are no rides available for your search criteria. Try adjusting your:
+                {t('emptyExplanation')}
               </Text>
               
               <View className="w-full bg-gray-50 rounded-xl p-4 mb-6">
-                <Text className="text-sm text-gray-600 mb-2 font-[Afacad]">• Search date and time</Text>
-                <Text className="text-sm text-gray-600 mb-2 font-[Afacad]">• Number of passengers</Text>
-                <Text className="text-sm text-gray-600 mb-2 font-[Afacad]">• Pickup or destination location</Text>
-                {searchParams.femaleOnly && (
-                  <Text className="text-sm text-gray-600 font-[Afacad]">• Remove female-only filter</Text>
-                )}
+                <Text className="text-sm text-gray-600 mb-2 font-[Afacad]">• {t('adjust.dateTime')}</Text>
+                <Text className="text-sm text-gray-600 mb-2 font-[Afacad]">• {t('adjust.passengers')}</Text>
+                <Text className="text-sm text-gray-600 mb-2 font-[Afacad]">• {t('adjust.locations')}</Text>
+                {searchParams.femaleOnly && <Text className="text-sm text-gray-600 font-[Afacad]">• {t('adjust.femaleOnly')}</Text>}
               </View>
 
               <Pressable 
@@ -398,7 +399,7 @@ const SearchResultsScreen = () => {
                 className="bg-[#00BD5F] px-6 py-3 rounded-xl"
               >
                 <Text className="text-white font-[Afacad] text-base font-semibold">
-                  Try New Search
+                  {t('tryNewSearch')}
                 </Text>
               </Pressable>
             </View>
@@ -465,19 +466,19 @@ const SearchResultsScreen = () => {
                   <View className="flex-row mb-2 flex-wrap">
                     {ride.femaleOnly && (
                       <View className="bg-pink-100 px-2 py-1 rounded-full mr-2 mb-1">
-                        <Text className="text-xs text-pink-600 font-[Afacad] font-medium">Female-only</Text>
+                        <Text className="text-xs text-pink-600 font-[Afacad] font-medium">{t('femaleOnly')}</Text>
                       </View>
                     )}
                     {ride.waypoints && ride.waypoints.length > 0 && (
                       <View className="bg-orange-100 px-2 py-1 rounded-full mr-2 mb-1">
                         <Text className="text-xs text-orange-600 font-[Afacad] font-medium">
-                          {ride.waypoints.length} stop{ride.waypoints.length !== 1 ? 's' : ''}
+                          {t('stopovers', { count: ride.waypoints.length })}
                         </Text>
                       </View>
                     )}
                     {ride.comments && (
                       <View className="bg-blue-100 px-2 py-1 rounded-full mr-2 mb-1">
-                        <Text className="text-xs text-blue-600 font-[Afacad] font-medium">Has note</Text>
+                        <Text className="text-xs text-blue-600 font-[Afacad] font-medium">{t('hasNote')}</Text>
                       </View>
                     )}
                   </View>
@@ -549,7 +550,7 @@ const SearchResultsScreen = () => {
                       className="bg-[#00BD5F] px-4 py-2 rounded-xl"
                     >
                       <Text className="text-white font-[Afacad] text-sm font-semibold">
-                        Book Now
+                        {t('bookNow')}
                       </Text>
                     </Pressable>
                   </View>
@@ -573,7 +574,7 @@ const SearchResultsScreen = () => {
               <View className="bg-white rounded-xl p-6 w-full shadow-lg" style={{ maxWidth: 400, minWidth: 300 }}>
                 {/* Modal Header */}
                 <View className="relative mb-6">
-                  <Text className="text-xl font-[Afacad] font-semibold text-center">Adjust Search</Text>
+                  <Text className="text-xl font-[Afacad] font-semibold text-center">{t('adjustSearch')}</Text>
                   <Pressable 
                     onPress={() => setShowSearchModal(false)}
                     className="absolute right-0 top-0 p-1"

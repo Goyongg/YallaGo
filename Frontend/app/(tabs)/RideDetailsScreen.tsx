@@ -6,13 +6,14 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import MapView, { Polyline, Marker } from 'react-native-maps';
 import auth from '@react-native-firebase/auth';
 import axios from 'axios';
-import { Platform } from 'react-native';
 import { BASE_URL } from '@/config';
 import useHomeUserData from '../../hooks/useHomeUserData';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
 const RideDetailsScreen = () => {
+  const { t } = useTranslation('(tabs)/RideDetailsScreen');
   const router = useRouter();
   const params = useLocalSearchParams();
   const [passengerCount, setPassengerCount] = useState(1);
@@ -216,7 +217,7 @@ const RideDetailsScreen = () => {
     }
 
     if (!rideDetails.rideId) {
-      Alert.alert('Error', 'Invalid ride information');
+      Alert.alert(t('alerts.invalid.title'), t('alerts.invalid.message'));
       return;
     }
 
@@ -225,7 +226,7 @@ const RideDetailsScreen = () => {
 
       const token = await auth().currentUser?.getIdToken();
       if (!token) {
-        Alert.alert('Authentication Error', 'Please log in to book rides');
+        Alert.alert(t('alerts.notLoggedIn.title'), t('alerts.notLoggedIn.message'));
         return;
       }
 
@@ -418,7 +419,7 @@ const RideDetailsScreen = () => {
           </MapView>
           
           <Text className="text-md text-gray-600 mt-2 font-[Afacad]">
-            Check the trip route on the map 🗺️
+            {t('mapHint')}
           </Text>
         </View>
 
@@ -427,7 +428,7 @@ const RideDetailsScreen = () => {
           <View className="flex-row items-center mb-4">
             <Ionicons name="location-outline" size={16} color="#00BD5F" />
             <Text className="ml-2 text-sm text-gray-600 font-[Afacad]">
-              Route: {rideDetails.from} → {rideDetails.to}
+              {t('routeLabel')} {rideDetails.from} → {rideDetails.to}
             </Text>
           </View>
 
@@ -450,7 +451,7 @@ const RideDetailsScreen = () => {
                   {rideDetails.from}
                 </Text>
                 <Text className="text-sm text-gray-500 font-[Afacad]">
-                  Pickup location
+                  {t('pickupLocation')}
                 </Text>
               </View>
               <View className="h-2" />
@@ -459,7 +460,7 @@ const RideDetailsScreen = () => {
                   {rideDetails.to}
                 </Text>
                 <Text className="text-sm text-gray-500 font-[Afacad]">
-                  Drop-off location
+                  {t('dropoffLocation')}
                 </Text>
               </View>
             </View>
@@ -491,7 +492,7 @@ const RideDetailsScreen = () => {
                 <Text className="text-sm text-gray-500 font-[Afacad]">
                   {vehicleInfo ? 
                     `${vehicleInfo.color} ${vehicleInfo.make} ${vehicleInfo.model} • ${vehicleInfo.plateNumber}` :
-                    `Verified driver • ${rideDetails.availableSeats} seats available`
+                    `{t('verifiedDriver')} • ${rideDetails.availableSeats} {t('seatsAvailable')}`
                   }
                 </Text>
               </View>
@@ -529,7 +530,7 @@ const RideDetailsScreen = () => {
           <View className="mx-4 mb-4">
             <View className="bg-pink-100 px-3 py-2 rounded-lg self-start">
               <Text className="text-pink-600 font-[Afacad] text-sm font-medium">
-                👩 Female-only ride
+                {t('femaleOnlyBadge')}
               </Text>
             </View>
           </View>
@@ -538,10 +539,10 @@ const RideDetailsScreen = () => {
         {/* Passenger Count and Price */}
         <View className="mx-4 mb-6">
           <View className="bg-gray-50 rounded-xl p-4">
-            <Text className="text-lg font-semibold font-[Afacad] mb-3">Booking Details</Text>
+            <Text className="text-lg font-semibold font-[Afacad] mb-3">{t('bookingDetails')}</Text>
             
             <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-base font-[Afacad]">Number of passengers:</Text>
+              <Text className="text-base font-[Afacad]">{t('numPassengers')}</Text>
               <View className="flex-row items-center border border-gray-300 rounded-lg bg-white">
                 <Pressable 
                   onPress={decreasePassengers}
@@ -574,7 +575,7 @@ const RideDetailsScreen = () => {
             <View className="border-t border-gray-200 pt-3">
               <View className="flex-row justify-between items-center mb-2">
                 <Text className="text-sm text-gray-600 font-[Afacad]">
-                  Price per seat:
+                  {t('pricePerSeat')}
                 </Text>
                 <Text className="text-sm font-[Afacad]">
                   {rideDetails.price.toFixed(1)} AED
@@ -582,7 +583,7 @@ const RideDetailsScreen = () => {
               </View>
               <View className="flex-row justify-between items-center mb-2">
                 <Text className="text-sm text-gray-600 font-[Afacad]">
-                  × {passengerCount} passenger{passengerCount !== 1 ? 's' : ''}:
+                  {t('xPassengers', { count: passengerCount })}:
                 </Text>
                 <Text className="text-sm font-[Afacad]">
                   {((rideDetails.price || 0) * passengerCount).toFixed(1)} AED
@@ -591,7 +592,7 @@ const RideDetailsScreen = () => {
               <View className="h-px bg-gray-200 my-2" />
               <View className="flex-row justify-between items-center">
                 <Text className="text-lg font-bold font-[Afacad]">
-                  Total:
+                  {t('total')}
                 </Text>
                 <Text className="text-xl font-bold font-[Afacad] text-[#00BD5F]">
                   {((rideDetails.price || 0) * passengerCount).toFixed(1)} AED
@@ -620,7 +621,7 @@ const RideDetailsScreen = () => {
               </>
             ) : (
               <Text className="text-white text-lg font-[Afacad] font-semibold">
-                Book {passengerCount} seat{passengerCount !== 1 ? 's' : ''} for {((rideDetails.price || 0) * passengerCount).toFixed(1)} AED
+                {isBooking ? t('booking') : t('bookSeats', { count: passengerCount, price: ((rideDetails.price || 0) * passengerCount).toFixed(1) })}
               </Text>
             )}
           </Pressable>
@@ -629,11 +630,11 @@ const RideDetailsScreen = () => {
             <View className="flex-row items-center">
               <Ionicons name="woman" size={20} color="#666" style={{ marginRight: 8 }} />
               <Text className="text-gray-600 text-lg font-[Afacad] font-semibold">
-                Female-Only Ride - Booking Not Available
+                {t('bookingNotAllowed')}
               </Text>
             </View>
             <Text className="text-gray-500 text-sm font-[Afacad] mt-1">
-              Your profile gender: {userGender} • Required: female
+              {t('genderMismatch', { gender: userGender })}
             </Text>
           </View>
         )}
