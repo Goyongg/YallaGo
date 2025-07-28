@@ -1,0 +1,80 @@
+{
+  "header": {
+    "title": "Ride Details"
+  },
+  "start": {
+    "title": "Start Ride",
+    "confirm": "Are you sure you want to start this ride? This will notify all passengers.",
+    "action": "Start Ride"
+  },
+  "end": {
+    "title": "End Ride",
+    "confirm": "Are you sure you want to end this ride? This action cannot be undone.",
+    "action": "End Ride"
+  },
+  "alerts": {
+    "success": {
+      "title": "Success"
+    },
+    "error": {
+      "title": "Error",
+      "noPhone": "No phone number available",
+      "callFailed": "Unable to make phone call"
+    },
+    "call": {
+      "title": "Call {{name}}",
+      "confirm": "Do you want to call {{phone}}?"
+    }
+  },
+  "comments": {
+    "title": "Your Note to Passengers"
+  },
+  "stopovers": {
+    "title": "Trip Stopovers ({{count}})"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "call": "Call",
+    "ok": "OK",
+    "passenger": "Passenger"
+  },
+  "loading": {
+    "rideDetails": "Loading ride details...",
+    "general": "Loading..."
+  },
+  "errors": {
+    "rideNotFound": "Ride Not Found",
+    "loadingRide": "Error Loading Ride",
+    "goBack": "Go Back"
+  },
+  "status": {
+    "readyToStart": "Ready to Start",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "booked": "Booked",
+    "unknown": "Unknown Status"
+  },
+  "seatInfo": {
+    "title": "Seat Information",
+    "available": "Available Seats:",
+    "booked": "Booked Seats:"
+  },
+  "passengers": {
+    "title": "Passengers ({{count}})",
+    "noPassengers": "No passengers yet",
+    "noPassengersSubtext": "Passengers will appear here once they book your ride",
+    "seats": "{{count}} seat",
+    "seats_plural": "{{count}} seats",
+    "unknownPassenger": "Unknown Passenger"
+  },
+  "ride": {
+    "duration": "Duration:",
+    "price": "Price:",
+    "perSeat": "AED per seat",
+    "dateNotAvailable": "Date not available",
+    "unknown": "Unknown"
+  },
+  "actions": {
+    "rideCompleted": "Ride Completed - Thank you!"
+  }
+}

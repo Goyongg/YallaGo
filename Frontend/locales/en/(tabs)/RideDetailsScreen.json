@@ -1,0 +1,36 @@
+{
+  "pickupLocation": "Pickup Location",
+  "dropoffLocation": "Drop-off Location",
+  "mapHint": "Check the trip route on the map 🗺️",
+  "routeLabel": "Route:",
+  "verifiedDriver": "Verified driver",
+  "seatsAvailable": "seats available",
+  "femaleOnlyBadge": "👩 Female-only ride",
+  "bookingDetails": "Booking Details",
+  "numPassengers": "Number of passengers:",
+  "pricePerSeat": "Price per seat:",
+  "xPassengers": "x {{count}} passengers",
+  "total": "Total:",
+  "booking": "Booking...",
+  "bookSeats": "Book {{count}} seat(s) for {{price}} AED",
+  "bookingNotAllowed": "Female-Only Ride - Booking Not Available",
+  "genderMismatch": "Your profile gender: {{gender}} • Required: female",
+  "alerts": {
+    "error": {
+      "title": "Booking Failed",
+      "message": "Something went wrong while booking."
+    },
+    "notLoggedIn": {
+      "title": "Authentication Error",
+      "message": "Please log in to book rides"
+    },
+    "invalid": {
+      "title": "Error",
+      "message": "Invalid ride information"
+    },
+    "bookingNotAllowed": {
+      "title": "Booking Restricted",
+      "message": "You cannot book this ride due to restrictions."
+    }
+  }
+}

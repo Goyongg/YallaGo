@@ -1,0 +1,21 @@
+{
+  "loading": "Loading results...",
+  "passenger": "passenger",
+  "passenger_plural": "passengers",
+  "femaleOnly": "Female-only",
+  "noResults": "No rides found",
+  "resultsFound": "{{count}} ride(s) found",
+  "emptyExplanation": "Sorry, there are no rides available for your search criteria. Try adjusting your:",
+  "adjust": {
+    "dateTime": "Search date and time",
+    "passengers": "Number of passengers",
+    "locations": "Pickup or destination location",
+    "femaleOnly": "Remove female-only filter"
+  },
+  "tryNewSearch": "Try New Search",
+  "stopovers": "{{count}} stop(s)",
+  "hasNote": "Has note",
+  "ridePreferences": "Ride Preferences",
+  "bookNow": "Book Now",
+  "adjustSearch": "Adjust Search"
+}

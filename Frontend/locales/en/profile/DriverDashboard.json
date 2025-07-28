@@ -1,0 +1,26 @@
+{
+  "title": "My Rides",
+  "loadingMessage": "Loading your rides...",
+  "error": {
+    "title": "Error Loading Rides",
+    "retryButton": "Try Again"
+  },
+  "tabs": {
+    "upcoming": "Upcoming Rides ({{count}})",
+    "history": "Ride History ({{count}})"
+  },
+  "empty": {
+    "upcoming": {
+      "title": "No upcoming rides",
+      "subtitle": "Create a new ride to get started"
+    },
+    "invalidUpcoming": {
+      "title": "No properly dated upcoming rides",
+      "subtitle": "Rides may have invalid date information"
+    },
+    "history": {
+      "title": "No ride history",
+      "subtitle": "Complete some rides to see your history"
+    }
+  }
+}

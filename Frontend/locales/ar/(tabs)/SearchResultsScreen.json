@@ -1,0 +1,21 @@
+{
+  "loading": "جارٍ تحميل النتائج...",
+  "passenger": "راكب",
+  "passenger_plural": "ركاب",
+  "femaleOnly": "للنساء فقط",
+  "noResults": "لم يتم العثور على رحلات",
+  "resultsFound": "تم العثور على {{count}} رحلة",
+  "emptyExplanation": "عذرًا، لا توجد رحلات متاحة وفقًا لمعايير البحث. حاول تعديل:",
+  "adjust": {
+    "dateTime": "تاريخ ووقت البحث",
+    "passengers": "عدد الركاب",
+    "locations": "موقع الانطلاق أو الوجهة",
+    "femaleOnly": "إزالة عامل التصفية للنساء فقط"
+  },
+  "tryNewSearch": "ابحث من جديد",
+  "stopovers": "{{count}} محطة توقف",
+  "hasNote": "يوجد ملاحظة",
+  "ridePreferences": "تفضيلات الرحلة",
+  "bookNow": "احجز الآن",
+  "adjustSearch": "تعديل البحث"
+}

@@ -1,0 +1,12 @@
+{
+  "currency": "AED",
+  "fallbackLocation": "Location",
+  "status": {
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "inProgress": "In Progress"
+  },
+  "summary": {
+    "seatsBooked": "{{count}} seat booked"
+  }
+}

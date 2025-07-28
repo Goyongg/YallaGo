@@ -1,0 +1,18 @@
+{
+  "title": "Recent Searches",
+  "emptyMessage": "No recent searches yet.\nStart searching to see your history here!",
+  "passenger": "passenger",
+  "passenger_plural": "passengers",
+  "femaleOnly": "Female-only",
+  "needsLocation": "Needs location selection",
+  "locationRequiredTitle": "Location Selection Required",
+  "locationRequiredBody": "To search for rides from {{from}} to {{to}}, you'll need to select the exact locations on the map.",
+  "cancel": "Cancel",
+  "selectLocations": "Select Locations",
+  "errors": {
+    "authTitle": "Authentication Error",
+    "authMessage": "Please log in to search for rides",
+    "searchTitle": "Search Failed",
+    "searchFallback": "Unable to search for rides. Please try again."
+  }
+}

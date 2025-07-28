@@ -1,0 +1,9 @@
+{
+  "title": "Choose your",
+  "highlight": "role",
+  "passenger": "Passenger",
+  "driver": "Driver",
+  "next": "Next",
+  "registrationFailedTitle": "Registration Failed",
+  "registrationFailedMessage": "Something went wrong"
+}

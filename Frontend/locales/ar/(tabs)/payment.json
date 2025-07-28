@@ -1,0 +1,53 @@
+{
+  "header": {
+    "title": "الدفع"
+  },
+  "trip": {
+    "title": "ملخص الرحلة",
+    "pickupLocation": "موقع الانطلاق",
+    "dropoffLocation": "موقع الوصول",
+    "seats": "المقاعد"
+  },
+  "payment": {
+    "title": "تفاصيل الدفع",
+    "cardInfo": "معلومات البطاقة",
+    "cardPlaceholder": "4242 4242 4242 4242"
+  },
+  "amount": {
+    "pricePerSeat": "سعر المقعد الواحد",
+    "numberOfSeats": "عدد المقاعد",
+    "totalAmount": "المبلغ الإجمالي للتفويض",
+    "currency": "AED",
+    "preAuthInfo": "هذا تفويض مسبق للدفع. سيتم خصم المبلغ فقط إذا قبل السائق حجزك."
+  },
+  "buttons": {
+    "authorize": "تفويض الدفع",
+    "processing": "جاري المعالجة...",
+    "goToBookings": "الذهاب إلى الحجوزات"
+  },
+  "security": {
+    "message": "معلومات الدفع الخاصة بك آمنة ومشفرة"
+  },
+  "alerts": {
+    "error": {
+      "title": "خطأ",
+      "missingDetails": "تفاصيل الدفع أو الحجز مفقودة.",
+      "authError": "يرجى تسجيل الدخول مرة أخرى.",
+      "bookingFailed": "حدث خطأ ما بعد الدفع."
+    },
+    "paymentFailed": {
+      "title": "❌ فشل الدفع",
+      "noIntent": "لم يتم إرجاع نية الدفع."
+    },
+    "success": {
+      "title": "✅ تم تفويض الدفع",
+      "message": "تم تفويض دفعتك وتم إنشاء حجزك. سيتم خصم المبلغ فقط إذا قبل السائق الحجز."
+    },
+    "bookingFailed": {
+      "title": "فشل الحجز"
+    }
+  },
+  "fallback": {
+    "notAvailable": "غير متوفر"
+  }
+}

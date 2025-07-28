@@ -1,0 +1,7 @@
+{
+  "vehicleDetails": "Vehicle details available",
+  "seatsLeft": "{{count}} seat{{count !== 1 ? 's' : ''}} left",
+  "femaleOnly": "Female-only",
+  "notAvailable": "Not available for your gender",
+  "bookNow": "Book Now"
+}

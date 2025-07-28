@@ -1,0 +1,45 @@
+{
+  "fromPlaceholder": "Select starting point",
+  "toPlaceholder": "Select destination",
+  "stopoverPlaceholder": "Select stopover {{index}}",
+  "addStopover": "+ Add Stopover",
+  "datePlaceholder": "Select date & time",
+  "passengerPlaceholder": "Max passengers",
+  "pricePlaceholder": "Price per seat (AED)",
+  "femaleOnly": "Female-only",
+  "femaleOnlyNote": "Only available for female users",
+  "commentLabel": "Leave a comment",
+  "optional": "(optional)",
+  "commentPlaceholder": "Add any notes for passengers (e.g. okay with kids, no heavy luggage)",
+  "characters": "characters",
+  "createRide": "Create Ride",
+  "errors": {
+    "missingTitle": "Missing Info",
+    "missingFields": "Please fill all the fields",
+    "locationTitle": "Missing Location",
+    "locationMessage": "Please select pickup and dropoff locations from the map",
+    "stopoverTitle": "Invalid Stopover",
+    "stopoverMessage": "Please select all stopover locations from the map",
+    "authTitle": "Error",
+    "authMessage": "Unable to authenticate user",
+    "genericTitle": "Error",
+    "genericMessage": "Ride creation failed"
+  },  
+  "conflict": {
+    "title": "Schedule Conflict",
+    "defaultMessage": "You have another ride scheduled around this time",
+    "cancel": "Cancel",
+    "proceed": "Create Anyway"
+  },
+  "success": {
+    "title": "Success",
+    "default": "Ride created successfully!"
+  },
+  "loading": {
+    "recommendation": "Calculating recommended price...",
+    "unable": "Unable to calculate recommended price"
+  },
+  "labels": {
+    "recommended": "Recommended price"
+  }
+}

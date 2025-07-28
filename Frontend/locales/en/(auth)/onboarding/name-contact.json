@@ -1,0 +1,23 @@
+{
+  "title": "Let us know",
+  "highlight": "about you",
+  "nameLabel": "Your Name",
+  "namePlaceholder": "Enter your name",
+  "genderLabel": "Gender (optional)",
+  "genderHelpLink": "Why we need this info?",
+  "genderOptions": {
+    "Male": "Male",
+    "Female": "Female"
+  },
+  "emailLabel": "Email",
+  "emailPlaceholder": "Enter your email",
+  "emailError": "Enter a valid email address",
+  "phoneLabel": "Phone Number",
+  "phonePlaceholder": "551234567",
+  "phoneHelp": "Supports various formats: 971551234567, +971551234567, 0551234567, 551234567",
+  "phoneError": "Invalid phone number",
+  "next": "Next",
+  "modalTitle": "Why we need this info",
+  "modalText": "We ask for your gender to enable \"female-only\" ride options. Further ID confirmation may be required later.",
+  "modalButton": "Got it"
+}

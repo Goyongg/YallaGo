@@ -1,0 +1,79 @@
+{
+  "title": "Manage Profile",
+  "loading": "Loading...",
+  "profileInformation": "Profile Information",
+  "accountManagement": "Account Management",
+  "manageVehicles": "Manage Vehicles",
+  
+  "fields": {
+    "name": "Name",
+    "email": "Email",
+    "phoneNumber": "Phone Number",
+    "gender": "Gender",
+    "drivingLicense": "Driving License"
+  },
+  
+  "placeholders": {
+    "name": "Enter name",
+    "email": "Enter email",
+    "phoneNumber": "Enter phone number",
+    "drivingLicense": "Enter driving license number"
+  },
+  
+  "gender": {
+    "male": "Male",
+    "female": "Female",
+    "preferNotToSay": "Prefer not to say"
+  },
+  
+  "verification": {
+    "status": "Verification Status",
+    "verified": "Verified",
+    "pending": "Pending",
+    "requestVerification": "Request Verification"
+  },
+  
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "logout": "Log Out",
+    "deleteAccount": "Delete Account",
+    "deletingAccount": "Deleting Account..."
+  },
+  
+  "validation": {
+    "nameEmpty": "Name cannot be empty",
+    "emailEmpty": "Email cannot be empty",
+    "invalidEmail": "Please enter a valid email address",
+    "licenseOnlyNumbers": "Driving license can only contain numbers",
+    "licenseTooShort": "Driving license number is too short",
+    "licenseTooLong": "Driving license number is too long",
+    "invalidPhoneNumber": "Invalid phone number",
+    "invalidLicenseFormat": "Invalid license number format"
+  },
+  
+  "messages": {
+    "updateSuccess": "{{field}} updated successfully",
+    "updateFailed": "Failed to update {{field}}",
+    "verificationSuccess": "Verification request submitted successfully! Your account is now verified.",
+    "verificationFailed": "Failed to submit verification request",
+    "accountDeleted": "Your account has been successfully deleted.",
+    "deleteFailed": "Failed to delete account. Please try again.",
+    "notAuthenticated": "User not authenticated",
+    "logoutFailed": "Could not log out. Try again."
+  },
+  
+  "confirmations": {
+    "deleteAccountTitle": "Delete Account",
+    "deleteAccountMessage": "Are you sure you want to permanently delete your account? This action cannot be undone.",
+    "delete": "Delete",
+    "cancel": "Cancel"
+  },
+  
+  "status": {
+    "notSet": "Not set",
+    "success": "Success",
+    "error": "Error",
+    "validationError": "Validation Error"
+  }
+}

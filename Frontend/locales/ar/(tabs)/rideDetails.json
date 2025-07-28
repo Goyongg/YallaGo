@@ -1,0 +1,25 @@
+{
+  "header": "تفاصيل الرحلة",
+  "loading": "جارٍ تحميل تفاصيل الرحلة...",
+  "errorTitle": "خطأ في تحميل الرحلة",
+  "goBack": "العودة",
+  "passengersLabel": "الركاب",
+  "seat": "مقعد",
+  "seat_plural": "مقاعد",
+  "call": "اتصال",
+  "noPassengers": "لا يوجد ركاب بعد",
+  "startRide": "ابدأ الرحلة",
+  "starting": "جارٍ البدء...",
+  "endRide": "إنهاء الرحلة",
+  "ending": "جارٍ الإنهاء...",
+  "rideCompleted": "تمت الرحلة - شكرًا لك!",
+  "yourDriver": "سائقك",
+  "vehicle": "المركبة",
+  "alerts": {
+    "errorTitle": "خطأ",
+    "noPhone": "لا يوجد رقم هاتف متاح",
+    "callTitle": "الاتصال بـ {{name}}",
+    "callConfirm": "هل تريد الاتصال بـ {{phone}}؟",
+    "callCancel": "إلغاء"
+  }
+}

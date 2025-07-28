@@ -1,0 +1,22 @@
+{
+  "fromPlaceholder": "Select starting point",
+  "toPlaceholder": "Select destination",
+  "datePlaceholder": "Select date",
+  "femaleOnly": "Female-only",
+  "femaleOnlyNote": "Only available for female users",
+  "search": "Search Rides",
+  "searching": "Searching...",
+  "errors": {
+    "missingTitle": "Missing Information",
+    "pickupDropoff": "Please select pickup and destination locations",
+    "locationTitle": "Missing Location",
+    "locationDetails": "Please select locations from the map",
+    "dateMissing": "Please select a date",
+    "invalidTitle": "Invalid Input",
+    "passengerInvalid": "Please enter a valid number of passengers",
+    "authTitle": "Authentication Error",
+    "authMessage": "Please log in to search for rides",
+    "searchTitle": "Search Failed",
+    "searchFallback": "Unable to search for rides. Please try again."
+  }
+}

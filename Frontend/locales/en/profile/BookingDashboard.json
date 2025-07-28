@@ -1,0 +1,26 @@
+{
+  "title": "My Bookings",
+  "loading": {
+    "message": "Loading your bookings..."
+  },
+  "error": {
+    "title": "Error Loading Bookings",
+    "retry": "Try Again"
+  },
+  "tabs": {
+    "upcoming": "Upcoming Bookings ({{count}})",
+    "history": "Booking History ({{count}})"
+  },
+  "empty": {
+    "upcoming": {
+      "title": "No upcoming bookings",
+      "subtitle": "Book a ride to see your upcoming trips",
+      "invalidTitle": "No properly dated upcoming bookings",
+      "invalidSubtitle": "Bookings may have invalid date information"
+    },
+    "history": {
+      "title": "No booking history",
+      "subtitle": "Complete some rides to see your history"
+    }
+  }
+}

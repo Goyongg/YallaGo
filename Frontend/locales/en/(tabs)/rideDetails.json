@@ -1,0 +1,25 @@
+{
+  "header": "Ride Details",
+  "loading": "Loading ride details...",
+  "errorTitle": "Error Loading Ride",
+  "goBack": "Go Back",
+  "passengersLabel": "Passengers",
+  "seat": "seat",
+  "seat_plural": "seats",
+  "call": "Call",
+  "noPassengers": "No passengers yet",
+  "startRide": "Start Ride",
+  "starting": "Starting...",
+  "endRide": "End Ride",
+  "ending": "Ending...",
+  "rideCompleted": "Ride Completed - Thank you!",
+  "yourDriver": "Your Driver",
+  "vehicle": "Vehicle",
+  "alerts": {
+    "errorTitle": "Error",
+    "noPhone": "No phone number available",
+    "callTitle": "Call {{name}}",
+    "callConfirm": "Do you want to call {{phone}}?",
+    "callCancel": "Cancel"
+  }
+}

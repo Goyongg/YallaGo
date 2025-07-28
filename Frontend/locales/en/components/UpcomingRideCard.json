@@ -1,0 +1,14 @@
+{
+  "status": {
+    "active": "Active Ride",
+    "completed": "Completed Ride",
+    "upcoming": "Upcoming Ride"
+  },
+  "dates": {
+    "today": "Today",
+    "tomorrow": "Tomorrow"
+  },
+  "passenger": "passenger",
+  "passengers": "passengers",
+  "unknownLocation": "Unknown location"
+}

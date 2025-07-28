@@ -1,0 +1,45 @@
+{
+  "fromPlaceholder": "اختر نقطة الانطلاق",
+  "toPlaceholder": "اختر الوجهة",
+  "stopoverPlaceholder": "اختر نقطة توقف {{index}}",
+  "addStopover": "+ أضف نقطة توقف",
+  "datePlaceholder": "اختر التاريخ والوقت",
+  "passengerPlaceholder": "عدد الركاب",
+  "pricePlaceholder": "السعر لكل راكب (درهم)",
+  "femaleOnly": "للنساء فقط",
+  "femaleOnlyNote": "متاح فقط للمستخدمات الإناث",
+  "commentLabel": "اترك تعليقًا",
+  "optional": "(اختياري)",
+  "commentPlaceholder": "أضف ملاحظات للركاب (مثلاً: لا مانع من الأطفال، لا للأمتعة الثقيلة)",
+  "characters": "حرف",
+  "createRide": "إنشاء الرحلة",
+  "errors": {
+    "missingTitle": "معلومات ناقصة",
+    "missingFields": "يرجى ملء جميع الحقول",
+    "locationTitle": "موقع مفقود",
+    "locationMessage": "يرجى اختيار مواقع الانطلاق والوصول من الخريطة",
+    "stopoverTitle": "نقطة توقف غير صالحة",
+    "stopoverMessage": "يرجى اختيار جميع نقاط التوقف من الخريطة",
+    "authTitle": "خطأ",
+    "authMessage": "تعذر التحقق من المستخدم",
+    "genericTitle": "خطأ",
+    "genericMessage": "فشل إنشاء الرحلة"
+  },
+  "conflict": {
+    "title": "تعارض في الجدول",
+    "defaultMessage": "لديك رحلة أخرى مجدولة في هذا الوقت",
+    "cancel": "إلغاء",
+    "proceed": "إنشاء على أي حال"
+  },
+  "success": {
+    "title": "تم بنجاح",
+    "default": "تم إنشاء الرحلة بنجاح!"
+  },
+  "loading": {
+    "recommendation": "جارٍ حساب السعر المقترح...",
+    "unable": "تعذر حساب السعر المقترح"
+  },
+  "labels": {
+    "recommended": "السعر المقترح"
+  }
+}

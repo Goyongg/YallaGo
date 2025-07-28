@@ -1,0 +1,58 @@
+{
+  "header": {
+    "title": "تفاصيل الحجز"
+  },
+  "loading": {
+    "bookingDetails": "جاري تحميل تفاصيل الحجز...",
+    "general": "جاري التحميل..."
+  },
+  "errors": {
+    "bookingNotFound": "الحجز غير موجود",
+    "loadingBooking": "خطأ في تحميل الحجز",
+    "goBack": "العودة",
+    "noPhone": "رقم الهاتف غير متوفر",
+    "callFailed": "تعذر إجراء المكالمة"
+  },
+  "status": {
+    "pending": "في الانتظار",
+    "confirmed": "مؤكد",
+    "ongoing": "قيد التنفيذ",
+    "completed": "مكتمل"
+  },
+  "booking": {
+    "seats": "{{count}} مقعد",
+    "seats_plural": "{{count}} مقاعد",
+    "priceAED": "درهم",
+    "pickup": "نقطة الانطلاق",
+    "destination": "الوجهة",
+    "stopover": "محطة توقف"
+  },
+  "driver": {
+    "title": "السائق",
+    "call": "اتصال",
+    "vehicle": "المركبة",
+    "rating": "التقييم"
+  },
+  "comments": {
+    "title": "ملاحظة السائق"
+  },
+  "stopovers": {
+    "title": "محطات التوقف في الرحلة ({{count}})"
+  },
+  "alerts": {
+    "call": {
+      "title": "اتصل بـ {{name}}",
+      "confirm": "هل تريد الاتصال بـ {{phone}}؟",
+      "cancel": "إلغاء",
+      "call": "اتصال"
+    },
+    "error": {
+      "title": "خطأ"
+    }
+  },
+  "time": {
+    "duration": "المدة",
+    "departure": "المغادرة",
+    "arrival": "الوصول"
+  }
+}

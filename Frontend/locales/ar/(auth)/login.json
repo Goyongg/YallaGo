@@ -1,0 +1,11 @@
+{
+  "title": "تسجيل الدخول إلى",
+  "highlight": "حسابك",
+  "emailLabel": "البريد الإلكتروني",
+  "emailPlaceholder": "أدخل بريدك الإلكتروني",
+  "passwordLabel": "كلمة المرور",
+  "passwordPlaceholder": "أدخل كلمة المرور",
+  "loginButton": "تسجيل الدخول",
+  "loginFailedTitle": "فشل تسجيل الدخول",
+  "loginFailedMessage": "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+}

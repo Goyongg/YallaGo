@@ -1,0 +1,54 @@
+{
+  "title": {
+    "driver": "Rate Your Driver",
+    "passenger": "Rate Your Passenger"
+  },
+  "required": "Required",
+  "mandatoryNotice": "This review is required to complete your ride. Please provide a star rating.",
+  "experiencePrompt": "How was your experience?",
+  "ratings": {
+    "1": "Poor",
+    "2": "Fair",
+    "3": "Good",
+    "4": "Very Good",
+    "5": "Excellent"
+  },
+  "ratingRequired": "Please select a rating to continue",
+  "commentLabel": "Leave a comment",
+  "optional": "(optional)",
+  "commentPlaceholder": "Share your experience with {{name}}...",
+  "characters": "characters",
+  "cancel": "Cancel",
+  "submitReview": "Submit Review",
+  "completeReview": "Complete Review",
+  "submitting": "Submitting...",
+  "footer": {
+    "mandatory": "Star rating is required to complete your ride",
+    "optional": "Star rating is required to submit your review"
+  },
+  "alerts": {
+    "rating": {
+      "title": "Rating Required",
+      "body": "Please select a star rating"
+    },
+    "auth": {
+      "title": "Error",
+      "body": "Authentication required"
+    },
+    "success": {
+      "title": "Thank You!",
+      "body": "Your review has been submitted successfully."
+    },
+    "required": {
+      "title": "Review Required",
+      "body": "You must provide a star rating to continue. The review is required to complete your ride."
+    },
+    "backdrop": {
+      "title": "Review Required",
+      "body": "Please complete your review by providing a star rating."
+    },
+    "error": {
+      "title": "Error"
+    }
+  }
+}

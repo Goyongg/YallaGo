@@ -1,0 +1,17 @@
+{
+  "title": "معلومات",
+  "license": {
+    "title": "اتفاقية الترخيص",
+    "subtitle": "عرض الشروط والأحكام"
+  },
+  "privacy": {
+    "title": "سياسة الخصوصية",
+    "subtitle": "كيف نتعامل مع بياناتك"
+  },
+  "version": {
+    "label": "الإصدار {{version}}"
+  },
+  "build": {
+    "label": "البنية {{build}}"
+  }
+}

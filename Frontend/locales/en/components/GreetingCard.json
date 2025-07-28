@@ -1,0 +1,5 @@
+{
+  "greeting": "Good Morning, {{userName}} 👋",
+  "ecoPoints": "Eco Points",
+  "subtitle": "Get rewarded for every eco-friendly trip you take."
+}

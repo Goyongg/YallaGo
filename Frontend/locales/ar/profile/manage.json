@@ -1,0 +1,79 @@
+{
+  "title": "إدارة الحساب",
+  "loading": "جارٍ التحميل...",
+  "profileInformation": "معلومات الحساب",
+  "accountManagement": "إدارة الحساب",
+  "manageVehicles": "إدارة المركبات",
+  
+  "fields": {
+    "name": "الاسم",
+    "email": "البريد الإلكتروني",
+    "phoneNumber": "رقم الهاتف",
+    "gender": "الجنس",
+    "drivingLicense": "رخصة القيادة"
+  },
+  
+  "placeholders": {
+    "name": "أدخل الاسم",
+    "email": "أدخل البريد الإلكتروني",
+    "phoneNumber": "أدخل رقم الهاتف",
+    "drivingLicense": "أدخل رقم رخصة القيادة"
+  },
+  
+  "gender": {
+    "male": "ذكر",
+    "female": "أنثى",
+    "preferNotToSay": "أفضل عدم الإفصاح"
+  },
+  
+  "verification": {
+    "status": "حالة التحقق",
+    "verified": "تم التحقق",
+    "pending": "قيد الانتظار",
+    "requestVerification": "طلب التحقق"
+  },
+  
+  "actions": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "logout": "تسجيل الخروج",
+    "deleteAccount": "حذف الحساب",
+    "deletingAccount": "جارٍ حذف الحساب..."
+  },
+  
+  "validation": {
+    "nameEmpty": "لا يمكن أن يكون الاسم فارغًا",
+    "emailEmpty": "لا يمكن أن يكون البريد الإلكتروني فارغًا",
+    "invalidEmail": "يرجى إدخال بريد إلكتروني صالح",
+    "licenseOnlyNumbers": "رخصة القيادة يمكن أن تحتوي على أرقام فقط",
+    "licenseTooShort": "رقم رخصة القيادة قصير جداً",
+    "licenseTooLong": "رقم رخصة القيادة طويل جداً",
+    "invalidPhoneNumber": "رقم هاتف غير صالح",
+    "invalidLicenseFormat": "تنسيق رقم الرخصة غير صالح"
+  },
+  
+  "messages": {
+    "updateSuccess": "تم تحديث {{field}} بنجاح",
+    "updateFailed": "فشل في تحديث {{field}}",
+    "verificationSuccess": "تم إرسال طلب التحقق بنجاح! حسابك الآن تم التحقق منه.",
+    "verificationFailed": "فشل في إرسال طلب التحقق",
+    "accountDeleted": "تم حذف حسابك بنجاح.",
+    "deleteFailed": "فشل في حذف الحساب. حاول مرة أخرى.",
+    "notAuthenticated": "المستخدم غير مصادق",
+    "logoutFailed": "لا يمكن تسجيل الخروج. حاول مرة أخرى."
+  },
+  
+  "confirmations": {
+    "deleteAccountTitle": "حذف الحساب",
+    "deleteAccountMessage": "هل أنت متأكد من أنك تريد حذف حسابك نهائياً؟ لا يمكن التراجع عن هذا الإجراء.",
+    "delete": "حذف",
+    "cancel": "إلغاء"
+  },
+  
+  "status": {
+    "notSet": "غير محدد",
+    "success": "نجح",
+    "error": "خطأ",
+    "validationError": "خطأ في التحقق"
+  }
+}

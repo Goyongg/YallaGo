@@ -1,0 +1,58 @@
+{
+  "header": {
+    "title": "Booking Details"
+  },
+  "loading": {
+    "bookingDetails": "Loading booking details...",
+    "general": "Loading..."
+  },
+  "errors": {
+    "bookingNotFound": "Booking Not Found",
+    "loadingBooking": "Error Loading Booking",
+    "goBack": "Go Back",
+    "noPhone": "No phone number available",
+    "callFailed": "Unable to make phone call"
+  },
+  "status": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "ongoing": "In Progress",
+    "completed": "Completed"
+  },
+  "booking": {
+    "seats": "{{count}} seat",
+    "seats_plural": "{{count}} seats",
+    "priceAED": "AED",
+    "pickup": "Pickup",
+    "destination": "Destination",
+    "stopover": "Stopover"
+  },
+  "driver": {
+    "title": "Your Driver",
+    "call": "Call",
+    "vehicle": "Vehicle",
+    "rating": "Rating"
+  },
+  "comments": {
+    "title": "Driver's Note"
+  },
+  "stopovers": {
+    "title": "Trip Stopovers ({{count}})"
+  },
+  "alerts": {
+    "call": {
+      "title": "Call {{name}}",
+      "confirm": "Do you want to call {{phone}}?",
+      "cancel": "Cancel",
+      "call": "Call"
+    },
+    "error": {
+      "title": "Error"
+    }
+  },
+  "time": {
+    "duration": "Duration",
+    "departure": "Departure",
+    "arrival": "Arrival"
+  }
+}

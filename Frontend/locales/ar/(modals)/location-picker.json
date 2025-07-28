@@ -1,0 +1,17 @@
+{
+  "title": {
+    "pickup": "اختر موقع الانطلاق",
+    "dropoff": "اختر موقع الوصول",
+    "stopover": "اختر موقع التوقف {{index}}",
+    "default": "اختر الموقع"
+  },
+  "errors": {
+    "missingTitle": "معلومات ناقصة",
+    "missingBody": "يرجى اختيار موقع"
+    },
+  "searchPlaceholder": "ابحث عن موقع...",
+  "selectedLabel": "الموقع المحدد:",
+  "popular": "أماكن مشهورة:",
+  "confirm": "تأكيد الموقع",
+  "searching": "جارٍ البحث..."
+}

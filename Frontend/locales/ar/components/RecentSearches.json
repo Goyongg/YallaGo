@@ -1,0 +1,18 @@
+{
+  "title": "عمليات البحث الأخيرة",
+  "emptyMessage": "لا توجد عمليات بحث حديثة بعد.\nابدأ بالبحث لرؤية سجلّك هنا!",
+  "passenger": "راكب",
+  "passenger_plural": "ركاب",
+  "femaleOnly": "للنساء فقط",
+  "needsLocation": "يجب تحديد الموقع",
+  "locationRequiredTitle": "مطلوب تحديد الموقع",
+  "locationRequiredBody": "للبحث عن رحلات من {{from}} إلى {{to}}، يجب تحديد المواقع على الخريطة.",
+  "cancel": "إلغاء",
+  "selectLocations": "تحديد المواقع",
+  "errors": {
+    "authTitle": "خطأ في تسجيل الدخول",
+    "authMessage": "يرجى تسجيل الدخول للبحث عن رحلات",
+    "searchTitle": "فشل البحث",
+    "searchFallback": "تعذر البحث عن الرحلات. حاول مرة أخرى."
+  }
+}

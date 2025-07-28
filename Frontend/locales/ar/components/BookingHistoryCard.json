@@ -1,0 +1,12 @@
+{
+  "currency": "درهم",
+  "fallbackLocation": "الموقع",
+  "status": {
+    "completed": "مكتمل",
+    "cancelled": "ملغى",
+    "inProgress": "قيد التنفيذ"
+  },
+  "summary": {
+    "seatsBooked": "{{count}} مقعد محجوز"
+  }
+}

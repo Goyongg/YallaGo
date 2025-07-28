@@ -1,0 +1,12 @@
+{
+  "status": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "inProgress": "In Progress"
+  },
+  "stopovers": "{{count}} stopover",
+  "summary": {
+    "seatsBooked": "{{count}} seat booked"
+  },
+  "tapToView": "Tap to view details"
+}

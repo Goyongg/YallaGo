@@ -1,0 +1,15 @@
+{
+  "menu": {
+    "manage": "Manage Profile",
+    "rides": "My Rides",
+    "requests": "Passenger Requests",
+    "gifts": "Gifts and discounts",
+    "giftsSub": "Enter promo code",
+    "bookings": "My Bookings",
+    "bookingsSub": "Access all your bookings",
+    "info": "Info"
+  },
+  "safety": "Safety",
+  "settings": "Settings",
+  "rating": "★ {{rating}}"
+}

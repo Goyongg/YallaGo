@@ -1,0 +1,17 @@
+{
+  "title": {
+    "pickup": "Select Pickup Location",
+    "dropoff": "Select Drop-off Location",
+    "stopover": "Select Stopover {{index}} Location",
+    "default": "Select Location"
+  },
+  "errors": {
+    "missingTitle": "Missing Information",
+    "missingBody": "Please select a location"
+    },
+  "searchPlaceholder": "Search for a location...",
+  "selectedLabel": "Selected Location:",
+  "popular": "Popular Places:",
+  "confirm": "Confirm Location",
+  "searching": "Searching..."
+}

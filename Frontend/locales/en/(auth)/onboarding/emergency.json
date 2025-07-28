@@ -1,0 +1,11 @@
+{
+  "title": "Emergency",
+  "highlight": "contact",
+  "subtitle": "Please provide someone we can contact in case of an emergency.",
+  "nameLabel": "Contact Name",
+  "namePlaceholder": "Enter full name",
+  "phoneLabel": "Contact Phone",
+  "phonePlaceholder": "Enter phone number",
+  "next": "Next",
+  "skip": "Skip for now"
+}

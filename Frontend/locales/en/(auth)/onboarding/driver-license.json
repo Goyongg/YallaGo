@@ -1,0 +1,12 @@
+{
+  "title": "Driver",
+  "highlight": "verification",
+  "subtitle": "Please enter your valid UAE driver's license number. Further ID verification may be required later.",
+  "placeholder": "License Number (numbers only)",
+  "validationHint": "License number must be at least 6 digits",
+  "invalidAlertTitle": "Invalid License",
+  "invalidAlertMessage": "License number must be at least 6 digits",
+  "errorAlertTitle": "Registration Failed",
+  "errorAlertMessage": "Something went wrong",
+  "submit": "Submit"
+}

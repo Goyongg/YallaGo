@@ -1,0 +1,41 @@
+{
+  "unknown": "Unknown",
+  "tapToView": "Tap to view ride details",
+  "actions": {
+    "endRide": "End Ride"
+  },
+  "status": {
+    "booked": "Booked",
+    "departed": "Departed",
+    "upcoming": "Upcoming",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "unknown": "Unknown"
+  },
+  "seats": {
+    "available": "{{count}} seats available",
+    "booked": "{{count}} booked"
+  },
+  "alerts": {
+    "cancel": "Cancel",
+    "success": "Success",
+    "error": "Error",
+    "start": {
+      "title": "Start Ride",
+      "message": "Are you sure you want to start this ride? This will notify all passengers.",
+      "confirm": "Start Ride"
+    },
+    "end": {
+      "title": "End Ride",
+      "message": "Are you sure you want to end this ride? This action cannot be undone.",
+      "confirm": "End Ride"
+    },
+    "delete": {
+      "title": "Delete Ride",
+      "message": "Are you sure you want to delete this ride? This action cannot be undone.",
+      "confirm": "Delete",
+      "titleBlocked": "Cannot Delete",
+      "messageBlocked": "This ride has passenger bookings and cannot be deleted. You can only delete rides with no bookings."
+    }
+  }
+}

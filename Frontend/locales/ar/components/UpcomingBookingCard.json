@@ -1,0 +1,12 @@
+{
+  "status": {
+    "pending": "قيد الانتظار",
+    "confirmed": "تم التأكيد",
+    "inProgress": "قيد التنفيذ"
+  },
+  "stopovers": "{{count}} محطة توقف",
+  "summary": {
+    "seatsBooked": "{{count}} مقعد محجوز"
+  },
+  "tapToView": "اضغط لعرض التفاصيل"
+}

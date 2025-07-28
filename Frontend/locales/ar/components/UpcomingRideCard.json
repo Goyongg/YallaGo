@@ -1,0 +1,14 @@
+{
+  "status": {
+    "active": "رحلة نشطة",
+    "completed": "رحلة مكتملة",
+    "upcoming": "رحلة قادمة"
+  },
+  "dates": {
+    "today": "اليوم",
+    "tomorrow": "غدًا"
+  },
+  "passenger": "راكب",
+  "passengers": "ركاب",
+  "unknownLocation": "موقع غير معروف"
+}

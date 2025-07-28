@@ -1,0 +1,11 @@
+{
+  "status": {
+    "completed": "مكتمل",
+    "cancelled": "ملغى"
+  },
+  "summary": {
+    "passengers": "{{count}} راكب{{count > 1 ? 'ين' : ''}}",
+    "noPassengers": "لا يوجد ركاب",
+    "earned": "تم الكسب {{amount}} درهم"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "header": {
+    "title": "تفاصيل الرحلة"
+  },
+  "start": {
+    "title": "بدء الرحلة",
+    "confirm": "هل أنت متأكد أنك تريد بدء هذه الرحلة؟ سيتم إشعار جميع الركاب.",
+    "action": "ابدأ الرحلة"
+  },
+  "end": {
+    "title": "إنهاء الرحلة",
+    "confirm": "هل أنت متأكد أنك تريد إنهاء هذه الرحلة؟ لا يمكن التراجع عن هذا الإجراء.",
+    "action": "إنهاء الرحلة"
+  },
+  "alerts": {
+    "success": {
+      "title": "نجاح"
+    },
+    "error": {
+      "title": "خطأ",
+      "noPhone": "رقم الهاتف غير متوفر",
+      "callFailed": "تعذر إجراء المكالمة"
+    },
+    "call": {
+      "title": "اتصل بـ {{name}}",
+      "confirm": "هل تريد الاتصال بـ {{phone}}؟"
+    }
+  },
+  "comments": {
+    "title": "ملاحظتك للركاب"
+  },
+  "stopovers": {
+    "title": "محطات التوقف في الرحلة ({{count}})"
+  },
+  "common": {
+    "cancel": "إلغاء",
+    "call": "اتصال",
+    "ok": "موافق",
+    "passenger": "راكب"
+  },
+  "loading": {
+    "rideDetails": "جاري تحميل تفاصيل الرحلة...",
+    "general": "جاري التحميل..."
+  },
+  "errors": {
+    "rideNotFound": "الرحلة غير موجودة",
+    "loadingRide": "خطأ في تحميل الرحلة",
+    "goBack": "العودة"
+  },
+  "status": {
+    "readyToStart": "جاهز للبدء",
+    "inProgress": "قيد التنفيذ",
+    "completed": "مكتملة",
+    "booked": "محجوزة",
+    "unknown": "حالة غير معروفة"
+  },
+  "seatInfo": {
+    "title": "معلومات المقاعد",
+    "available": "المقاعد المتاحة:",
+    "booked": "المقاعد المحجوزة:"
+  },
+  "passengers": {
+    "title": "الركاب ({{count}})",
+    "noPassengers": "لا يوجد ركاب بعد",
+    "noPassengersSubtext": "سيظهر الركاب هنا بمجرد حجزهم لرحلتك",
+    "seats": "{{count}} مقعد",
+    "seats_plural": "{{count}} مقاعد",
+    "unknownPassenger": "راكب غير معروف"
+  },
+  "ride": {
+    "duration": "المدة:",
+    "price": "السعر:",
+    "perSeat": "درهم للمقعد الواحد",
+    "dateNotAvailable": "التاريخ غير متوفر",
+    "unknown": "غير معروف"
+  },
+  "actions": {
+    "rideCompleted": "تم إكمال الرحلة - شكراً لك!"
+  }
+}

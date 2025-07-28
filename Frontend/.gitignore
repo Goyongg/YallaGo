@@ -83,7 +83,15 @@ ios/DerivedData/
 
 # Firebase / Google config
 *.plist
-*.json
+
+# Ignore only specific JSON files
+Frontend/app.json
+Frontend/eas.json
+Frontend/google-services.json
+
+# But NOT the ones in Frontend/locales
+!Frontend/locales/
+!Frontend/locales/*.json
 
 # Git conflict files
 *.orig

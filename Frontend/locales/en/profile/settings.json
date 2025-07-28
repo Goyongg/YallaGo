@@ -1,0 +1,21 @@
+{
+  "title": "Settings",
+  "permissions": "Permissions",
+  "notifications": "Notifications",
+  "notificationsDesc": "Enable to receive important ride updates and alerts",
+  "systemSettings": "Open system settings",
+  "languageSection": "App Language",
+  "restartNote": "Changing the app language may require a full app reload.",
+  "dataPrivacy": "Data & Privacy",
+  "clearSearch": "Clear Recent Searches",
+  "clearSearchDesc": "This will remove all saved search history from your device.",
+  "help": "Help & Support",
+  "clearSearchAlertTitle": "Clear Recent Searches",
+  "clearSearchAlertMsg": "Are you sure you want to clear all your recent searches? This action cannot be undone.",
+  "clearSearchSuccess": "Recent searches have been cleared successfully!",
+  "clearSearchError": "Failed to clear recent searches. Please try again.",
+  "success": "Success",
+  "error": "Error",
+  "cancel": "Cancel",
+  "confirm": "Clear"
+}

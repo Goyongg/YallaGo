@@ -1,0 +1,20 @@
+{
+  "button": "Emergency SOS",
+  "subtitle": "Tap in case of emergency",
+  "activated": {
+    "button": "SOS ACTIVATED",
+    "subtitle": "Emergency services notified",
+    "title": "SOS Activated",
+    "message": "Emergency services have been notified."
+  },
+  "alert": {
+    "title": "Emergency SOS",
+    "message": "This feature will contact emergency services and notify your emergency contacts.",
+    "cancel": "Cancel",
+    "confirm": "Call Emergency"
+  },
+  "error": {
+    "title": "Error",
+    "message": "Could not initiate call. Please dial 999 manually."
+  }
+}

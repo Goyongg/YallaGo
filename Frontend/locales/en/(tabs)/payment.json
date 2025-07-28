@@ -1,0 +1,53 @@
+{
+  "header": {
+    "title": "Payment"
+  },
+  "trip": {
+    "title": "Trip Summary",
+    "pickupLocation": "Pickup Location",
+    "dropoffLocation": "Drop-off Location",
+    "seats": "Seats"
+  },
+  "payment": {
+    "title": "Payment Details",
+    "cardInfo": "Card Information",
+    "cardPlaceholder": "4242 4242 4242 4242"
+  },
+  "amount": {
+    "pricePerSeat": "Price per seat",
+    "numberOfSeats": "Number of seats",
+    "totalAmount": "Total Amount to Authorize",
+    "currency": "AED",
+    "preAuthInfo": "This is a pre-authorization. You'll only be charged if the driver accepts your booking."
+  },
+  "buttons": {
+    "authorize": "Authorize Payment",
+    "processing": "Processing...",
+    "goToBookings": "Go to Bookings"
+  },
+  "security": {
+    "message": "Your payment information is secure and encrypted"
+  },
+  "alerts": {
+    "error": {
+      "title": "Error",
+      "missingDetails": "Missing payment or booking details.",
+      "authError": "Please log in again.",
+      "bookingFailed": "Something went wrong after payment."
+    },
+    "paymentFailed": {
+      "title": "❌ Payment failed",
+      "noIntent": "No payment intent returned."
+    },
+    "success": {
+      "title": "✅ Payment Authorized",
+      "message": "Your payment was authorized and your booking is now created. You'll only be charged if the driver accepts it."
+    },
+    "bookingFailed": {
+      "title": "Booking Failed"
+    }
+  },
+  "fallback": {
+    "notAvailable": "N/A"
+  }
+}

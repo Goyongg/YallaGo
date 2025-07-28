@@ -1,0 +1,17 @@
+{
+  "title": "Info",
+  "license": {
+    "title": "License Agreement",
+    "subtitle": "View terms and conditions"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "subtitle": "How we handle your data"
+  },
+  "version": {
+    "label": "Version {{version}}"
+  },
+  "build": {
+    "label": "Build {{build}}"
+  }
+}

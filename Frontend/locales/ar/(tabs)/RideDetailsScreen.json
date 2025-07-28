@@ -1,0 +1,36 @@
+{
+  "pickupLocation": "موقع الانطلاق",
+  "dropoffLocation": "موقع الوصول",
+  "mapHint": "تحقق من مسار الرحلة على الخريطة 🗺️",
+  "routeLabel": "المسار:",
+  "verifiedDriver": "سائق موثّق",
+  "seatsAvailable": "مقاعد متاحة",
+  "femaleOnlyBadge": "👩 رحلة للنساء فقط",
+  "bookingDetails": "تفاصيل الحجز",
+  "numPassengers": "عدد الركاب:",
+  "pricePerSeat": "السعر لكل راكب:",
+  "xPassengers": "x {{count}} راكب",
+  "total": "الإجمالي:",
+  "booking": "جارٍ الحجز...",
+  "bookSeats": "احجز {{count}} مقعد/مقاعد بـ {{price}} درهم",
+  "bookingNotAllowed": "رحلة للنساء فقط - لا يمكن الحجز",
+  "genderMismatch": "نوع الجنس في ملفك الشخصي: {{gender}} • المطلوب: أنثى",
+  "alerts": {
+    "error": {
+      "title": "فشل الحجز",
+      "message": "حدث خطأ أثناء الحجز."
+    },
+    "notLoggedIn": {
+      "title": "خطأ في تسجيل الدخول",
+      "message": "يرجى تسجيل الدخول لحجز الرحلات"
+    },
+    "invalid": {
+      "title": "خطأ",
+      "message": "معلومات الرحلة غير صالحة"
+    },
+    "bookingNotAllowed": {
+      "title": "الحجز غير متاح",
+      "message": "لا يمكنك حجز هذه الرحلة بسبب القيود."
+    }
+  }
+}

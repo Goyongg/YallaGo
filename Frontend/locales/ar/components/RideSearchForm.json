@@ -1,0 +1,22 @@
+{
+  "fromPlaceholder": "اختر نقطة الانطلاق",
+  "toPlaceholder": "اختر الوجهة",
+  "datePlaceholder": "اختر التاريخ",
+  "femaleOnly": "للنساء فقط",
+  "femaleOnlyNote": "متاح فقط للمستخدمات الإناث",
+  "search": "ابحث عن رحلات",
+  "searching": "جارٍ البحث...",
+  "errors": {
+    "missingTitle": "معلومات ناقصة",
+    "pickupDropoff": "يرجى اختيار مواقع الانطلاق والوصول",
+    "locationTitle": "موقع مفقود",
+    "locationDetails": "يرجى اختيار المواقع من الخريطة",
+    "dateMissing": "يرجى اختيار التاريخ",
+    "invalidTitle": "إدخال غير صالح",
+    "passengerInvalid": "يرجى إدخال عدد صحيح للركاب",
+    "authTitle": "خطأ في المصادقة",
+    "authMessage": "يرجى تسجيل الدخول للبحث عن الرحلات",
+    "searchTitle": "فشل البحث",
+    "searchFallback": "تعذر البحث عن الرحلات. حاول مرة أخرى."
+  }
+}

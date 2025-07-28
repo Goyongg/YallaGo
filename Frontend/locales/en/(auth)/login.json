@@ -1,0 +1,11 @@
+{
+  "title": "Log in to your",
+  "highlight": "account",
+  "emailLabel": "Email",
+  "emailPlaceholder": "Enter your email",
+  "passwordLabel": "Password",
+  "passwordPlaceholder": "Enter your password",
+  "loginButton": "Log in",
+  "loginFailedTitle": "Login Failed",
+  "loginFailedMessage": "Invalid email or password"
+}

@@ -1,0 +1,34 @@
+{
+  "title": "Passenger Requests",
+  "subtitle": "Manage passenger booking requests for your rides",
+  "loading": "Loading passengers booking requests...",
+  "pendingCount": "Pending Requests ({{count}})",
+  "unknown": {
+    "pickup": "Unknown pickup",
+    "destination": "Unknown destination"
+  },
+  "status": {
+    "label": "Status: {{status}}"
+  },
+  "actions": {
+    "accept": "Accept",
+    "decline": "Decline"
+  },
+  "alerts": {
+    "accepted": "Booking from {{name}} accepted!",
+    "declined": "Booking declined",
+    "success": "Success",
+    "error": "Error"
+  },
+  "errors": {
+    "acceptFailed": "Failed to accept booking",
+    "declineFailed": "Failed to decline booking",
+    "notFound": "Booking not found or endpoint unavailable",
+    "forbidden": "Access denied - you may not have permission to accept this booking",
+    "invalid": "Invalid booking request"
+  },
+  "empty": {
+    "title": "No passenger booking requests",
+    "subtitle": "When passengers request to book your rides, they'll appear here"
+  }
+}
