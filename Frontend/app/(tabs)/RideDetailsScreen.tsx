@@ -229,38 +229,39 @@ const RideDetailsScreen = () => {
         return;
       }
 
-      const bookingPayload = {
-        rideId: rideDetails.rideId,
-        seatsBooked: passengerCount,
-        bookingPrice: rideDetails.price,
-      };
-
-      console.log('🚗 Booking ride with payload:', bookingPayload);
-
-      const response = await fetch(`${BASE_URL}/bookings`, {
+      // Call /payments/create-intent to get clientSecret
+      const paymentRes = await fetch(`${BASE_URL}/payments/create-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(bookingPayload),
+        body: JSON.stringify({
+          rideId: rideDetails.rideId,
+          amount: rideDetails.price * passengerCount,
+        }),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Booking error:', errorText);
-        throw new Error(errorText || 'Failed to book ride');
+      if (!paymentRes.ok) {
+        const errorText = await paymentRes.text();
+        throw new Error(`Failed to create payment intent: ${errorText}`);
       }
 
-      const result = await response.json();
-      console.log('Booking successful:', result);
+      const { clientSecret, paymentIntentId } = await paymentRes.json(); // ✅ Now you can safely destructure
 
-      Alert.alert(
-        'Booking Successful! 🎉', 
-        `Your ride has been booked successfully.\n\nBooking ID: ${result.bookingId || 'N/A'}\nSeats booked: ${passengerCount}\nTotal cost: ${((rideDetails.price || 0) * passengerCount).toFixed(1)} AED`,
-        [{ text: 'OK' }]
-      );
-
+      // STEP 2: Navigate to payment screen
+      router.push({
+        pathname: '/payment',
+        params: {
+          clientSecret,
+          paymentIntentId,
+          rideId: rideDetails.rideId,
+          seats: passengerCount.toString(),
+          price: rideDetails.price.toString(),
+          from: rideDetails.from, // 👈
+          to: rideDetails.to,     // 👈
+        },
+      });
     } catch (error: any) {
       console.error('Booking failed:', error);
       

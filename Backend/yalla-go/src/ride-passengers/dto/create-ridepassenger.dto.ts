@@ -14,4 +14,8 @@ export class CreateRidePassengerDto {
     @IsNotEmpty()
     @IsNumber()
     bookingPrice: number;
+
+    @IsNotEmpty()
+    @IsString()
+    paymentIntentId: string;
 }

@@ -2,7 +2,7 @@
   "expo": {
     "name": "YallaGo",
     "slug": "Frontend",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/adaptive-icon.png",
     "scheme": "frontend",
@@ -16,6 +16,7 @@
       }
     },
     "android": {
+      "versionCode": 1,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",

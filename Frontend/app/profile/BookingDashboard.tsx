@@ -148,7 +148,7 @@ const BookingDashboard = () => {
         <View className="w-[95%] self-center flex-1">
           {/* Back Arrow + Title */}
           <View className="flex-row items-center mb-6">
-            <Pressable onPress={() => router.back()}>
+            <Pressable onPress={() => router.replace('/(tabs)/home')}>
               <Ionicons name="arrow-back" size={24} color="black" />
             </Pressable>
             <Text className="text-xl ml-4 font-bold font-[Afacad]">My Bookings</Text>
@@ -171,7 +171,7 @@ const BookingDashboard = () => {
         <View className="w-[95%] self-center flex-1">
           {/* Back Arrow + Title */}
           <View className="flex-row items-center mb-6">
-            <Pressable onPress={() => router.back()}>
+            <Pressable onPress={() => router.replace('/(tabs)/home')}>
               <Ionicons name="arrow-back" size={24} color="black" />
             </Pressable>
             <Text className="text-xl ml-4 font-bold font-[Afacad]">My Bookings</Text>
@@ -203,7 +203,7 @@ const BookingDashboard = () => {
       <View className="w-[95%] self-center flex-1">
         {/* Back Arrow + Title */}
         <View className="flex-row items-center mb-6">
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => router.replace('/(tabs)/home')}>
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
           <Text className="text-xl ml-4 font-bold font-[Afacad]">{t('title')}</Text>

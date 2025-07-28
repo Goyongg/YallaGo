@@ -364,7 +364,7 @@ export class RidesService {
             //if (ride.driverId === firebaseUid) return false;
 
             // Don't include rides that are departed, completed, or cancelled
-            if (ride.status !== RideStatus.IN_PROGRESS) return false;
+            if (![RideStatus.IN_PROGRESS, RideStatus.BOOKED].includes(ride.status)) return false;
 
             // Filter by available seats
             if (ride.availableSeats < searchRidesDto.requestedSeats) return false;
