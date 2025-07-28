@@ -5,8 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import auth from '@react-native-firebase/auth';
 import { BASE_URL } from '@/config';
+import { useTranslation } from 'react-i18next';
 
 const BookingRequests = () => {
+  const { t } = useTranslation('profile/BookingRequests');
+
   const [bookingRequests, setBookingRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -97,7 +100,7 @@ const BookingRequests = () => {
       );
       
       console.log('✅ Accept booking response:', response.data);
-      Alert.alert('Success', `Booking from ${passengerName} accepted!`);
+      Alert.alert(t('alerts.success'), t('alerts.accepted', { name: passengerName }));
       fetchBookingRequests(); // Refresh the list
     } catch (err: any) {
       console.error('❌ Error accepting booking:', err);
@@ -117,7 +120,7 @@ const BookingRequests = () => {
         errorMessage = 'Invalid booking request';
       }
       
-      Alert.alert('Error', errorMessage);
+      Alert.alert(t('alerts.error'), errorMessage);
     }
   };
 
@@ -141,7 +144,7 @@ const BookingRequests = () => {
       );
       
       console.log('✅ Decline booking response:', response.data);
-      Alert.alert('Success', 'Booking declined');
+      Alert.alert(t('alerts.success'), t('alerts.declined'));
       fetchBookingRequests(); // Refresh the list
     } catch (err: any) {
       console.error('❌ Error declining booking:', err);
@@ -156,7 +159,7 @@ const BookingRequests = () => {
         errorMessage = 'Booking not found or endpoint unavailable';
       }
       
-      Alert.alert('Error', errorMessage);
+      Alert.alert(t('alerts.error'), errorMessage);
     }
   };
 
@@ -183,12 +186,12 @@ const BookingRequests = () => {
           <Pressable onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
-          <Text className="text-xl ml-4 font-bold font-[Afacad]">Passenger Requests</Text>
+          <Text className="text-xl ml-4 font-bold font-[Afacad]">{t('title')}</Text>
         </View>
 
         {/* Subtitle */}
         <Text className="text-gray-600 mb-4 font-[Afacad]">
-          Manage passenger booking requests for your rides
+          {t('subtitle')}
         </Text>
 
         {/* Content */}
@@ -215,7 +218,7 @@ const BookingRequests = () => {
           {!loading && bookingRequests.length > 0 && (
             <View className="mb-6">
               <Text className="text-lg font-bold font-[Afacad] text-black mb-4">
-                Pending Requests ({bookingRequests.length})
+                {t('pendingCount', { count: bookingRequests.length })}
               </Text>
               
               {bookingRequests.map((request, index) => {
@@ -247,7 +250,7 @@ const BookingRequests = () => {
                   <View className="flex-row items-center mb-3">
                     <Ionicons name="location-outline" size={16} color="#666" />
                     <Text className="text-sm text-gray-600 font-[Afacad] ml-2 flex-1" numberOfLines={1}>
-                      {request.startLocation || 'Unknown pickup'} → {request.endLocation || 'Unknown destination'}
+                      {request.startLocation || t('unknown.pickup')} → {request.endLocation || t('unknown.destination')}
                     </Text>
                   </View>
                   
@@ -276,7 +279,7 @@ const BookingRequests = () => {
                     <View className="flex-row items-center mb-3">
                       <Ionicons name="information-circle-outline" size={16} color="#666" />
                       <Text className="text-sm text-gray-600 font-[Afacad] ml-2 capitalize">
-                        Status: {request.status}
+                        {t('status.label', { status: request.status })}
                       </Text>
                     </View>
                   )}
@@ -286,13 +289,13 @@ const BookingRequests = () => {
                       onPress={() => declineBooking(request.bookingId || request.id)}
                       className="bg-red-500 px-5 py-3 rounded-lg"
                     >
-                      <Text className="text-white font-[Afacad] font-medium">Decline</Text>
+                      <Text className="text-white font-[Afacad] font-medium">{t('actions.decline')}</Text>
                     </Pressable>
                     <Pressable
                       onPress={() => acceptBooking(request.bookingId || request.id, request.name || 'Passenger')}
                       className="bg-green-500 px-5 py-3 rounded-lg ml-3"
                     >
-                      <Text className="text-white font-[Afacad] font-medium">Accept</Text>
+                      <Text className="text-white font-[Afacad] font-medium">{t('actions.accept')}</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -306,10 +309,10 @@ const BookingRequests = () => {
             <View className="flex-1 justify-center items-center mt-20">
               <Ionicons name="clipboard-outline" size={64} color="#9CA3AF" />
               <Text className="text-center text-gray-400 mt-4 font-[Afacad] text-lg">
-                No passenger booking requests
+                {t('empty.title')}
               </Text>
               <Text className="text-center text-gray-400 mt-2 font-[Afacad]">
-                When passengers request to book your rides, they'll appear here
+                {t('empty.subtitle')}
               </Text>
             </View>
           )}

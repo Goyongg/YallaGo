@@ -1,4 +1,4 @@
-// app/ride-details.tsx - Enhanced with comments and stopovers
+// app/(tabs)/ride-details.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -20,6 +20,8 @@ import axios from 'axios';
 import ReviewModal from '../components/ReviewModal';
 import useHomeUserData from '../../hooks/useHomeUserData';
 import { BASE_URL } from '@/config';
+import SOSButton from '../components/SOSButton';
+import { useTranslation } from 'react-i18next';
 
 interface PassengerInfo {
   name: string;
@@ -77,6 +79,8 @@ const safeNumber = (value: any): number => {
 };
 
 const RideDetailsScreen = () => {
+  const { t } = useTranslation('(tabs)/ride-details');
+
   const router = useRouter();
   const params = useLocalSearchParams();
   const mapRef = useRef<MapView>(null);
@@ -496,13 +500,13 @@ const RideDetailsScreen = () => {
     const safePhone = safeString(phoneNumber);
     
     if (!safePhone) {
-      Alert.alert('Error', 'No phone number available');
+      Alert.alert(t('alerts.errorTitle'), t('alerts.noPhone'));
       return;
     }
 
     Alert.alert(
-      `Call ${safeName}`,
-      `Do you want to call ${safePhone}?`,
+      t('alerts.callTitle', { name: safeName }), 
+      t('alerts.callConfirm', { phone: safePhone }), 
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -637,25 +641,6 @@ const RideDetailsScreen = () => {
     }
   };
 
-  const handleSOSPress = () => {
-    Alert.alert(
-      'Emergency SOS',
-      'This feature will contact emergency services and notify your emergency contacts.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Call Emergency', 
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('SOS Activated', 'Emergency services have been notified.');
-            const emergencyNumber = '999'; // UAE emergency number
-            Linking.openURL(`tel:${emergencyNumber}`);
-          }
-        },
-      ]
-    );
-  };
-
   const handleReviewComplete = () => {
     setShowReviewModal(false);
     setReviewTarget(null);
@@ -688,14 +673,14 @@ const RideDetailsScreen = () => {
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
           <Text className="text-xl font-bold font-[Afacad] text-black">
-            Ride Details
+            {t('header')}
           </Text>
           <View className="w-8" />
         </View>
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#00BD5F" />
           <Text className="mt-4 text-lg font-[Afacad] text-gray-600">
-            Loading ride details...
+            {t('loading')}
           </Text>
         </View>
       </SafeAreaView>
@@ -711,14 +696,14 @@ const RideDetailsScreen = () => {
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
           <Text className="text-xl font-bold font-[Afacad] text-black">
-            Ride Details
+            {t('header')}
           </Text>
           <View className="w-8" />
         </View>
         <View className="flex-1 justify-center items-center px-4">
           <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
           <Text className="text-lg font-bold text-gray-800 mt-4 text-center font-[Afacad]">
-            Error Loading Ride
+            {t('errorTitle')}
           </Text>
           <Text className="text-gray-600 mt-2 text-center font-[Afacad]">
             {safeString(error)}
@@ -727,12 +712,16 @@ const RideDetailsScreen = () => {
             onPress={() => router.back()}
             className="bg-[#00BD5F] px-6 py-3 rounded-lg mt-6"
           >
-            <Text className="text-white font-bold font-[Afacad]">Go Back</Text>
+            <Text className="text-white font-bold font-[Afacad]">{t('goBack')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
     );
   }
+
+  const totalSeatsBooked = passengers.reduce((total, passenger) => {
+    return total + safeNumber(passenger.seatsBooked);
+  }, 0);
 
   const renderDriverView = () => (
     <>
@@ -740,7 +729,7 @@ const RideDetailsScreen = () => {
       <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
         <View className="p-4 border-b border-gray-200">
           <Text className="text-lg font-bold font-[Afacad] text-black">
-            Passengers ({passengers.length})
+            {t('passengersLabel')} ({totalSeatsBooked})
           </Text>
         </View>
         
@@ -753,7 +742,7 @@ const RideDetailsScreen = () => {
                     {safeString(passenger.name) || 'Unknown Passenger'}
                   </Text>
                   <Text className="text-sm font-[Afacad] text-gray-600">
-                    {safeNumber(passenger.seatsBooked)} seat{safeNumber(passenger.seatsBooked) > 1 ? 's' : ''}
+                    {safeNumber(passenger.seatsBooked)} {t('seat')}{safeNumber(passenger.seatsBooked)}
                   </Text>
                 </View>
                 <Pressable
@@ -761,17 +750,33 @@ const RideDetailsScreen = () => {
                   className="bg-green-500 px-4 py-2 rounded-full flex-row items-center"
                 >
                   <Ionicons name="call" size={16} color="white" />
-                  <Text className="text-white font-[Afacad] ml-2">Call</Text>
+                  <Text className="text-white font-[Afacad] ml-2">{t('call')}</Text>
                 </Pressable>
               </View>
             ))}
           </ScrollView>
         ) : (
           <View className="p-4 items-center">
-            <Text className="text-gray-500 font-[Afacad]">No passengers yet</Text>
+            <Text className="text-gray-500 font-[Afacad]">{t('noPassengers')}</Text>
           </View>
         )}
       </View>
+
+      {/* Reusable SOS Button for Driver */}
+      <SOSButton
+        rideId={rideData?.rideId || ''}
+        userRole="driver"
+        rideStatus={rideData?.status || ''}
+        rideData={{
+          coordinates: rideData?.coordinates,
+          from: rideData?.from,
+          to: rideData?.to
+        }}
+        onSOSActivated={() => {
+          console.log('📞 Driver activated SOS on ride-details page');
+          // Optional: Notify passengers or additional actions
+        }}
+      />
 
       {/* Driver Action Buttons */}
       <View className="mx-4 mb-4">
@@ -782,7 +787,7 @@ const RideDetailsScreen = () => {
             className="bg-green-500 py-4 rounded-lg mb-3 items-center"
           >
             <Text className="text-white text-lg font-[Afacad] font-semibold">
-              {loading ? 'Starting...' : 'Start Ride'}
+              {loading ? '{t(starting)}' : '{t(startRide)}'}
             </Text>
           </Pressable>
         )}
@@ -794,7 +799,7 @@ const RideDetailsScreen = () => {
             className="bg-red-500 py-4 rounded-lg mb-3 items-center"
           >
             <Text className="text-white text-lg font-[Afacad] font-semibold">
-              {loading ? 'Ending...' : 'End Ride'}
+              {loading ? '{t(ending)}' : '{t(endRide)}'}
             </Text>
           </Pressable>
         )}
@@ -802,7 +807,7 @@ const RideDetailsScreen = () => {
         {rideStatus === 'completed' && (
           <View className="bg-gray-100 py-4 rounded-lg items-center">
             <Text className="text-gray-600 text-lg font-[Afacad]">
-              Ride Completed - Thank you!
+              {t('rideCompleted')}
             </Text>
           </View>
         )}
@@ -817,7 +822,7 @@ const RideDetailsScreen = () => {
         <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
           <View className="p-4 border-b border-gray-200">
             <Text className="text-lg font-bold font-[Afacad] text-black">
-              Your Driver
+              {t('yourDriver')}
             </Text>
           </View>
           
@@ -842,14 +847,14 @@ const RideDetailsScreen = () => {
                 className="bg-green-500 px-4 py-2 rounded-full flex-row items-center"
               >
                 <Ionicons name="call" size={16} color="white" />
-                <Text className="text-white font-[Afacad] ml-2">Call</Text>
+                <Text className="text-white font-[Afacad] ml-2">{t('call')}</Text>
               </Pressable>
             </View>
             
             {/* Vehicle Info */}
             {vehicleInfo && (
               <View className="bg-gray-50 rounded-lg p-3">
-                <Text className="text-sm font-[Afacad] text-gray-600 mb-2">Vehicle</Text>
+                <Text className="text-sm font-[Afacad] text-gray-600 mb-2">{t('vehicle')}</Text>
                 <Text className="text-base font-[Afacad] font-medium text-black">
                   {safeString(vehicleInfo.make)} {safeString(vehicleInfo.model)} • {safeString(vehicleInfo.color)}
                 </Text>
@@ -862,30 +867,28 @@ const RideDetailsScreen = () => {
         </View>
       )}
 
-      {/* SOS Button */}
-      <View className="mx-4 mb-4">
-        <Pressable
-          onPress={handleSOSPress}
-          className="bg-red-500 py-4 rounded-lg items-center border-2 border-red-600"
-        >
-          <View className="flex-row items-center">
-            <Ionicons name="warning" size={24} color="white" />
-            <Text className="text-white text-lg font-[Afacad] font-bold ml-2">
-              Emergency SOS
-            </Text>
-          </View>
-          <Text className="text-red-100 text-sm font-[Afacad] mt-1">
-            Tap in case of emergency
-          </Text>
-        </Pressable>
-      </View>
+      {/* Reusable SOS Button */}
+      <SOSButton
+        rideId={rideData?.rideId || ''}
+        userRole="passenger"
+        rideStatus={rideData?.status || ''}
+        rideData={{
+          coordinates: rideData?.coordinates,
+          from: rideData?.from,
+          to: rideData?.to
+        }}
+        onSOSActivated={() => {
+          console.log('📞 Passenger activated SOS on ride-details page');
+          // Optional: Add any additional logging or analytics
+        }}
+      />
 
       {/* Passenger Action Buttons */}
       <View className="mx-4 mb-4">
         {rideStatus === 'completed' && !showReviewModal && (
           <View className="bg-gray-100 py-4 rounded-lg items-center">
             <Text className="text-gray-600 text-lg font-[Afacad]">
-              Ride Completed - Thank you!
+              {t('rideCompleted')}
             </Text>
           </View>
         )}
@@ -901,7 +904,7 @@ const RideDetailsScreen = () => {
           <Ionicons name="arrow-back" size={24} color="black" />
         </Pressable>
         <Text className="text-xl font-bold font-[Afacad] text-black">
-          Ride Details
+          {t('header')}
         </Text>
         <View className="w-8" />
       </View>

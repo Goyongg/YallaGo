@@ -7,6 +7,7 @@ import DatePickerModal from './DatePickerModal'; // Updated import
 import { saveRecentSearch } from '../../utils/recentSearchStorage';
 import auth from '@react-native-firebase/auth';
 import { BASE_URL } from '@/config';
+import { useTranslation } from 'react-i18next';
 
 interface LocationData {
   name: string;
@@ -38,6 +39,8 @@ const RideSearchForm: React.FC<ExtendedRideSearchFormProps> = ({
   initialToCoordinates,
   initialDate,
 }) => {
+  const { t } = useTranslation('components/RideSearchForm');
+
   const [selectedDate, setSelectedDate] = useState<Date | null>(null); // Changed from dateTime to selectedDate
   const [pickerVisible, setPickerVisible] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -135,7 +138,7 @@ const RideSearchForm: React.FC<ExtendedRideSearchFormProps> = ({
   // Updated to show only date, no time
   const formattedDate = selectedDate
     ? selectedDate.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })
-    : 'Select date';
+    : t('datePlaceholder');
 
   // Add this useEffect to reset femaleOnly if user is not female
   useEffect(() => {
@@ -163,29 +166,29 @@ const RideSearchForm: React.FC<ExtendedRideSearchFormProps> = ({
   const handleSearch = async () => {
     // Validation
     if (!from || !to) {
-      Alert.alert('Missing Information', 'Please select pickup and destination locations');
+      Alert.alert(t('errors.missingTitle'), t('errors.pickupDropoff'));
       return;
     }
 
     if (!fromLocation || !toLocation) {
-      Alert.alert('Missing Location', 'Please select locations from the map');
+      Alert.alert(t('errors.locationTitle'), t('errors.locationDetails'));
       return;
     }
 
     if (!selectedDate) {
-      Alert.alert('Missing Information', 'Please select a date');
+      Alert.alert(t('errors.missingTitle'), t('errors.dateMissing'));
       return;
     }
 
     if (!passengerCount || parseInt(passengerCount) < 1) {
-      Alert.alert('Invalid Input', 'Please enter a valid number of passengers');
+      Alert.alert(t('errors.invalidTitle'), t('errors.passengerInvalid'));
       return;
     }
 
     // Get authentication token
     const token = await auth().currentUser?.getIdToken();
     if (!token) {
-      Alert.alert('Authentication Error', 'Please log in to search for rides');
+      Alert.alert(t('errors.authTitle'), t('errors.authMessage'));
       return;
     }
 
@@ -278,10 +281,7 @@ const RideSearchForm: React.FC<ExtendedRideSearchFormProps> = ({
 
     } catch (error: any) {
       console.error('Search error:', error);
-      Alert.alert(
-        'Search Failed', 
-        error.message || 'Unable to search for rides. Please try again.'
-      );
+      Alert.alert(t('errors.searchTitle'), error.message || t('errors.searchFallback'));
     } finally {
       setIsSearching(false);
     }
@@ -303,7 +303,7 @@ const RideSearchForm: React.FC<ExtendedRideSearchFormProps> = ({
                 className="ml-2 flex-1"
               >
                 <Text className={`ml-2 text-lg font-[Afacad] py-3 ${from ? 'text-black' : 'text-[#A0AEC0]'}`}>
-                  {from || 'Select starting point'}
+                  {from || t('fromPlaceholder')}
                 </Text>
               </Pressable>
               {from && (
@@ -321,7 +321,7 @@ const RideSearchForm: React.FC<ExtendedRideSearchFormProps> = ({
                 className="ml-2 flex-1"
               >
                 <Text className={`ml-2 text-lg font-[Afacad] py-3 ${to ? 'text-black' : 'text-[#A0AEC0]'}`}>
-                  {to || 'Select destination'}
+                  {to || t('toPlaceholder')}
                 </Text>
               </Pressable>
               {to && (
@@ -360,10 +360,10 @@ const RideSearchForm: React.FC<ExtendedRideSearchFormProps> = ({
           {/* Female-only Toggle - Show but disable for non-female users */}
           <View className="flex-row justify-between items-center mt-4 mx-4">
             <View className="flex-1">
-              <Text className="text-xl font-[Afacad] text-gray-700">Female-only</Text>
+              <Text className="text-xl font-[Afacad] text-gray-700">{t('femaleOnly')}</Text>
               {!isFemale && (
                 <Text className="text-sm font-[Afacad] text-gray-500 mt-1">
-                  Only available for female users
+                  {t('femaleOnlyNote')}
                 </Text>
               )}
             </View>
@@ -392,7 +392,7 @@ const RideSearchForm: React.FC<ExtendedRideSearchFormProps> = ({
                 <Ionicons name="sync" size={18} color="white" style={{ marginRight: 8 }} />
               )}
               <Text className="text-white text-xl text-base font-[Afacad]">
-                {isSearching ? 'Searching...' : 'Search Rides'}
+                {isSearching ? t('searching') : t('search')}
               </Text>
             </View>
           </Pressable>

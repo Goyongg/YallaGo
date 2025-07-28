@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import auth from '@react-native-firebase/auth';
+import '../i18n';
 
 export default function Index() {
   const router = useRouter();
@@ -24,10 +25,10 @@ export default function Index() {
           const email = user.email;
           const idToken = await user.getIdToken();
 
-          // console.log('User is signed in');
-          // console.log('UID:', uid);
-          // console.log('Email:', email);
-          // console.log('Token:', idToken);
+          console.log('User is signed in');
+          console.log('UID:', uid);
+          console.log('Email:', email);
+          console.log('Token:', idToken);
 
           router.replace('/(tabs)/home');
         } catch (error) {

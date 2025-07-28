@@ -1,8 +1,9 @@
-// components/UpcomingRideCard.tsx - Dynamic title based on ride status
+// components/UpcomingRideCard.tsx - i18n integrated
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 interface UpcomingRideCardProps {
   rideId: string;
@@ -10,8 +11,7 @@ interface UpcomingRideCardProps {
   from: string;
   to: string;
   userRole: 'driver' | 'passenger';
-  status?: string; // ← ADD: New status prop
-  // For passengers
+  status?: string;
   vehicle?: {
     make: string;
     model: string;
@@ -28,35 +28,36 @@ const UpcomingRideCard: React.FC<UpcomingRideCardProps> = ({
   from,
   to,
   userRole,
-  status, // ← ADD: New status prop
+  status,
   vehicle,
   passengerCount
 }) => {
   const router = useRouter();
+  const { t } = useTranslation('components/UpcomingRideCard');
 
-  // ✨ NEW: Get dynamic title and color based on status
+  // Get dynamic title and color based on status
   const getRideStatusInfo = () => {
     switch (status) {
       case 'departed':
       case 'ongoing':
         return {
-          title: 'Active Ride',
-          iconColor: '#FF6B35', // Orange color for active
+          title: t('status.active'),
+          iconColor: '#FF6B35',
           bgColor: 'bg-orange-100',
           textColor: 'text-orange-700'
         };
       case 'completed':
         return {
-          title: 'Completed Ride',
-          iconColor: '#4CAF50', // Green for completed
+          title: t('status.completed'),
+          iconColor: '#4CAF50',
           bgColor: 'bg-green-100',
           textColor: 'text-green-700'
         };
       case 'in-progress':
       default:
         return {
-          title: 'Upcoming Ride',
-          iconColor: '#00BD5F', // Default green
+          title: t('status.upcoming'),
+          iconColor: '#00BD5F',
           bgColor: 'bg-green-100',
           textColor: 'text-green-700'
         };
@@ -73,7 +74,7 @@ const UpcomingRideCard: React.FC<UpcomingRideCardProps> = ({
       params: {
         rideId,
         userRole,
-        status, // ← ADD: Pass status to ride details
+        status,
         vehicle: vehicle ? JSON.stringify(vehicle) : undefined,
         passengerCount: passengerCount?.toString(),
       },
@@ -84,13 +85,9 @@ const UpcomingRideCard: React.FC<UpcomingRideCardProps> = ({
   const formatTime = (timeString: string) => {
     try {
       const date = new Date(timeString);
-      if (isNaN(date.getTime())) {
-        console.warn('🚗 Invalid time string:', timeString);
-        return timeString;
-      }
+      if (isNaN(date.getTime())) return timeString;
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    } catch (error) {
-      console.error('🚗 Error formatting time:', error);
+    } catch {
       return timeString;
     }
   };
@@ -99,33 +96,21 @@ const UpcomingRideCard: React.FC<UpcomingRideCardProps> = ({
   const formatDate = (timeString: string) => {
     try {
       const date = new Date(timeString);
-      if (isNaN(date.getTime())) {
-        console.warn('🚗 Invalid date string:', timeString);
-        return '';
-      }
-      
+      if (isNaN(date.getTime())) return '';
       const today = new Date();
-      const tomorrow = new Date(today);
+      const tomorrow = new Date();
       tomorrow.setDate(today.getDate() + 1);
-      
-      if (date.toDateString() === today.toDateString()) {
-        return 'Today';
-      } else if (date.toDateString() === tomorrow.toDateString()) {
-        return 'Tomorrow';
-      } else {
-        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-      }
-    } catch (error) {
-      console.error('🚗 Error formatting date:', error);
+      if (date.toDateString() === today.toDateString()) return t('dates.today');
+      if (date.toDateString() === tomorrow.toDateString()) return t('dates.tomorrow');
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    } catch {
       return '';
     }
   };
 
   // Truncate long addresses
   const truncateAddress = (address: string, maxLength: number = 30) => {
-    if (!address || typeof address !== 'string') {
-      return 'Unknown location';
-    }
+    if (!address || typeof address !== 'string') return t('unknownLocation');
     return address.length > maxLength ? `${address.substring(0, maxLength)}...` : address;
   };
 
@@ -147,7 +132,7 @@ const UpcomingRideCard: React.FC<UpcomingRideCardProps> = ({
   });
 
   return (
-    <Pressable 
+    <Pressable
       onPress={handleCardPress}
       className="self-center w-[80%] bg-white rounded-xl p-4 mb-6 shadow-md border border-gray-200 active:bg-gray-50"
     >
@@ -215,7 +200,7 @@ const UpcomingRideCard: React.FC<UpcomingRideCardProps> = ({
             <>
               <Ionicons name="people-outline" size={16} color="#666" />
               <Text className="ml-2 text-gray-600 font-[Afacad] text-sm">
-                {passengerCount} {passengerCount === 1 ? 'passenger' : 'passengers'}
+                {passengerCount} {passengerCount === 1 ? t('passenger') : t('passengers')}
               </Text>
             </>
           )}

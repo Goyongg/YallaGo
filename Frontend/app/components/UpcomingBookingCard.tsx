@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 interface UpcomingBookingCardProps {
   id: string;
@@ -44,6 +45,7 @@ const UpcomingBookingCard: React.FC<UpcomingBookingCardProps> = ({
   vehicle,
   stopovers,
 }) => {
+  const { t } = useTranslation('components/UpcomingBookingCard');
   const router = useRouter();
 
   const truncateText = (text: string, maxLength: number = 12) => {
@@ -66,28 +68,28 @@ const UpcomingBookingCard: React.FC<UpcomingBookingCardProps> = ({
   const getStatusDisplay = (status: string) => {
     switch (status.toLowerCase()) {
       case 'pending':
-        return {
-          text: 'Pending',
-          bgColor: 'bg-yellow-100',
-          textColor: 'text-yellow-700'
+        return { 
+          text: t('status.pending'), 
+          bgColor: 'bg-yellow-100', 
+          textColor: 'text-yellow-700' 
         };
       case 'confirmed':
-        return {
-          text: 'Confirmed',
-          bgColor: 'bg-[#00BD5F]',
-          textColor: 'text-white'
+        return { 
+          text: t('status.confirmed'), 
+          bgColor: 'bg-[#00BD5F]', 
+          textColor: 'text-white' 
         };
       case 'ongoing':
-        return {
-          text: 'In Progress',
-          bgColor: 'bg-blue-500',
-          textColor: 'text-white'
+        return { 
+          text: t('status.inProgress'), 
+          bgColor: 'bg-blue-500', 
+          textColor: 'text-white' 
         };
       default:
-        return {
-          text: 'Confirmed',
-          bgColor: 'bg-[#00BD5F]',
-          textColor: 'text-white'
+        return { 
+          text: t('status.confirmed'), 
+          bgColor: 'bg-[#00BD5F]', 
+          textColor: 'text-white' 
         };
     }
   };
@@ -173,7 +175,7 @@ const UpcomingBookingCard: React.FC<UpcomingBookingCardProps> = ({
           <View className="flex-row items-center mt-1">
             <Ionicons name="flag-outline" size={16} color="#6B7280" />
             <Text className="text-xs text-gray-500 font-[Afacad] ml-2">
-              {stopovers.length} stopover{stopovers.length > 1 ? 's' : ''}
+              {t('stopovers', { count: stopovers.length })}
             </Text>
           </View>
         )}
@@ -183,10 +185,10 @@ const UpcomingBookingCard: React.FC<UpcomingBookingCardProps> = ({
       <View className="flex-row justify-between items-center">
         <View className="flex-row items-center">
           <Text className="text-sm text-gray-600 font-[Afacad]">
-            🪑 {seatsBooked} seat{seatsBooked > 1 ? 's' : ''} booked
+            {t('summary.seatsBooked', { count: seatsBooked })}
           </Text>
           <Text className="text-xs text-gray-500 font-[Afacad] ml-3">
-            • Tap to view details
+            • {t('tapToView')}
           </Text>
         </View>
         

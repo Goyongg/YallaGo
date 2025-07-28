@@ -1,7 +1,9 @@
+// components/RideResultCard.tsx - i18n integrated
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 interface RideResultCardProps {
   departureTime: string;
@@ -20,7 +22,6 @@ interface RideResultCardProps {
   availableSeats?: number;
   femaleOnly?: boolean;
   rideId?: string;
-  // Vehicle information from backend
   vehicleMake?: string;
   vehicleModel?: string;
   vehicleColor?: string;
@@ -54,13 +55,13 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
   polyline,
 }) => {
   const router = useRouter();
+  const { t } = useTranslation('components/RideResultCard');
 
   const isFemale = userGender?.toLowerCase() === 'female';
   const canBookRide = !femaleOnly || isFemale;
 
   const handleCardPress = () => {
     if (rideId) {
-      // Navigate to ride details screen with vehicle information
       router.push({
         pathname: '/(tabs)/RideDetailsScreen',
         params: {
@@ -75,18 +76,17 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
           toLat,
           toLng,
           price,
-          polyline, // send polyline as string
+          polyline,
           driverName,
           driverRating: driverRating.toString(),
           availableSeats: availableSeats?.toString(),
           femaleOnly: femaleOnly ? '1' : '0',
-          // Pass vehicle information
           vehicleMake: vehicleMake || '',
           vehicleModel: vehicleModel || '',
           vehicleColor: vehicleColor || '',
           vehiclePlateNumber: vehiclePlateNumber || '',
           userGender: userGender || 'prefer_not_to_say',
-        }
+        },
       });
     }
   };
@@ -97,13 +97,12 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
     }
   };
 
-  // Display vehicle info in the card if available
-  const vehicleDisplay = vehicleMake && vehicleModel 
+  const vehicleDisplay = vehicleMake && vehicleModel
     ? `${vehicleColor} ${vehicleMake} ${vehicleModel} • ${vehiclePlateNumber}`
-    : 'Vehicle details available';
+    : t('vehicleDetails');
 
   return (
-    <Pressable 
+    <Pressable
       onPress={handleCardPress}
       className="bg-[#F3F3F3] rounded-2xl p-4 mb-4 shadow border border-gray-100 active:bg-gray-200"
     >
@@ -127,13 +126,9 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
 
           {/* Right: Locations */}
           <View className="ml-2 flex-1">
-            <Text className="text-md font-semibold font-[Afacad]" numberOfLines={1}>
-              {from}
-            </Text>
+            <Text className="text-md font-semibold font-[Afacad]" numberOfLines={1}>{from}</Text>
             <View className="h-5" />
-            <Text className="text-md font-semibold font-[Afacad]" numberOfLines={1}>
-              {to}
-            </Text>
+            <Text className="text-md font-semibold font-[Afacad]" numberOfLines={1}>{to}</Text>
           </View>
         </View>
 
@@ -142,7 +137,7 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
           <Text className="text-lg font-bold text-black font-[Afacad]">{price} AED</Text>
           {availableSeats && (
             <Text className="text-xs text-gray-500 font-[Afacad] mt-1">
-              {availableSeats} seat{availableSeats !== 1 ? 's' : ''} left
+              {t('seatsLeft', { count: availableSeats })}
             </Text>
           )}
         </View>
@@ -152,12 +147,12 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
       <View className="flex-row mb-2 flex-wrap">
         {femaleOnly && (
           <View className="bg-pink-100 px-2 py-1 rounded-full mr-2 mb-1">
-            <Text className="text-xs text-pink-600 font-[Afacad] font-medium">Female-only</Text>
+            <Text className="text-xs text-pink-600 font-[Afacad] font-medium">{t('femaleOnly')}</Text>
           </View>
         )}
         {femaleOnly && !isFemale && (
           <View className="bg-gray-100 px-2 py-1 rounded-full mb-1">
-            <Text className="text-xs text-gray-600 font-[Afacad]">Not available for your gender</Text>
+            <Text className="text-xs text-gray-600 font-[Afacad]">{t('notAvailable')}</Text>
           </View>
         )}
       </View>
@@ -173,32 +168,20 @@ const RideResultCard: React.FC<RideResultCardProps> = ({
               <Text className="font-[Afacad] text-base font-medium">{driverName}</Text>
               <View className="flex-row items-center ml-2">
                 <Ionicons name="star" size={12} color="#FFD700" />
-                <Text className="text-sm text-gray-500 font-[Afacad] ml-1">
-                  {(driverRating || 0).toFixed(1)}
-                </Text>
+                <Text className="text-sm text-gray-500 font-[Afacad] ml-1">{(driverRating || 0).toFixed(1)}</Text>
               </View>
             </View>
-            <Text className="text-sm text-gray-500 font-[Afacad]" numberOfLines={1}>
-              {vehicleDisplay}
-            </Text>
+            <Text className="text-sm text-gray-500 font-[Afacad]" numberOfLines={1}>{vehicleDisplay}</Text>
           </View>
         </View>
 
-        {/* Conditional Book Now Button */}
         {canBookRide ? (
-          <Pressable 
-            onPress={handleBookPress}
-            className="bg-[#00BD5F] px-4 py-2 rounded-xl"
-          >
-            <Text className="text-white font-[Afacad] text-sm font-semibold">
-              Book Now
-            </Text>
+          <Pressable onPress={handleBookPress} className="bg-[#00BD5F] px-4 py-2 rounded-xl">
+            <Text className="text-white font-[Afacad] text-sm font-semibold">{t('bookNow')}</Text>
           </Pressable>
         ) : (
           <View className="bg-gray-300 px-4 py-2 rounded-xl">
-            <Text className="text-gray-600 font-[Afacad] text-sm font-semibold">
-              Female Only
-            </Text>
+            <Text className="text-gray-600 font-[Afacad] text-sm font-semibold">{t('femaleOnly')}</Text>
           </View>
         )}
       </View>

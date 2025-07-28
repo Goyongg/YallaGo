@@ -5,6 +5,7 @@ import MapView, { Region } from 'react-native-maps';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
 const LATITUDE_DELTA = 0.02;
@@ -24,6 +25,8 @@ const DEFAULT_REGION = {
 };
 
 const LocationPicker = () => {
+  const { t } = useTranslation('(modals)/location-picker');
+
   const router = useRouter();
   const params = useLocalSearchParams<{ 
     type: string; 
@@ -265,7 +268,7 @@ const LocationPicker = () => {
 
   const handleConfirm = () => {
     if (!type || !selectedLocation) {
-      Alert.alert('Missing Information', 'Please select a location');
+      Alert.alert(t('errors.missingTitle'), t('errors.missingBody'));
       return;
     }
 
@@ -448,13 +451,13 @@ const LocationPicker = () => {
   const getHeaderTitle = () => {
     switch (type) {
       case 'pickup':
-        return 'Select Pickup Location';
+        return t('title.pickup');
       case 'dropoff':
-        return 'Select Drop-off Location';
+        return t('title.dropoff');
       case 'stopover':
-        return `Select Stopover ${stopoverIndex ? parseInt(stopoverIndex) + 1 : ''} Location`;
+        return t('title.stopover', { index: stopoverIndex ? parseInt(stopoverIndex) + 1 : '' });
       default:
-        return 'Select Location';
+        return t('title.default');
     }
   };
 
@@ -549,7 +552,7 @@ const LocationPicker = () => {
             <TextInput
               value={searchQuery}
               onChangeText={handleSearchChange}
-              placeholder="Search for a location..."
+              placeholder={t('searchPlaceholder')}
               className="flex-1 ml-3 text-base font-[Afacad]"
               placeholderTextColor="#999"
               autoCapitalize="words"
@@ -601,7 +604,7 @@ const LocationPicker = () => {
           <View className="bg-white px-4 py-3 border-b border-gray-200 flex-row items-center">
             <Ionicons name="sync" size={20} color="#00BD5F" />
             <Text className="ml-3 text-base font-[Afacad] text-gray-600">
-              Searching...
+              {t('searching')}
             </Text>
           </View>
         )}
@@ -613,7 +616,7 @@ const LocationPicker = () => {
               <Ionicons name="location" size={16} color="white" />
             </View>
             <View className="ml-3 flex-1">
-              <Text className="text-sm text-gray-500 font-[Afacad] mb-1">Selected Location:</Text>
+              <Text className="text-sm text-gray-500 font-[Afacad] mb-1">{t('selectedLabel')}</Text>
               <Text className="text-base text-gray-800 font-[Afacad] font-semibold" numberOfLines={2}>
                 {selectedLocation.name}
               </Text>
@@ -647,7 +650,7 @@ const LocationPicker = () => {
           onPress={handleConfirm}
         >
           <Text className="text-white text-lg font-[Afacad] font-semibold">
-            Confirm Location
+            {t('confirm')}
           </Text>
         </Pressable>
       </View>

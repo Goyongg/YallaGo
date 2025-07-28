@@ -1,4 +1,4 @@
-// app/booking-details.tsx - Enhanced with comments and stopovers
+// app/(tabs)/booking-details.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -16,7 +16,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import auth from '@react-native-firebase/auth';
 import axios from 'axios';
 import { BASE_URL } from '@/config';
+import SOSButton from '../components/SOSButton';
+import { useTranslation } from 'react-i18next';
 
+// ... (keep all existing interfaces exactly the same)
 interface BookingData {
   bookingId: string;
   rideId: string;
@@ -57,6 +60,7 @@ interface BookingData {
 }
 
 const BookingDetailsScreen = () => {
+  const { t } = useTranslation('(tabs)/bookingDetails');
   const router = useRouter();
   const params = useLocalSearchParams();
   const mapRef = useRef<MapView>(null);
@@ -223,7 +227,7 @@ const BookingDetailsScreen = () => {
     }
   };
 
-  // NEW: Process stopovers from waypoints
+  // Process stopovers from waypoints
   const processStopovers = (waypoints: any[]) => {
     console.log('🛑 Processing waypoints:', waypoints);
     
@@ -285,7 +289,7 @@ const BookingDetailsScreen = () => {
       setBookingData(targetBooking);
       processCoordinatesAndPolyline(targetBooking);
       
-      // NEW: Process stopovers from waypoints
+      // Process stopovers from waypoints
       processStopovers(targetBooking.waypoints);
 
     } catch (err: any) {
@@ -305,14 +309,14 @@ const BookingDetailsScreen = () => {
     }
   }, [bookingId]);
 
-  // NEW: Render driver comment section (keeping original design style)
+  // Render driver comment section
   const renderDriverComment = () => {
     if (!bookingData?.comments) return null;
     
     return (
       <View className="mx-4 mb-6">
         <Text className="text-lg font-semibold font-[Afacad] mb-3">
-          Driver's Note
+          {t('comments.title')}
         </Text>
         <View className="bg-gray-100 rounded-xl p-4">
           <View className="flex-row items-start">
@@ -327,14 +331,14 @@ const BookingDetailsScreen = () => {
     );
   };
 
-  // NEW: Render stopovers section (keeping original design style)
+  // Render stopovers section
   const renderStopovers = () => {
     if (!stopovers || stopovers.length === 0) return null;
 
     return (
       <View className="mx-4 mb-6">
         <Text className="text-lg font-semibold font-[Afacad] mb-3">
-          Trip Stopovers ({stopovers.length})
+          {t('stopovers.title', { count: stopovers.length })}
         </Text>
         <View className="bg-orange-50 rounded-xl p-4">
           {stopovers.map((stopover, index) => (
@@ -358,21 +362,21 @@ const BookingDetailsScreen = () => {
     const safePhone = safeString(phoneNumber);
     
     if (!safePhone) {
-      Alert.alert('Error', 'No phone number available');
+      Alert.alert(t('alerts.error.title'), t('errors.noPhone'));
       return;
     }
 
     Alert.alert(
-      `Call ${safeName}`,
-      `Do you want to call ${safePhone}?`,
+      t('alerts.call.title', { name: safeName }),
+      t('alerts.call.confirm', { phone: safePhone }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('alerts.call.cancel'), style: 'cancel' },
         { 
-          text: 'Call', 
+          text: t('alerts.call.call'), 
           onPress: () => {
             const url = `tel:${safePhone}`;
             Linking.openURL(url).catch(err => 
-              Alert.alert('Error', 'Unable to make phone call')
+              Alert.alert(t('alerts.error.title'), t('errors.callFailed'))
             );
           }
         },
@@ -380,54 +384,38 @@ const BookingDetailsScreen = () => {
     );
   };
 
-  const handleSOSPress = () => {
-    Alert.alert(
-      'Emergency SOS',
-      'This feature will contact emergency services and notify your emergency contacts.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Call Emergency', 
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('SOS Activated', 'Emergency services have been notified.');
-            const emergencyNumber = '999'; // UAE emergency number
-            Linking.openURL(`tel:${emergencyNumber}`);
-          }
-        },
-      ]
-    );
-  };
-
   const getStatusDisplay = (status: string) => {
-    switch (status.toLowerCase()) {
+    const statusKey = status.toLowerCase();
+    const statusText = t(`status.${statusKey}`, { defaultValue: t('status.confirmed') });
+    
+    switch (statusKey) {
       case 'pending':
         return {
-          text: 'Pending',
+          text: statusText,
           bgColor: 'bg-yellow-100',
           textColor: 'text-yellow-700'
         };
       case 'confirmed':
         return {
-          text: 'Confirmed',
+          text: statusText,
           bgColor: 'bg-[#00BD5F]',
           textColor: 'text-white'
         };
       case 'ongoing':
         return {
-          text: 'In Progress',
+          text: statusText,
           bgColor: 'bg-blue-500',
           textColor: 'text-white'
         };
       case 'completed':
         return {
-          text: 'Completed',
+          text: statusText,
           bgColor: 'bg-green-500',
           textColor: 'text-white'
         };
       default:
         return {
-          text: 'Confirmed',
+          text: statusText,
           bgColor: 'bg-[#00BD5F]',
           textColor: 'text-white'
         };
@@ -443,14 +431,14 @@ const BookingDetailsScreen = () => {
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
           <Text className="text-xl font-bold font-[Afacad] text-black">
-            Booking Details
+            {t('header.title')}
           </Text>
           <View className="w-8" />
         </View>
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#00BD5F" />
           <Text className="mt-4 text-lg font-[Afacad] text-gray-600">
-            Loading booking details...
+            {t('loading.bookingDetails')}
           </Text>
         </View>
       </SafeAreaView>
@@ -466,14 +454,14 @@ const BookingDetailsScreen = () => {
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
           <Text className="text-xl font-bold font-[Afacad] text-black">
-            Booking Details
+            {t('header.title')}
           </Text>
           <View className="w-8" />
         </View>
         <View className="flex-1 justify-center items-center px-4">
           <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
           <Text className="text-lg font-bold text-gray-800 mt-4 text-center font-[Afacad]">
-            Error Loading Booking
+            {t('errors.loadingBooking')}
           </Text>
           <Text className="text-gray-600 mt-2 text-center font-[Afacad]">
             {safeString(error)}
@@ -482,7 +470,7 @@ const BookingDetailsScreen = () => {
             onPress={() => router.back()}
             className="bg-[#00BD5F] px-6 py-3 rounded-lg mt-6"
           >
-            <Text className="text-white font-bold font-[Afacad]">Go Back</Text>
+            <Text className="text-white font-bold font-[Afacad]">{t('errors.goBack')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -497,19 +485,19 @@ const BookingDetailsScreen = () => {
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
           <Text className="text-xl font-bold font-[Afacad] text-black">
-            Booking Details
+            {t('header.title')}
           </Text>
           <View className="w-8" />
         </View>
         <View className="flex-1 justify-center items-center px-4">
           <Text className="text-lg font-bold text-gray-800 mt-4 text-center font-[Afacad]">
-            Booking Not Found
+            {t('errors.bookingNotFound')}
           </Text>
           <Pressable 
             onPress={() => router.back()}
             className="bg-[#00BD5F] px-6 py-3 rounded-lg mt-6"
           >
-            <Text className="text-white font-bold font-[Afacad]">Go Back</Text>
+            <Text className="text-white font-bold font-[Afacad]">{t('errors.goBack')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -530,7 +518,7 @@ const BookingDetailsScreen = () => {
           <Ionicons name="arrow-back" size={24} color="black" />
         </Pressable>
         <Text className="text-xl font-bold font-[Afacad] text-black">
-          Booking Details
+          {t('header.title')}
         </Text>
         <View className="w-8" />
       </View>
@@ -553,12 +541,12 @@ const BookingDetailsScreen = () => {
             {/* Route Markers */}
             <Marker
               coordinate={routeCoordinates[0]}
-              title="Pickup"
+              title={t('booking.pickup')}
               pinColor="green"
             />
             <Marker
               coordinate={routeCoordinates[routeCoordinates.length - 1]}
-              title="Destination"
+              title={t('booking.destination')}
               pinColor="red"
             />
 
@@ -568,7 +556,7 @@ const BookingDetailsScreen = () => {
                 key={stopover.id}
                 coordinate={stopover.coordinates}
                 title={stopover.location}
-                description="Stopover"
+                description={t('booking.stopover')}
               >
                 <View className="bg-orange-400 rounded-full p-2">
                   <Ionicons name="pause" size={10} color="white" />
@@ -599,7 +587,7 @@ const BookingDetailsScreen = () => {
                   {departureTime} - {arrivalTime} ({duration})
                 </Text>
                 <Text className="text-sm font-[Afacad] text-gray-600 mt-1">
-                  {bookingData.seatsBooked} seat{bookingData.seatsBooked > 1 ? 's' : ''} • {totalCost} AED
+                  {t('booking.seats', { count: bookingData.seatsBooked })} • {totalCost} {t('booking.priceAED')}
                 </Text>
               </View>
               <View className={`px-3 py-1 rounded-full ${statusConfig.bgColor}`}>
@@ -611,10 +599,10 @@ const BookingDetailsScreen = () => {
           </View>
         </View>
 
-        {/* NEW: Driver Comment Section */}
+        {/* Driver Comment Section */}
         {renderDriverComment()}
 
-        {/* NEW: Stopovers Section */}
+        {/* Stopovers Section */}
         {renderStopovers()}
 
         {/* Driver Info */}
@@ -622,7 +610,7 @@ const BookingDetailsScreen = () => {
           <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
             <View className="p-4 border-b border-gray-200">
               <Text className="text-lg font-bold font-[Afacad] text-black">
-                Your Driver
+                {t('driver.title')}
               </Text>
             </View>
             
@@ -650,7 +638,7 @@ const BookingDetailsScreen = () => {
                     className="bg-green-500 px-4 py-2 rounded-full flex-row items-center"
                   >
                     <Ionicons name="call" size={16} color="white" />
-                    <Text className="text-white font-[Afacad] ml-2">Call</Text>
+                    <Text className="text-white font-[Afacad] ml-2">{t('driver.call')}</Text>
                   </Pressable>
                 )}
               </View>
@@ -658,7 +646,7 @@ const BookingDetailsScreen = () => {
               {/* Vehicle Info */}
               {bookingData.make && bookingData.model && (
                 <View className="bg-gray-50 rounded-lg p-3">
-                  <Text className="text-sm font-[Afacad] text-gray-600 mb-2">Vehicle</Text>
+                  <Text className="text-sm font-[Afacad] text-gray-600 mb-2">{t('driver.vehicle')}</Text>
                   <Text className="text-base font-[Afacad] font-medium text-black">
                     {safeString(bookingData.make)} {safeString(bookingData.model)} • {safeString(bookingData.color)}
                   </Text>
@@ -671,23 +659,20 @@ const BookingDetailsScreen = () => {
           </View>
         )}
 
-        {/* SOS Button */}
-        <View className="mx-4 mb-4">
-          <Pressable
-            onPress={handleSOSPress}
-            className="bg-red-500 py-4 rounded-lg items-center border-2 border-red-600"
-          >
-            <View className="flex-row items-center">
-              <Ionicons name="warning" size={24} color="white" />
-              <Text className="text-white text-lg font-[Afacad] font-bold ml-2">
-                Emergency SOS
-              </Text>
-            </View>
-            <Text className="text-red-100 text-sm font-[Afacad] mt-1">
-              Tap in case of emergency
-            </Text>
-          </Pressable>
-        </View>
+        {/* SOS Button with proper props */}
+        <SOSButton
+          rideId={bookingData?.rideId || bookingData?.bookingId || ''}
+          userRole="passenger" // Since this is a booking details page, user is typically a passenger
+          rideStatus={bookingData?.status || ''}
+          rideData={{
+            coordinates: bookingData?.coordinates,
+            from: bookingData?.startLocation,
+            to: bookingData?.endLocation
+          }}
+          onSOSActivated={() => {
+            console.log('📞 SOS activated on booking-details page');
+          }}
+        />
       </ScrollView>
     </SafeAreaView>
   );
