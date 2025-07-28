@@ -1,8 +1,11 @@
-// i18n integration for SOSButton.tsx
+// SOSButton.tsx - Connected to backend /sos-alerts endpoint
 import React, { useState } from 'react';
-import { View, Text, Pressable, Alert, Linking } from 'react-native';
+import { View, Text, Pressable, Alert, Linking, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import auth from '@react-native-firebase/auth';
+import axios from 'axios';
+import { BASE_URL } from '@/config';
 
 interface SOSButtonProps {
   rideId: string;
@@ -27,6 +30,7 @@ const SOSButton: React.FC<SOSButtonProps> = ({
 }) => {
   const { t } = useTranslation('components/SOSButton');
   const [sosPressed, setSosPressed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isRideActive = (): boolean => {
     if (!rideStatus) return false;
@@ -34,8 +38,62 @@ const SOSButton: React.FC<SOSButtonProps> = ({
     return activeStatuses.includes(rideStatus.toLowerCase());
   };
 
+  // Function to send SOS alert to backend
+  const sendSOSAlert = async (): Promise<boolean> => {
+    try {
+      setIsSubmitting(true);
+      console.log('🚨 Sending SOS alert to backend for rideId:', rideId);
+
+      const user = auth().currentUser;
+      if (!user) {
+        console.error('🚨 No authenticated user found');
+        Alert.alert('Error', 'You must be logged in to send an SOS alert');
+        return false;
+      }
+
+      const idToken = await user.getIdToken();
+      
+      const response = await axios.post(
+        `${BASE_URL}/sos-alerts?rideId=${rideId}`,
+        {}, // Empty body since rideId is in query params
+        {
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 10000,
+        }
+      );
+
+      console.log('🚨 SOS alert sent successfully:', response.data);
+      return true;
+
+    } catch (error: any) {
+      console.error('🚨 Error sending SOS alert:', error);
+      
+      let errorMessage = 'Failed to send SOS alert. Emergency services will still be contacted.';
+      
+      if (error.response?.status === 401) {
+        errorMessage = 'Authentication failed. Emergency services will still be contacted.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Ride not found. Emergency services will still be contacted.';
+      } else if (error.response?.data?.message) {
+        errorMessage = `${error.response.data.message}. Emergency services will still be contacted.`;
+      } else if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Request timed out. Emergency services will still be contacted.';
+      }
+      
+      // Show error but don't prevent calling emergency services
+      Alert.alert('SOS Alert Error', errorMessage);
+      return false;
+
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSOSPress = () => {
-    if (sosPressed) return;
+    if (sosPressed || isSubmitting) return;
 
     Alert.alert(
       t('alert.title'),
@@ -45,21 +103,36 @@ const SOSButton: React.FC<SOSButtonProps> = ({
         {
           text: t('alert.confirm'),
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             setSosPressed(true);
+            
+            // Call the onSOSActivated callback first
             if (onSOSActivated) {
               try {
                 onSOSActivated();
               } catch (error) {
-                console.error('SOS callback error:', error);
+                console.error('🚨 SOS callback error:', error);
               }
             }
-            Alert.alert(t('activated.title'), t('activated.message'));
 
+            // Send SOS alert to backend
+            const alertSent = await sendSOSAlert();
+            
+            // Show appropriate success message
+            const successMessage = alertSent 
+              ? t('activated.messageWithBackend') 
+              : t('activated.message');
+            
+            Alert.alert(t('activated.title'), successMessage);
+
+            // Call emergency services
             const emergencyNumber = '999';
-            Linking.openURL(`tel:${emergencyNumber}`).catch(err => {
+            try {
+              await Linking.openURL(`tel:${emergencyNumber}`);
+            } catch (err) {
+              console.error('🚨 Error calling emergency services:', err);
               Alert.alert(t('error.title'), t('error.message'));
-            });
+            }
           },
         },
       ]
@@ -72,27 +145,47 @@ const SOSButton: React.FC<SOSButtonProps> = ({
     <View className={containerClassName}>
       <Pressable
         onPress={handleSOSPress}
-        disabled={sosPressed}
+        disabled={sosPressed || isSubmitting}
         className={`py-4 rounded-lg items-center border-2 ${
-          sosPressed ? 'bg-gray-400 border-gray-500' : 'bg-red-500 border-red-600'
+          sosPressed || isSubmitting 
+            ? 'bg-gray-400 border-gray-500' 
+            : 'bg-red-500 border-red-600'
         }`}
       >
         <View className="flex-row items-center">
-          <Ionicons name="warning" size={24} color={sosPressed ? '#999' : 'white'} />
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+          ) : (
+            <Ionicons 
+              name="warning" 
+              size={24} 
+              color={sosPressed || isSubmitting ? '#999' : 'white'} 
+            />
+          )}
           <Text
             className={`text-lg font-[Afacad] font-bold ml-2 ${
-              sosPressed ? 'text-gray-300' : 'text-white'
+              sosPressed || isSubmitting ? 'text-gray-300' : 'text-white'
             }`}
           >
-            {sosPressed ? t('activated.button') : t('button')}
+            {isSubmitting 
+              ? t('sending.button') 
+              : sosPressed 
+                ? t('activated.button') 
+                : t('button')
+            }
           </Text>
         </View>
         <Text
           className={`text-sm font-[Afacad] mt-1 ${
-            sosPressed ? 'text-gray-400' : 'text-red-100'
+            sosPressed || isSubmitting ? 'text-gray-400' : 'text-red-100'
           }`}
         >
-          {sosPressed ? t('activated.subtitle') : t('subtitle')}
+          {isSubmitting 
+            ? t('sending.subtitle') 
+            : sosPressed 
+              ? t('activated.subtitle') 
+              : t('subtitle')
+          }
         </Text>
       </Pressable>
     </View>

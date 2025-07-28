@@ -1,4 +1,4 @@
-// RideDetailsScreen.tsx - ENHANCED: Direct profile fetch for gender verification
+// RideDetailsScreen.tsx - ENHANCED: Direct profile fetch for gender verification + Waypoints support
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,9 +21,99 @@ const RideDetailsScreen = () => {
   const [vehicleInfo, setVehicleInfo] = useState<any>(null);
   const [userGenderFromProfile, setUserGenderFromProfile] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  
+  // NEW: Add stopovers state
+  const [stopovers, setStopovers] = useState<
+    { id: string; location: string; coordinates: { latitude: number; longitude: number } }[]
+  >([]);
 
   // Get user data from home hook
   const { userData } = useHomeUserData();
+
+  // NEW: Function to process waypoints
+  const processStopovers = (waypoints: any[]) => {
+    console.log('🛑 Processing waypoints in RideDetailsScreen:', waypoints);
+    
+    if (Array.isArray(waypoints) && waypoints.length > 0) {
+      const formattedStopovers = waypoints.map((wp: any, index: number) => ({
+        id: `stopover-${index}`,
+        location: wp.label || `Stopover ${index + 1}`,
+        coordinates: {
+          latitude: wp.coordinates?.lat ?? wp.coordinates?._latitude ?? 0,
+          longitude: wp.coordinates?.lng ?? wp.coordinates?._longitude ?? 0,
+        },
+      }));
+      setStopovers(formattedStopovers);
+      console.log('🛑 Stopovers parsed in RideDetailsScreen:', formattedStopovers);
+    } else {
+      setStopovers([]);
+      console.log('🛑 No stopovers to process in RideDetailsScreen');
+    }
+  };
+
+  // NEW: Function to render stopovers
+  const renderStopovers = () => {
+    if (!stopovers || stopovers.length === 0) return null;
+
+    return (
+      <View className="mx-4 mb-6">
+        <Text className="text-lg font-semibold font-[Afacad] mb-3">
+          Trip Stopovers ({stopovers.length})
+        </Text>
+        <View className="bg-orange-50 rounded-xl p-4">
+          {stopovers.map((stopover, index) => (
+            <View key={stopover.id || index} className="flex-row items-center mb-3 last:mb-0">
+              <View className="w-3 h-3 rounded-full bg-orange-400 mr-3" />
+              <View className="flex-1">
+                <Text className="text-base font-medium font-[Afacad]">
+                  {stopover.location}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+        <View className="h-px bg-gray-200 mt-6" />
+      </View>
+    );
+  };
+
+  // NEW: Function to render driver comments
+  const renderDriverComment = () => {
+    // Get comment from params (passed from SearchResultsScreen)
+    const driverComment = params.driverComment as string;
+    
+    if (!driverComment) return null;
+    
+    return (
+      <View className="mx-4 mb-6">
+        <Text className="text-lg font-semibold font-[Afacad] mb-3">
+          Driver's Note
+        </Text>
+        <View className="bg-gray-100 rounded-xl p-4">
+          <View className="flex-row items-start">
+            <Ionicons name="chatbubble-outline" size={16} color="#00BD5F" style={{ marginTop: 2, marginRight: 8 }} />
+            <Text className="text-base text-gray-700 font-[Afacad] italic flex-1">
+              "{driverComment}"
+            </Text>
+          </View>
+        </View>
+        <View className="h-px bg-gray-200 mt-6" />
+      </View>
+    );
+  };
+
+  // NEW: Process waypoints from params
+  useEffect(() => {
+    // Process waypoints from params if available
+    if (params.waypoints) {
+      try {
+        const waypoints = JSON.parse(params.waypoints as string);
+        processStopovers(waypoints);
+      } catch (err) {
+        console.warn('Failed to parse waypoints from params:', err);
+      }
+    }
+  }, [params.waypoints]);
 
   // ENHANCED: Direct profile fetch function
   const fetchUserProfile = async () => {
@@ -248,7 +338,7 @@ const RideDetailsScreen = () => {
         throw new Error(`Failed to create payment intent: ${errorText}`);
       }
 
-      const { clientSecret, paymentIntentId } = await paymentRes.json(); // ✅ Now you can safely destructure
+      const { clientSecret, paymentIntentId } = await paymentRes.json();
 
       // STEP 2: Navigate to payment screen
       router.push({
@@ -259,8 +349,8 @@ const RideDetailsScreen = () => {
           rideId: rideDetails.rideId,
           seats: passengerCount.toString(),
           price: rideDetails.price.toString(),
-          from: rideDetails.from, // 👈
-          to: rideDetails.to,     // 👈
+          from: rideDetails.from,
+          to: rideDetails.to,
         },
       });
     } catch (error: any) {
@@ -416,6 +506,20 @@ const RideDetailsScreen = () => {
                 <Ionicons name="location" size={12} color="white" />
               </View>
             </Marker>
+
+            {/* NEW: Stopover Markers */}
+            {stopovers.map((stopover) => (
+              <Marker
+                key={stopover.id}
+                coordinate={stopover.coordinates}
+                title={stopover.location}
+                description="Stopover"
+              >
+                <View className="bg-orange-400 rounded-full p-2">
+                  <Ionicons name="pause" size={10} color="white" />
+                </View>
+              </Marker>
+            ))}
           </MapView>
           
           <Text className="text-md text-gray-600 mt-2 font-[Afacad]">
@@ -524,6 +628,12 @@ const RideDetailsScreen = () => {
 
         {/* Divider */}
         <View className="h-px bg-gray-200 mx-4 mb-4" />
+
+        {/* NEW: Driver Comment Section */}
+        {renderDriverComment()}
+
+        {/* NEW: Stopovers Section */}
+        {renderStopovers()}
 
         {/* Female Only Badge with Enhanced Display */}
         {rideDetails.femaleOnly && (

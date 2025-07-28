@@ -1,4 +1,4 @@
-// app/(tabs)/ride-details.tsx
+// app/(tabs)/ride-details.tsx - FIXED: Handle empty bookings safely
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   View, 
@@ -168,8 +168,17 @@ const RideDetailsScreen = () => {
     }
   };
 
+  // ✅ FIXED: Handle empty bookings safely
   const processDriverRideData = async (rideItem: any) => {
-    console.log('🚗 Booking data structure:', JSON.stringify(rideItem.bookings[0], null, 2));
+    console.log('🚗 Processing driver ride data:', rideItem);
+    
+    // ✅ FIX: Check if bookings exist before logging
+    if (rideItem.bookings && Array.isArray(rideItem.bookings) && rideItem.bookings.length > 0) {
+      console.log('🚗 Booking data structure:', JSON.stringify(rideItem.bookings[0], null, 2));
+    } else {
+      console.log('🚗 No bookings found for this ride');
+    }
+    
     try {
       // Parse departure time
       let departureTime: Date;
@@ -206,33 +215,44 @@ const RideDetailsScreen = () => {
       // Process stopovers from waypoints
       processStopovers(rideItem.waypoints);
 
-      // Set passengers from bookings
-      // In ride-details.tsx - Replace the filtering logic with:
-      if (rideItem.bookings && Array.isArray(rideItem.bookings)) {
+      // ✅ FIX: Handle empty or missing bookings safely
+      if (rideItem.bookings && Array.isArray(rideItem.bookings) && rideItem.bookings.length > 0) {
         console.log('🚗 Processing driver bookings for passenger list');
-
-        console.log('🚗 Raw booking data:', rideItem.bookings[0]);
-        console.log('🚗 Extracted passengerId:', rideItem.bookings[0].passengerId);
+        console.log('🚗 Number of bookings:', rideItem.bookings.length);
         
-        // Since backend already filters to confirmed bookings, trust all bookings in the array
-        const passengerList: PassengerInfo[] = rideItem.bookings.map((booking: any) => ({
-          name: safeString(booking.passengerName) || 'Unknown Passenger',
-          phone: safeString(booking.phoneNumber) || '',
-          seatsBooked: safeNumber(booking.seatsBooked),
-          userId: booking.passengerId || '', // ← Make sure this is getting "yumA4ag6ZvXdi7MHYBnQuamPIH73"
-        }));
+        // Process each booking safely
+        const passengerList: PassengerInfo[] = rideItem.bookings
+          .filter((booking: any) => booking && typeof booking === 'object') // Filter out invalid bookings
+          .map((booking: any, index: number) => {
+            console.log(`🚗 Processing booking ${index}:`, booking);
+            
+            return {
+              name: safeString(booking.passengerName) || 'Unknown Passenger',
+              phone: safeString(booking.phoneNumber) || '',
+              seatsBooked: safeNumber(booking.seatsBooked),
+              userId: safeString(booking.passengerId) || '', // ✅ Safe access with fallback
+            };
+          });
 
-        console.log('🚗 Processed passenger data:', passengerList[0]);
-        
+        console.log('🚗 Processed passenger data:', passengerList);
         setPassengers(passengerList);
         console.log('🚗 Final passenger list for details page:', passengerList.length, 'passengers');
+      } else {
+        // ✅ FIX: Handle case when there are no bookings
+        console.log('🚗 No bookings to process - setting empty passenger list');
+        setPassengers([]);
       }
 
       // Set ride status
       setRideStatus(rideItem.status === 'departed' ? 'departed' : 'in-progress');
 
-      console.log('🚗 Driver ride data processed:', ride);
-      console.log('🚗 Passengers:', passengers.length);
+      console.log('🚗 Driver ride data processed successfully:', {
+        rideId: ride.rideId,
+        from: ride.from,
+        to: ride.to,
+        status: ride.status,
+        passengerCount: passengers.length
+      });
 
     } catch (err) {
       console.error('🚗 Error processing driver ride data:', err);
@@ -286,7 +306,7 @@ const RideDetailsScreen = () => {
         console.log('🚗 Using fallback locations');
       }
 
-      // ✅ FIX: Use the extracted locations in the ride data object
+      // Use the extracted locations in the ride data object
       const ride: RideData = {
         rideId: bookingItem.bookingId,
         from: fromLocation,  // ← Fixed: use extracted location
@@ -329,6 +349,20 @@ const RideDetailsScreen = () => {
         setPolylineCoords([startCoords, endCoords]); // Simple line for booking-specific route
       }
 
+      if (bookingItem.driver) {
+        const driver: DriverInfo = {
+          name: safeString(bookingItem.driver.name) || 'Unknown Driver',
+          phone: safeString(bookingItem.driver.phoneNumber) || '',
+          rating: safeNumber(bookingItem.driver.averageRating),
+        };
+        setDriverInfo(driver);
+        console.log('🚗 ✅ Driver info set for passenger:', driver);
+      } else {
+        console.log('🚗 ❌ No driver info found in booking data');
+        console.log('🚗 Available booking fields:', Object.keys(bookingItem));
+        setDriverInfo(null);
+      }
+
       // Set driver info
       if (bookingItem.driver) {
         const driver: DriverInfo = {
@@ -367,11 +401,6 @@ const RideDetailsScreen = () => {
         hasDriver: !!driverInfo,
         hasVehicle: !!vehicleInfo
       });
-
-      // Add these debug logs right after extracting locations:
-      console.log('🚗 DEBUG - Full ride object:', JSON.stringify(bookingItem.ride, null, 2));
-      console.log('🚗 DEBUG - Comments from ride:', bookingItem.ride?.comments);
-      console.log('🚗 DEBUG - Waypoints from ride:', bookingItem.ride?.waypoints);
 
     } catch (err) {
       console.error('🚗 Error processing passenger booking data:', err);
@@ -503,6 +532,7 @@ const RideDetailsScreen = () => {
     );
   };
 
+  // Rest of the component remains the same...
   const handleCallPress = (phoneNumber: string, name: string) => {
     const safeName = safeString(name) || 'Person';
     const safePhone = safeString(phoneNumber);
@@ -611,30 +641,49 @@ const RideDetailsScreen = () => {
                 
                 setRideStatus('completed');
                 
-                // ✅ FIX: Show review modal IMMEDIATELY without timeout
-                // Don't wait for data refresh that might cause the page to break
+                // ✅ ENHANCED: Better review modal logic with debugging
+                console.log('🔍 Review Modal Debug Info:');
+                console.log('🔍 userRole:', userRole);
+                console.log('🔍 passengers.length:', passengers.length);
+                console.log('🔍 passengers:', passengers);
+                console.log('🔍 driverInfo:', driverInfo);
+                console.log('🔍 driverInfo exists:', !!driverInfo);
+                
                 if (userRole === 'driver' && passengers.length > 0) {
-                  console.log('🚗 About to set review target');
-                  console.log('🚗 Passengers array:', passengers);
-                  console.log('🚗 First passenger:', passengers[0]);
-                  console.log('🚗 First passenger userId:', passengers[0]?.userId);
-                  console.log('🚗 First passenger phone:', passengers[0]?.phone);
-                  // Driver reviews first passenger (can be extended for multiple passengers)
+                  console.log('🚗 ✅ Driver ending ride - showing passenger review modal');
                   setReviewTarget({ name: passengers[0].name, id: passengers[0].userId });
-                  console.log('🚗 Review target set to:', { name: passengers[0].name, id: passengers[0].userId });
                   setShowReviewModal(true);
-                } else if (userRole === 'passenger' && driverInfo) {
-                  // Passenger reviews driver
-                  setReviewTarget({ name: driverInfo.name, id: driverInfo.phone });
-                  setShowReviewModal(true);
+                } else if (userRole === 'passenger') {
+                  console.log('🚗 🎯 Passenger ending ride - checking driver info...');
+                  
+                  if (driverInfo) {
+                    console.log('🚗 ✅ Driver info found - showing driver review modal');
+                    console.log('🚗 Driver to review:', driverInfo.name, driverInfo.phone);
+                    setReviewTarget({ name: driverInfo.name, id: driverInfo.phone });
+                    setShowReviewModal(true);
+                  } else {
+                    console.log('🚗 ❌ No driver info available - will show success without review');
+                    // Still show success, but mention that review isn't available
+                    Alert.alert('Success', 'Ride completed successfully!', [
+                      {
+                        text: 'OK',
+                        onPress: () => {
+                          refetch();
+                          router.replace('/(tabs)/home');
+                        }
+                      }
+                    ]);
+                  }
                 } else {
-                  // ✅ FIX: If no review needed, navigate back immediately
+                  console.log('🚗 ❌ Fallback case - no review modal');
+                  console.log('🚗 Reason: userRole =', userRole, ', passengers.length =', passengers.length);
+                  
                   Alert.alert('Success', 'Ride completed successfully!', [
                     {
                       text: 'OK',
                       onPress: () => {
-                        refetch(); // Refresh data
-                        router.replace('/(tabs)/home'); // Navigate back
+                        refetch();
+                        router.replace('/(tabs)/home');
                       }
                     }
                   ]);
@@ -938,13 +987,6 @@ const RideDetailsScreen = () => {
             showsUserLocation={true}
             showsMyLocationButton={false}
           >
-            {/* Current Location Marker */}
-            {/* <Marker
-              coordinate={currentLocation}
-              title="Your Location"
-              pinColor="blue"
-            /> */}
-            
             {/* Route Markers */}
             {routeCoordinates.length > 0 && (
               <>
