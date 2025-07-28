@@ -1,4 +1,4 @@
-// components/ReviewModal.tsx - MANDATORY VERSION
+// components/ReviewModal.tsx - FIXED VERSION
 import React, { useState } from 'react';
 import {
   Modal,
@@ -20,6 +20,7 @@ interface ReviewModalProps {
   onClose: () => void;
   rideId: string;
   targetName: string; // Name of the person being reviewed
+  targetId: string; // ID of the person being reviewed (passengerId or driverId)
   userRole: 'driver' | 'passenger';
   mandatory?: boolean; // NEW: Whether the review is mandatory
 }
@@ -29,6 +30,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   onClose,
   rideId,
   targetName,
+  targetId, // ✅ FIX: Add targetId prop
   userRole,
   mandatory = false, // Default to false for backward compatibility
 }) => {
@@ -58,14 +60,21 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       }
 
       const idToken = await user.getIdToken();
+      const userId = user.uid; // ✅ FIX: Get the userId from Firebase auth
 
-      const reviewPayload = {
+      const reviewPayload: any = {
         rideId,
         rating,
         comment: comment.trim() || undefined, // Only send comment if it's not empty
       };
 
-      console.log('Submitting review:', reviewPayload);
+      // ✅ FIX: Only add passengerId when driver is reviewing passenger
+      if (userRole === 'driver') {
+        reviewPayload.passengerId = targetId;
+      }
+      // ✅ FIX: No additional fields needed when passenger reviews driver
+
+      console.log('Submitting review payload:', reviewPayload);
 
       const response = await axios.post(`${BASE_URL}/reviews`, reviewPayload, {
         headers: {
@@ -111,6 +120,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       let errorMessage = 'Failed to submit review. Please try again.';
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
       }
       
       Alert.alert(t('alerts.error.title'), errorMessage);

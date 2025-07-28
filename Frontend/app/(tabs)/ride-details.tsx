@@ -27,6 +27,7 @@ interface PassengerInfo {
   name: string;
   phone: string;
   seatsBooked: number;
+  userId: string;
 }
 
 interface DriverInfo {
@@ -168,6 +169,7 @@ const RideDetailsScreen = () => {
   };
 
   const processDriverRideData = async (rideItem: any) => {
+    console.log('🚗 Booking data structure:', JSON.stringify(rideItem.bookings[0], null, 2));
     try {
       // Parse departure time
       let departureTime: Date;
@@ -208,13 +210,19 @@ const RideDetailsScreen = () => {
       // In ride-details.tsx - Replace the filtering logic with:
       if (rideItem.bookings && Array.isArray(rideItem.bookings)) {
         console.log('🚗 Processing driver bookings for passenger list');
+
+        console.log('🚗 Raw booking data:', rideItem.bookings[0]);
+        console.log('🚗 Extracted passengerId:', rideItem.bookings[0].passengerId);
         
         // Since backend already filters to confirmed bookings, trust all bookings in the array
         const passengerList: PassengerInfo[] = rideItem.bookings.map((booking: any) => ({
           name: safeString(booking.passengerName) || 'Unknown Passenger',
           phone: safeString(booking.phoneNumber) || '',
           seatsBooked: safeNumber(booking.seatsBooked),
+          userId: booking.passengerId || '', // ← Make sure this is getting "yumA4ag6ZvXdi7MHYBnQuamPIH73"
         }));
+
+        console.log('🚗 Processed passenger data:', passengerList[0]);
         
         setPassengers(passengerList);
         console.log('🚗 Final passenger list for details page:', passengerList.length, 'passengers');
@@ -606,8 +614,14 @@ const RideDetailsScreen = () => {
                 // ✅ FIX: Show review modal IMMEDIATELY without timeout
                 // Don't wait for data refresh that might cause the page to break
                 if (userRole === 'driver' && passengers.length > 0) {
+                  console.log('🚗 About to set review target');
+                  console.log('🚗 Passengers array:', passengers);
+                  console.log('🚗 First passenger:', passengers[0]);
+                  console.log('🚗 First passenger userId:', passengers[0]?.userId);
+                  console.log('🚗 First passenger phone:', passengers[0]?.phone);
                   // Driver reviews first passenger (can be extended for multiple passengers)
-                  setReviewTarget({ name: passengers[0].name, id: passengers[0].phone });
+                  setReviewTarget({ name: passengers[0].name, id: passengers[0].userId });
+                  console.log('🚗 Review target set to:', { name: passengers[0].name, id: passengers[0].userId });
                   setShowReviewModal(true);
                 } else if (userRole === 'passenger' && driverInfo) {
                   // Passenger reviews driver
@@ -742,7 +756,7 @@ const RideDetailsScreen = () => {
                     {safeString(passenger.name) || 'Unknown Passenger'}
                   </Text>
                   <Text className="text-sm font-[Afacad] text-gray-600">
-                    {safeNumber(passenger.seatsBooked)} {t('seat')}{safeNumber(passenger.seatsBooked)}
+                    {safeNumber(passenger.seatsBooked)} {t('seat')}
                   </Text>
                 </View>
                 <Pressable
@@ -787,7 +801,7 @@ const RideDetailsScreen = () => {
             className="bg-green-500 py-4 rounded-lg mb-3 items-center"
           >
             <Text className="text-white text-lg font-[Afacad] font-semibold">
-              {loading ? '{t(starting)}' : '{t(startRide)}'}
+              {loading ? t('starting') : t('startRide')}
             </Text>
           </Pressable>
         )}
@@ -799,7 +813,7 @@ const RideDetailsScreen = () => {
             className="bg-red-500 py-4 rounded-lg mb-3 items-center"
           >
             <Text className="text-white text-lg font-[Afacad] font-semibold">
-              {loading ? '{t(ending)}' : '{t(endRide)}'}
+              {loading ? t('ending') : t('endRide')}
             </Text>
           </Pressable>
         )}
@@ -1019,6 +1033,7 @@ const RideDetailsScreen = () => {
           onClose={handleReviewComplete}
           rideId={rideData.rideId}
           targetName={reviewTarget.name}
+          targetId={reviewTarget.id}
           userRole={userRole as 'driver' | 'passenger'}
         />
       )}
