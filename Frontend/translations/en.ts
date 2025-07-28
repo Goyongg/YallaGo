@@ -17,6 +17,7 @@ import RideDetailsScreen from '../locales/en/(tabs)/RideDetailsScreen.json';
 import RideDetails from '../locales/en/(tabs)/rideDetails.json';
 import driverRideDetails from '../locales/en/(tabs)/driverRideDetails.json';
 import bookingDetails from '../locales/en/(tabs)/bookingDetails.json';
+import payment from '../locales/en/(tabs)/payment.json';
 
 // components
 import BookingHistoryCard from '../locales/en/components/BookingHistoryCard.json';
@@ -66,6 +67,7 @@ export default {
   '(tabs)/ride-details': RideDetails,
   '(tabs)/driverRideDetails': driverRideDetails,
   '(tabs)/bookingDetails': bookingDetails,
+  '(tabs)/payment': payment,
 
   // components
   'components/BookingHistoryCard': BookingHistoryCard,

@@ -619,7 +619,7 @@ const DriverRideDetailsScreen = () => {
         </View>
 
         {/* Passengers List - FIXED with safety checks */}
-        <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
+        {/* <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
           <View className="p-4 border-b border-gray-200">
             <Text className="text-lg font-bold font-[Afacad] text-black">
               {t('passengers.title', { count: passengers.length })}
@@ -656,7 +656,7 @@ const DriverRideDetailsScreen = () => {
               </Text>
             </View>
           )}
-        </View>
+        </View> */}
 
         {/* SOS Button for Driver */}
         <SOSButton

@@ -719,13 +719,17 @@ const RideDetailsScreen = () => {
     );
   }
 
+  const totalSeatsBooked = passengers.reduce((total, passenger) => {
+    return total + safeNumber(passenger.seatsBooked);
+  }, 0);
+
   const renderDriverView = () => (
     <>
       {/* Passengers List */}
       <View className="bg-white rounded-lg mx-4 mb-4 shadow-sm">
         <View className="p-4 border-b border-gray-200">
           <Text className="text-lg font-bold font-[Afacad] text-black">
-            {t('passengersLabel')} ({passengers.length})
+            {t('passengersLabel')} ({totalSeatsBooked})
           </Text>
         </View>
         
