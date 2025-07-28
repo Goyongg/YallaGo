@@ -2,11 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import DriverUpcomingRideCard from '../components/DriverUpcomingRideCard'; // Your enhanced existing card
-import DriverRideHistoryCard from '../components/DriverRideHistoryCard'; // Your enhanced existing card
+import DriverUpcomingRideCard from '../components/DriverUpcomingRideCard';
+import DriverRideHistoryCard from '../components/DriverRideHistoryCard';
 import useDriverRides from '../../hooks/useDriverRides';
+import { useTranslation } from 'react-i18next';
 
 const DriverDashboard = () => {
+  const { t } = useTranslation('profile/DriverDashboard');
+
   const [activeTab, setActiveTab] = useState<'upcoming' | 'history'>('upcoming');
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
@@ -137,13 +140,13 @@ const DriverDashboard = () => {
             <Pressable onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color="black" />
             </Pressable>
-            <Text className="text-xl ml-4 font-bold font-[Afacad]">My Rides</Text>
+            <Text className="text-xl ml-4 font-bold font-[Afacad]">{t('title')}</Text>
           </View>
           
           {/* Loading indicator */}
           <View className="flex-1 justify-center items-center">
             <ActivityIndicator size="large" color="#00BD5F" />
-            <Text className="mt-4 text-gray-500 font-[Afacad]">Loading your rides...</Text>
+            <Text className="mt-4 text-gray-500 font-[Afacad]">{t('loadingMessage')}</Text>
           </View>
         </View>
       </View>
@@ -160,14 +163,14 @@ const DriverDashboard = () => {
             <Pressable onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color="black" />
             </Pressable>
-            <Text className="text-xl ml-4 font-bold font-[Afacad]">My Rides</Text>
+            <Text className="text-xl ml-4 font-bold font-[Afacad]">{t('title')}</Text>
           </View>
           
           {/* Error message */}
           <View className="flex-1 justify-center items-center px-4">
             <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
             <Text className="text-lg font-bold text-gray-800 mt-4 text-center font-[Afacad]">
-              Error Loading Rides
+              {t('error.title')}
             </Text>
             <Text className="text-gray-600 mt-2 text-center font-[Afacad]">
               {error}
@@ -176,7 +179,7 @@ const DriverDashboard = () => {
               onPress={refetch}
               className="bg-[#00BD5F] px-6 py-3 rounded-lg mt-6"
             >
-              <Text className="text-white font-bold font-[Afacad]">Try Again</Text>
+              <Text className="text-white font-bold font-[Afacad]">{t('error.retryButton')}</Text>
             </Pressable>
           </View>
         </View>
@@ -192,7 +195,7 @@ const DriverDashboard = () => {
           <Pressable onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
-          <Text className="text-xl ml-4 font-bold font-[Afacad]">My Rides</Text>
+          <Text className="text-xl ml-4 font-bold font-[Afacad]">{t('title')}</Text>
         </View>
 
         {/* Tabs */}
@@ -210,7 +213,10 @@ const DriverDashboard = () => {
                   activeTab === tab ? 'text-[#00BD5F]' : 'text-gray-400'
                 }`}
               >
-                {tab === 'upcoming' ? `Upcoming Rides (${upcomingRides.length})` : `Ride History (${historyRides.length})`}
+                {tab === 'upcoming'
+                  ? t('tabs.upcoming', { count: upcomingRides.length })
+                  : t('tabs.history', { count: historyRides.length })
+                }
               </Text>
             </Pressable>
           ))}
@@ -233,10 +239,10 @@ const DriverDashboard = () => {
               <View className="flex-1 justify-center items-center mt-20">
                 <Ionicons name="car-outline" size={64} color="#9CA3AF" />
                 <Text className="text-center text-gray-400 mt-4 font-[Afacad] text-lg">
-                  No upcoming rides
+                  {t('empty.upcoming.title')}
                 </Text>
                 <Text className="text-center text-gray-400 mt-2 font-[Afacad]">
-                  Create a new ride to get started
+                  {t('empty.upcoming.subtitle')}
                 </Text>
               </View>
             ) : (
@@ -254,10 +260,10 @@ const DriverDashboard = () => {
                     <View className="flex-1 justify-center items-center mt-20">
                       <Ionicons name="calendar-outline" size={64} color="#9CA3AF" />
                       <Text className="text-center text-gray-400 mt-4 font-[Afacad] text-lg">
-                        No properly dated upcoming rides
+                        {t('empty.invalidUpcoming.title')}
                       </Text>
                       <Text className="text-center text-gray-400 mt-2 font-[Afacad]">
-                        Rides may have invalid date information
+                        {t('empty.invalidUpcoming.subtitle')}
                       </Text>
                     </View>
                   );
@@ -346,10 +352,10 @@ const DriverDashboard = () => {
               <View className="flex-1 justify-center items-center mt-20">
                 <Ionicons name="time-outline" size={64} color="#9CA3AF" />
                 <Text className="text-center text-gray-400 mt-4 font-[Afacad] text-lg">
-                  No ride history
+                  {t('empty.history.title')}
                 </Text>
                 <Text className="text-center text-gray-400 mt-2 font-[Afacad]">
-                  Complete some rides to see your history
+                  {t('empty.history.subtitle')}
                 </Text>
               </View>
             ) : (

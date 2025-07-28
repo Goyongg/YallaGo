@@ -1,9 +1,13 @@
 // settings.tsx - Updated with Clear Recent Searches functionality
-import React, { useState } from 'react';
-import { View, Text, Pressable, Switch, ScrollView, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Pressable, Switch, ScrollView, Alert, I18nManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { clearRecentSearches } from '../../utils/recentSearchStorage';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
+import * as Updates from 'expo-updates';
+import { saveLanguage } from '../../utils/languageStorage';
 
 // Language configuration for UI display
 const LANGUAGES = {
@@ -12,33 +16,40 @@ const LANGUAGES = {
 };
 
 const SettingsScreen = () => {
+  const { t } = useTranslation('profile/settings');
+
   const router = useRouter();
   
   // Simple state for UI toggles (no real functionality)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState<'en' | 'ar'>('en');
+  const [currentLanguage, setCurrentLanguage] = useState<'en' | 'ar'>(i18n.language as 'en' | 'ar');
   const [clearingSearches, setClearingSearches] = useState(false);
+
+  useEffect(() => {
+    setCurrentLanguage(i18n.language as 'en' | 'ar');
+  }, [i18n.language]);
+
 
   const handleClearRecentSearches = async () => {
     Alert.alert(
-      'Clear Recent Searches',
-      'Are you sure you want to clear all your recent searches? This action cannot be undone.',
+      t('clearSearchAlertTitle'),
+      t('clearSearchAlertMsg'),
       [
         {
-          text: 'Cancel',
+          text: t('cancel'),
           style: 'cancel'
         },
         {
-          text: 'Clear',
+          text: t('confirm'),
           style: 'destructive',
           onPress: async () => {
             try {
               setClearingSearches(true);
               await clearRecentSearches();
-              Alert.alert('Success', 'Recent searches have been cleared successfully!');
+              Alert.alert(t('success'), t('clearSearchSuccess'));
             } catch (error) {
               console.error('Error clearing recent searches:', error);
-              Alert.alert('Error', 'Failed to clear recent searches. Please try again.');
+              Alert.alert(t('error'), t('clearSearchError'));
             } finally {
               setClearingSearches(false);
             }
@@ -56,7 +67,7 @@ const SettingsScreen = () => {
           <Pressable onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
-          <Text className="text-xl ml-4 font-bold font-[Afacad]">Settings</Text>
+          <Text className="text-xl ml-4 font-bold font-[Afacad]">{t('title')}</Text>
         </View>
       </View>
 
@@ -68,7 +79,7 @@ const SettingsScreen = () => {
       >
         {/* Permissions Section */}
         <View className="mb-8 mt-4">
-          <Text className="text-lg font-bold font-[Afacad] mb-4 text-gray-800">Permissions</Text>
+          <Text className="text-lg font-bold font-[Afacad] mb-4 text-gray-800">{t('permissions')}</Text>
           
           {/* Notifications */}
           <View className="bg-gray-50 rounded-lg p-4 mb-3">
@@ -76,10 +87,10 @@ const SettingsScreen = () => {
               <View className="flex-1 mr-4">
                 <View className="flex-row items-center mb-1">
                   <Ionicons name="notifications" size={20} color="#00BD5F" />
-                  <Text className="text-base font-[Afacad] font-semibold ml-2">Notifications</Text>
+                  <Text className="text-base font-[Afacad] font-semibold ml-2">{t('notifications')}</Text>
                 </View>
                 <Text className="text-sm font-[Afacad] text-gray-600">
-                  Receive updates about your rides, booking requests, and important announcements
+                  {t('notificationsDesc')}
                 </Text>
               </View>
               <Switch
@@ -95,19 +106,30 @@ const SettingsScreen = () => {
           {/* System Settings Link */}
           <Pressable onPress={() => console.log('Open system settings')}>
             <Text className="text-sm font-[Afacad] text-blue-600 text-center">
-              Manage all app permissions in System Settings
+              {t('systemSettings')}
             </Text>
           </Pressable>
         </View>
 
         {/* Language Section */}
         <View className="mb-8">
-          <Text className="text-lg font-bold font-[Afacad] mb-4 text-gray-800">Language / اللغة</Text>
+          <Text className="text-lg font-bold font-[Afacad] mb-4 text-gray-800">{t('languageSection')}</Text>
           
           {Object.entries(LANGUAGES).map(([code, lang]) => (
             <Pressable
               key={code}
-              onPress={() => setCurrentLanguage(code as 'en' | 'ar')}
+              onPress={async () => {
+                const langCode = code as 'en' | 'ar';
+                setCurrentLanguage(langCode);
+                await saveLanguage(langCode);
+                await i18n.changeLanguage(langCode);
+                const isRTL = langCode === 'ar';
+                if (I18nManager.isRTL !== isRTL) {
+                  I18nManager.forceRTL(isRTL);
+                  I18nManager.allowRTL(isRTL);
+                  Updates.reloadAsync();
+                }
+              }}
               className={`bg-gray-50 rounded-lg p-4 mb-3 border-2 ${
                 currentLanguage === code ? 'border-green-500 bg-green-50' : 'border-transparent'
               }`}
@@ -129,13 +151,13 @@ const SettingsScreen = () => {
           ))}
           
           <Text className="text-xs font-[Afacad] text-gray-500 mt-2 text-center">
-            App restart may be required for full language changes
+            {t('restartNote')}
           </Text>
         </View>
 
         {/* Data & Privacy Section */}
         <View className="mb-8">
-          <Text className="text-lg font-bold font-[Afacad] mb-4 text-gray-800">Data & Privacy</Text>
+          <Text className="text-lg font-bold font-[Afacad] mb-4 text-gray-800">{t('dataPrivacy')}</Text>
           
           {/* Clear Recent Searches */}
           <Pressable 
@@ -149,10 +171,10 @@ const SettingsScreen = () => {
               <View className="flex-1 mr-4">
                 <View className="flex-row items-center mb-1">
                   <Ionicons name="refresh" size={20} color="#FF6B6B" />
-                  <Text className="text-base font-[Afacad] font-semibold ml-2">Clear Recent Searches</Text>
+                  <Text className="text-base font-[Afacad] font-semibold ml-2">{t('clearSearch')}</Text>
                 </View>
                 <Text className="text-sm font-[Afacad] text-gray-600">
-                  Remove all saved search history from your device
+                  {t('clearSearchDesc')}
                 </Text>
               </View>
               {clearingSearches ? (
@@ -174,7 +196,7 @@ const SettingsScreen = () => {
             <View className="flex-row items-center justify-between">
               <View className="flex-row items-center">
                 <Ionicons name="help-circle" size={20} color="#666" />
-                <Text className="text-base font-[Afacad] ml-3">Help & Support</Text>
+                <Text className="text-base font-[Afacad] ml-3">{t('help')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#aaa" />
             </View>

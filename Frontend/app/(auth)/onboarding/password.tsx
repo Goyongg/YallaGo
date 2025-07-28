@@ -4,8 +4,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useRegistration } from '@/context/RegistrationContext';
 import { isValidPassword } from '@/utils/validation';
+import { useTranslation } from 'react-i18next';
 
 const Password = () => {
+  const { t } = useTranslation('(auth)/onboarding/password');
   const router = useRouter();
   const { registrationData, setRegistrationData } = useRegistration();
   const { email } = useLocalSearchParams<{ email?: string }>(); // get email from params
@@ -44,17 +46,17 @@ const Password = () => {
       {/* Top Section */}
       <View>
         <Text className="text-5xl font-bold leading-[60px] tracking-wide mb-6">
-          Create a
-          <Text className="text-brand italic"> password</Text>
+          {t('title')}
+          <Text className="text-brand italic"> {t('highlight')}</Text>
         </Text>
 
         <Text className="text-base text-gray-600 mb-6">
-          For{" "}<Text className="font-semibold">{email ?? 'your account'}</Text>
+          {t('for')} <Text className="font-semibold">{email ?? t('defaultEmailText')}</Text>
         </Text>
 
         <TextInput
           className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-          placeholder="Enter your password (min 6 characters)"
+          placeholder={t('placeholder')}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -73,7 +75,7 @@ const Password = () => {
         {loading ? (
           <ActivityIndicator color="#ffffff" />
         ) : (
-          <Text className="text-white font-semibold text-2xl">Next</Text>
+          <Text className="text-white font-semibold text-2xl">{t('next')}</Text>
         )}
       </Pressable>
     </KeyboardAvoidingView>

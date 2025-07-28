@@ -1,7 +1,9 @@
+// components/DriverRideHistoryCard.tsx - i18n integrated
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DriverHistoryRideCardProps } from '@/interfaces/interfaces';
+import { useTranslation } from 'react-i18next';
 
 interface EnhancedDriverHistoryRideCardProps extends DriverHistoryRideCardProps {
   bookedSeats?: number;
@@ -19,6 +21,8 @@ const DriverRideHistoryCard: React.FC<EnhancedDriverHistoryRideCardProps> = ({
   bookedSeats = 0,
   status = 'completed',
 }) => {
+  const { t } = useTranslation('components/DriverRideHistoryCard');
+
   const truncateText = (text: string, maxLength: number = 12) => {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
@@ -28,19 +32,19 @@ const DriverRideHistoryCard: React.FC<EnhancedDriverHistoryRideCardProps> = ({
     switch (status.toLowerCase()) {
       case 'completed':
         return {
-          text: 'Completed',
+          text: t('status.completed'),
           bgColor: 'bg-[#00BD5F]',
           textColor: 'text-white'
         };
       case 'cancelled':
         return {
-          text: 'Cancelled',
+          text: t('status.cancelled'),
           bgColor: 'bg-red-500',
           textColor: 'text-white'
         };
       default:
         return {
-          text: 'Completed',
+          text: t('status.completed'),
           bgColor: 'bg-[#00BD5F]',
           textColor: 'text-white'
         };
@@ -96,11 +100,11 @@ const DriverRideHistoryCard: React.FC<EnhancedDriverHistoryRideCardProps> = ({
         <View className="flex-row justify-between items-center">
           <View className="flex-row items-center flex-wrap">
             <Text className="text-sm text-gray-600 font-[Afacad]">
-              🧍 {bookedSeats > 0 ? `${bookedSeats} passenger${bookedSeats > 1 ? 's' : ''}` : 'No passengers'}
+              🧍 {bookedSeats > 0 ? t('summary.passengers', { count: bookedSeats }) : t('summary.noPassengers')}
             </Text>
             {bookedSeats > 0 && (
               <Text className="text-sm text-[#00BD5F] font-semibold font-[Afacad] ml-2">
-                • Earned {parseInt(price) * bookedSeats} AED
+                • {t('summary.earned', { amount: parseInt(price) * bookedSeats })}
               </Text>
             )}
           </View>

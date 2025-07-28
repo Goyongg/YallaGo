@@ -11,6 +11,7 @@ import useRecentSearches from '@/hooks/useRecentSearches';
 import useUpcomingRide from '../../hooks/useUpcomingRide';
 import CreateRideForm from '../components/CreateRideForm';
 import { useGlobalSearchParams, useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 export const unstable_settings = {
   gestureEnabled: false,
@@ -18,6 +19,8 @@ export const unstable_settings = {
 };
 
 const Home = () => {
+  const { t } = useTranslation('(tabs)/home');
+
   const [femaleOnly, setFemaleOnly] = useState(false);
   const [passengerCount, setPassengerCount] = useState('');
   const [date, setDate] = useState('');
@@ -67,7 +70,7 @@ const Home = () => {
     console.log('🏠 Still loading or no userData');
     return (
       <View className="flex-1 justify-center items-center">
-        <Text className="font-[Afacad]">Loading...</Text>
+        <Text className="font-[Afacad]">{t('loading')}</Text>
       </View>
     );
   }
@@ -116,7 +119,7 @@ const Home = () => {
           {upcomingRideLoading && (
             <View className="mx-4 mb-4 p-3 bg-blue-100 rounded-lg">
               <Text className="text-center text-blue-600 font-[Afacad]">
-                Loading upcoming rides...
+                {t('loadingUpcoming')}
               </Text>
             </View>
           )}

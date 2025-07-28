@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { isValidEmail, validatePhoneNumber, COUNTRY_CODES, formatPhoneWithCountryCode, CountryCode } from '@/utils/validation';
 import { Ionicons } from '@expo/vector-icons';
 import { RegistrationData, useRegistration } from '@/context/RegistrationContext';
+import { useTranslation } from 'react-i18next';
 
 // Export the phone input component for reuse
 export const PhoneInputWithCountryCode = ({ 
@@ -94,6 +95,8 @@ export const PhoneInputWithCountryCode = ({
 };
 
 const NameAndContact = () => {
+  const { t } = useTranslation('(auth)/onboarding/name-contact');
+
   const router = useRouter();
   const { registrationData, setRegistrationData } = useRegistration();
 
@@ -186,16 +189,16 @@ const NameAndContact = () => {
       {/* Top Section */}
       <View>
         <Text className="text-6xl font-bold leading-[60px] tracking-wide mb-6">
-          Let us know
-          <Text className="text-brand italic"> about you</Text>
+          {t('title')}
+          <Text className="text-brand italic"> {t('highlight')}</Text>
         </Text>
 
         {/* Name Input */}
         <View className="mb-4">
-          <Text className="text-base font-semibold mb-1 text-gray-700">Your Name</Text>
+          <Text className="text-base font-semibold mb-1 text-gray-700">{t('nameLabel')}</Text>
           <TextInput
             className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-            placeholder="Enter your name"
+            placeholder={t('namePlaceholder')}
             value={name}
             onChangeText={setName}
             placeholderTextColor="#A0AEC0"
@@ -205,7 +208,7 @@ const NameAndContact = () => {
         {/* Gender Picker */}
         <View className="mb-4">
           <View className='flex-row items-center justify-between'>
-            <Text className="text-base font-semibold mb-1 text-gray-700">Gender (optional)</Text>
+            <Text className="text-base font-semibold mb-1 text-gray-700">{t('genderLabel')}</Text>
             <View className="flex-row gap-1">
               {['Male', 'Female'].map((option) => (
                 <TouchableOpacity
@@ -216,7 +219,7 @@ const NameAndContact = () => {
                   onPress={() => handleGenderSelect(option)}
                 >
                   <Text className={gender === option ? 'text-white' : 'text-black'}>
-                    {option}
+                    {t(`genderOptions.${option}`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -227,16 +230,16 @@ const NameAndContact = () => {
             onPress={toggleModal}
             className="text-brand text-sm mt-2 self-start"
           >
-            Why we need this info?
+            {t('genderHelpLink')}
           </Text>
         </View>
 
         {/* Email Input */}
         <View className="mb-4">
-          <Text className="text-base font-semibold mb-1 text-gray-700">Email</Text>
+          <Text className="text-base font-semibold mb-1 text-gray-700">{t('emailLabel')}</Text>
           <TextInput
             className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-            placeholder="Enter your email"
+            placeholder={t('emailPlaceholder')}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -246,13 +249,13 @@ const NameAndContact = () => {
 
           {/* Email validation error */}
           {email.length > 0 && !isValidEmail(email) && (
-            <Text className="text-red-500 text-sm mt-1">Enter a valid email address</Text>
+            <Text className="text-red-500 text-sm mt-1">{t('emailError')}</Text>
           )}
         </View>
 
         {/* Phone Input */}
         <View className="mb-6 relative">
-          <Text className="text-base font-semibold mb-1 text-gray-700">Phone Number</Text>
+          <Text className="text-base font-semibold mb-1 text-gray-700">{t('phoneLabel')}</Text>
           
           <PhoneInputWithCountryCode
             phone={phone}
@@ -261,16 +264,17 @@ const NameAndContact = () => {
             phoneError={phoneError}
             selectedCountryCode={selectedCountryCode}
             onCountryChange={setSelectedCountryCode}
+            placeholder={t('phonePlaceholder')}
           />
           
           {/* Format Helper */}
           <Text className="text-gray-500 text-xs mt-1">
-            Supports various formats: 971551234567, +971551234567, 0551234567, 551234567
+            {t('phoneHelp')}
           </Text>
           
           {/* Phone validation feedback */}
           {phoneError && (
-            <Text className="text-red-500 text-sm mt-1">{phoneError}</Text>
+            <Text className="text-red-500 text-sm mt-1">{t('phoneError')}</Text>
           )}
         </View>
       </View>
@@ -286,7 +290,7 @@ const NameAndContact = () => {
         {loading ? (
           <ActivityIndicator color="#ffffff" />
         ) : (
-          <Text className="text-white font-semibold text-2xl">Next</Text>
+          <Text className="text-white font-semibold text-2xl">{t('next')}</Text>
         )}
       </Pressable>
 
@@ -299,16 +303,15 @@ const NameAndContact = () => {
       >
         <View className="flex-1 justify-center items-center bg-black/50 px-6">
           <View className="bg-white p-6 rounded-xl w-full max-w-md">
-            <Text className="text-lg font-bold mb-2">Why we need this info</Text>
+            <Text className="text-lg font-bold mb-2">{t('modalTitle')}</Text>
             <Text className="text-gray-600 mb-4">
-              We ask for your gender to enable "female-only" ride options.
-              Further ID confirmation may be required later.
+              {t('modalText')}
             </Text>
             <Pressable
               className="bg-brand px-4 py-2 rounded-lg self-end"
               onPress={toggleModal}
             >
-              <Text className="text-white font-semibold">Got it</Text>
+              <Text className="text-white font-semibold">{t('modalButton')}</Text>
             </Pressable>
           </View>
         </View>

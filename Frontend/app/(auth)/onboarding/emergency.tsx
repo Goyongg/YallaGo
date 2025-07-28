@@ -3,8 +3,11 @@ import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Keybo
 import { useRouter } from 'expo-router';
 import { useRegistration } from '@/context/RegistrationContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 const Emergency = () => {
+  const { t } = useTranslation('(auth)/onboarding/emergency');
+
   const router = useRouter();
   const { registrationData, setRegistrationData } = useRegistration();
 
@@ -40,19 +43,19 @@ const Emergency = () => {
       {/* Title + Input Fields */}
       <View>
         <Text className="text-5xl font-bold leading-[60px] tracking-wide mb-6">
-          Emergency
-          <Text className="text-brand italic"> contact</Text>
+          {t('title')}
+          <Text className="text-brand italic"> {t('highlight')}</Text>
         </Text>
 
         <Text className="text-base text-gray-600 mb-6">
-          Please provide someone we can contact in case of an emergency.
+          {t('subtitle')}
         </Text>
 
         <View className="mb-4">
-          <Text className="text-base font-semibold mb-1 text-gray-700">Contact Name</Text>
+          <Text className="text-base font-semibold mb-1 text-gray-700">{t('nameLabel')}</Text>
           <TextInput
             className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-            placeholder="Enter full name"
+            placeholder={t('namePlaceholder')}
             value={contactName}
             onChangeText={setContactName}
             placeholderTextColor="#A0AEC0"
@@ -60,10 +63,10 @@ const Emergency = () => {
         </View>
 
         <View className="mb-6">
-          <Text className="text-base font-semibold mb-1 text-gray-700">Contact Phone</Text>
+          <Text className="text-base font-semibold mb-1 text-gray-700">{t('phoneLabel')}</Text>
           <TextInput
             className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-            placeholder="Enter phone number"
+            placeholder={t('phonePlaceholder')}
             value={contactPhone}
             onChangeText={setContactPhone}
             keyboardType="phone-pad"
@@ -83,7 +86,7 @@ const Emergency = () => {
           disabled={!isFormFilled}
           onPress={handleNext}
         >
-          <Text className="text-white font-semibold text-2xl">Next</Text>
+          <Text className="text-white font-semibold text-2xl">{t('next')}</Text>
         </Pressable>
 
         <View className="items-center">

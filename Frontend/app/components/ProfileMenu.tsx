@@ -3,25 +3,26 @@ import React from 'react';
 import { View, Text, Modal, Pressable, TouchableWithoutFeedback, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ProfileMenuProps } from '../../interfaces/interfaces';
-
-const allMenuItems = [
-  { label: 'Manage Profile', route: '../profile/manage' },
-  { label: 'My Rides', route: '../profile/DriverDashboard', driverOnly: true }, // Added driverOnly flag
-  { label: 'Passenger Requests', route: '../profile/BookingRequests', driverOnly: true },
-  { label: 'Gifts and discounts', sub: 'Enter promo code', route: '../profile/gifts' },
-  { label: 'My Bookings', sub: 'Access all your bookings', route: '../profile/BookingDashboard' },
-  { label: 'Info', route: '../profile/info' },
-];
+import { useTranslation } from 'react-i18next';
 
 const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, rating, userRole }) => {
   const router = useRouter();
+  const { t } = useTranslation('components/ProfileMenu');
 
-  // Filter menu items based on user role
+  const allMenuItems = [
+    { label: t('menu.manage'), route: '../profile/manage' },
+    { label: t('menu.rides'), route: '../profile/DriverDashboard', driverOnly: true },
+    { label: t('menu.requests'), route: '../profile/BookingRequests', driverOnly: true },
+    { label: t('menu.gifts'), sub: t('menu.giftsSub'), route: '../profile/gifts' },
+    { label: t('menu.bookings'), sub: t('menu.bookingsSub'), route: '../profile/BookingDashboard' },
+    { label: t('menu.info'), route: '../profile/info' },
+  ];
+
   const menuItems = allMenuItems.filter(item => {
     if (item.driverOnly) {
-      return userRole === 'driver'; // Only show driver-only items to drivers
+      return userRole === 'driver';
     }
-    return true; // Show all other items to everyone
+    return true;
   });
 
   const handleMenuPress = async (item: any) => {
@@ -37,7 +38,6 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, r
         <View className="flex-1 justify-end bg-black/30">
           <TouchableWithoutFeedback>
             <View className="bg-white rounded-t-3xl pt-6 pb-12 px-6">
-              {/* Close Button */}
               <Pressable onPress={onClose} className="absolute top-4 right-4 z-10">
                 <Ionicons name="close" size={28} color="black" />
               </Pressable>
@@ -51,32 +51,36 @@ const ProfileMenu: React.FC<ProfileMenuProps> = ({ visible, onClose, userName, r
                   </View>
                 </View>
                 <Text className="mt-3 text-xl font-bold font-[Afacad]">{userName}</Text>
-                <Text className="text-gray-400 font-[Afacad]">★ {(rating || 0).toFixed(2)}</Text>
+                <Text className="text-gray-400 font-[Afacad]">
+                  {t('rating', { rating: (rating || 0).toFixed(2) })}
+                </Text>
               </View>
 
-              {/* Menu Scrollable Section */}
               <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Icon Row */}
                 <View className="flex-row justify-around items-center mb-6">
                   <Pressable
                     onPress={() => {
                       onClose();
                       router.push('/profile/safety');
-                    }} className="items-center">
+                    }}
+                    className="items-center"
+                  >
                     <Ionicons name="shield-checkmark" size={26} color="#444" />
-                    <Text className="text-sm font-[Afacad] mt-1">Safety</Text>
+                    <Text className="text-sm font-[Afacad] mt-1">{t('safety')}</Text>
                   </Pressable>
-                  
-                  <Pressable onPress={() => {
-                    onClose();
-                    router.push('/profile/settings');
-                  }} className="items-center">
+
+                  <Pressable
+                    onPress={() => {
+                      onClose();
+                      router.push('/profile/settings');
+                    }}
+                    className="items-center"
+                  >
                     <Ionicons name="settings" size={26} color="#444" />
-                    <Text className="text-sm font-[Afacad] mt-1">Settings</Text>
+                    <Text className="text-sm font-[Afacad] mt-1">{t('settings')}</Text>
                   </Pressable>
                 </View>
 
-                {/* List Items - Now using filtered menuItems */}
                 {menuItems.map((item, index) => (
                   <Pressable
                     key={index}

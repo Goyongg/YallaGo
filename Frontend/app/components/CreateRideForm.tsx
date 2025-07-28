@@ -5,6 +5,7 @@ import DateTimePickerModal from './DateTimePickerModal';
 import auth from '@react-native-firebase/auth';
 import { router, useGlobalSearchParams, useFocusEffect } from 'expo-router';
 import { BASE_URL } from '@/config';
+import { useTranslation } from 'react-i18next';
 
 interface LocationData {
   name: string;
@@ -21,6 +22,8 @@ interface StopoverData {
 }
 
 const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
+  const { t } = useTranslation('components/CreateRideForm');
+
   const params = useGlobalSearchParams();
   
   const [from, setFrom] = useState('');
@@ -157,7 +160,7 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
     ? `${dateTime.toLocaleDateString(undefined, { day: 'numeric', month: 'long' })}, ${String(
         dateTime.getHours(),
       ).padStart(2, '0')}:${String(dateTime.getMinutes()).padStart(2, '0')}`
-    : 'Select date & time';
+    : t('datePlaceholder');
 
   useEffect(() => {
     if (!isFemale && femaleOnly) {
@@ -308,12 +311,12 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
 
   const handleCreate = async () => {
     if (!from || !to || !dateTime || !passengerCount || !price) {
-      Alert.alert('Missing Info', 'Please fill all the fields');
+      Alert.alert(t('errors.missingTitle'), t('errors.missingFields'));
       return;
     }
 
     if (!fromLocation || !toLocation) {
-      Alert.alert('Missing Location', 'Please select pickup and dropoff locations from the map');
+      Alert.alert(t('errors.locationTitle'), t('errors.locationMessage'));
       return;
     }
 
@@ -323,13 +326,13 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
     );
 
     if (stopovers.some(stopover => stopover.name.trim() !== '' && (stopover.coordinates.lat === 0 || stopover.coordinates.lng === 0))) {
-      Alert.alert('Invalid Stopover', 'Please select all stopover locations from the map');
+      Alert.alert(t('errors.stopoverTitle'), t('errors.stopoverMessage'));
       return;
     }
 
     const token = await auth().currentUser?.getIdToken();
     if (!token) {
-      Alert.alert('Error', 'Unable to authenticate user');
+      Alert.alert(t('errors.authTitle'), t('errors.authMessage'));
       return;
     }
 
@@ -340,12 +343,12 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
     const conflictCheck = await checkRideConflict(dateStr, timeStr);
     if (conflictCheck.hasConflict) {
       Alert.alert(
-        'Schedule Conflict', 
-        conflictCheck.message || 'You have another ride scheduled around this time',
+        t('conflict.title'),
+        conflictCheck.message || t('conflict.defaultMessage'),
         [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Create Anyway', 
+          { text: t('conflict.cancel'), style: 'cancel' },
+          {
+            text: t('conflict.proceed'),
             style: 'destructive',
             onPress: () => proceedWithRideCreation(dateStr, timeStr, validStopovers, token)
           }
@@ -408,7 +411,7 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
       const result = await response.json();
       console.log('Ride created successfully:', result);
 
-      Alert.alert('Success', result.message || 'Ride created successfully!', [
+      Alert.alert(t('success.title'), result.message || t('success.default'), [
         { text: 'OK', onPress: () => {
           // Reset form
           setFrom('');
@@ -426,7 +429,7 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
       ]);
     } catch (err: any) {
       console.error('Create ride failed:', err);
-      Alert.alert('Error', err.message || 'Ride creation failed');
+      Alert.alert(t('errors.genericTitle'), err.message || t('errors.genericMessage'));
     }
   };
 
@@ -452,7 +455,7 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
                   className="ml-2 flex-1"
                 >
                   <Text className={`ml-2 text-lg font-[Afacad] py-3 ${from ? 'text-black' : 'text-[#A0AEC0]'}`}>
-                    {from || 'Select starting point'}
+                    {from || t('fromPlaceholder')}
                   </Text>
                 </Pressable>
                 {from && (
@@ -470,7 +473,7 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
                   className="ml-2 flex-1"
                 >
                   <Text className={`ml-2 text-lg font-[Afacad] py-3 ${to ? 'text-black' : 'text-[#A0AEC0]'}`}>
-                    {to || 'Select destination'}
+                    {to || t('toPlaceholder')}
                   </Text>
                 </Pressable>
                 {to && (
@@ -491,7 +494,7 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
                     <Text className={`text-lg font-[Afacad] py-3 ${
                       stopover.name ? 'text-black' : 'text-[#A0AEC0]'
                     }`}>
-                      {stopover.name || `Select stopover ${idx + 1}`}
+                      {stopover.name || t('stopoverPlaceholder', { index: idx + 1 })}
                     </Text>
                   </Pressable>
                   <View className="flex-row items-center">
@@ -508,7 +511,7 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
 
             {stopovers.length < 3 && (
               <Pressable onPress={addStopover} className="mb-3 mx-4">
-                <Text className="text-[#00BD5F] font-[Afacad] text-base">+ Add Stopover</Text>
+                <Text className="text-[#00BD5F] font-[Afacad] text-base">{t('addStopover')}</Text>
               </Pressable>
             )}
 
@@ -532,7 +535,7 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
                   value={passengerCount}
                   onChangeText={setPassengerCount}
                   keyboardType="number-pad"
-                  placeholder="Max passengers"
+                  placeholder={t('passengerPlaceholder')}
                   placeholderTextColor="#A0AEC0"
                   className="ml-2 flex-1 text-lg font-[Afacad] py-3"
                 />
@@ -547,7 +550,7 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
                   value={price}
                   onChangeText={setPrice}
                   keyboardType="decimal-pad"
-                  placeholder="Price per seat (AED)"
+                  placeholder={t('pricePlaceholder')}
                   placeholderTextColor="#A0AEC0"
                   className="ml-2 flex-1 text-lg font-[Afacad] py-3"
                 />
@@ -559,17 +562,17 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
                   <View className="flex-row items-center">
                     <Ionicons name="sync" size={14} color="#666" />
                     <Text className="text-sm text-gray-500 font-[Afacad] ml-2">
-                      Calculating recommended price...
+                      {t('loading.recommendation')}
                     </Text>
                   </View>
                 ) : recommendedPrice ? (
                   <Text className="text-sm font-[Afacad] font-medium">
-                    <Text className="text-black">Recommended price: </Text>
+                    <Text className="text-black">{t('labels.recommended')} </Text>
                     <Text className="text-[#00BD5F]">{recommendedPrice} AED</Text>
                   </Text>
                 ) : (fromLocation && toLocation && dateTime) && !isLoadingPrice ? (
                   <Text className="text-sm text-gray-400 font-[Afacad]">
-                    Unable to calculate recommended price
+                    {t('loading.unable')}
                   </Text>
                 ) : null}
               </View>
@@ -578,10 +581,10 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
             {/* Female-only Toggle - Show but disable for non-female users */}
             <View className="flex-row justify-between items-center mt-4 mx-4">
               <View className="flex-1">
-                <Text className="text-xl font-[Afacad] text-gray-700">Female-only</Text>
+                <Text className="text-xl font-[Afacad] text-gray-700">{t('femaleOnly')}</Text>
                 {!isFemale && (
                   <Text className="text-sm font-[Afacad] text-gray-500 mt-1">
-                    Only available for female users
+                    {t('femaleOnlyNote')}
                   </Text>
                 )}
               </View>
@@ -600,13 +603,13 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
               <View className="flex-row items-center mb-2">
                 <Ionicons name="chatbubble-ellipses-outline" size={18} color="#00BD5F" />
                 <Text className="ml-2 text-[16px] text-black font-[Afacad]">
-                  Leave a comment <Text className="text-gray-400">(optional)</Text>
+                  {t('commentLabel')} <Text className="text-gray-400">{t('optional')}</Text>
                 </Text>
               </View>
 
               <View className="border border-gray-300 rounded-md px-3 py-2 bg-white">
                 <TextInput
-                  placeholder="Add any notes for passengers (e.g. okay with kids, no heavy luggage)"
+                  placeholder={t('commentPlaceholder')}
                   placeholderTextColor="#A0AEC0"
                   value={comment}
                   onChangeText={setComment}
@@ -618,7 +621,7 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
                 />
               </View>
               <Text className="text-xs text-gray-500 mt-1 font-[Afacad]">
-                {comment.length}/200 characters
+                {comment.length}/200 {t('characters')}
               </Text>
             </View>
 
@@ -628,7 +631,7 @@ const CreateRideForm: React.FC<{ userGender?: string }> = ({ userGender }) => {
               style={{ backgroundColor: '#00BD5F' }}
               className="rounded-xl py-3 items-center mt-3"
             >
-              <Text className="text-white text-xl text-base font-[Afacad]">Create Ride</Text>
+              <Text className="text-white text-xl text-base font-[Afacad]">{t('createRide')}</Text>
             </Pressable>
           </View>
         </ScrollView>

@@ -4,8 +4,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, Text, View } from "react-native";
+import { useTranslation } from 'react-i18next';
 
 const Role = () => {
+  const { t } = useTranslation('(auth)/onboarding/role');
+
   const router = useRouter();
   const { registrationData, setRegistrationData } = useRegistration();
   const [selectedRole, setSelectedRole] = useState<"passenger" | "driver">(
@@ -32,8 +35,8 @@ const Role = () => {
         router.replace("/(tabs)/home");
       } catch (err: any) {
         Alert.alert(
-          "Registration Failed",
-          err.message || "Something went wrong"
+          t('registrationFailedTitle'),
+          err.message || t('registrationFailedMessage')
         );
       } finally {
         setLoading(false);
@@ -59,8 +62,8 @@ const Role = () => {
       {/* Top Section */}
       <View>
         <Text className="text-5xl font-bold leading-[60px] tracking-wide mb-6">
-          Choose your
-          <Text className="text-brand italic"> role</Text>
+          {t('title')}
+          <Text className="text-brand italic"> {t('highlight')}</Text>
         </Text>
 
         <View className="flex-row space-x-4 mb-4 gap-3">
@@ -79,15 +82,11 @@ const Role = () => {
                   selectedRole === role ? "text-white" : "text-black"
                 }`}
               >
-                {role === "passenger" ? "Passenger" : "Driver"}
+                {t(role)}
               </Text>
             </Pressable>
           ))}
         </View>
-
-        {/* <Text className="text-sm text-gray-500 pl-1">
-          You can become a driver later through account settings.
-        </Text> */}
       </View>
 
       {/* Bottom Button */}
@@ -101,7 +100,7 @@ const Role = () => {
         {loading ? (
           <ActivityIndicator color="#ffffff" />
         ) : (
-          <Text className="text-white font-semibold text-2xl">Next</Text>
+          <Text className="text-white font-semibold text-2xl">{t('next')}</Text>
         )}
       </Pressable>
     </KeyboardAvoidingView>

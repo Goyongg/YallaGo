@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+// i18n for DateTimePickerModal.tsx
+import React, { useState } from 'react';
 import { View, Text, Modal, Pressable, TouchableWithoutFeedback, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { useTranslation } from 'react-i18next';
 
 interface DateTimePickerModalProps {
   visible: boolean;
@@ -8,34 +10,26 @@ interface DateTimePickerModalProps {
   onConfirm: (selectedDate: Date) => void;
 }
 
-const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({
-  visible,
-  onClose,
-  onConfirm,
-}) => {
+const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({ visible, onClose, onConfirm }) => {
+  const { t } = useTranslation('components/DateTimePickerModal');
   const today = new Date();
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [selectedHour, setSelectedHour] = useState(today.getHours());
 
-  // This rounds current minute to 5 (when picker opens), instead of always showing 00 when not divisible by 5
   const roundToNearestFive = (minutes: number) => Math.round(minutes / 5) * 5;
   const [selectedMinute, setSelectedMinute] = useState(roundToNearestFive(today.getMinutes()));
 
   const generateDays = () => {
     const days = [];
     for (let i = 0; i <= 30; i++) {
-      // Create a base date set to today at 00:00 (midnight)
       const baseDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-      // Clone the base date and add `i` days to it
-      // This is to avoid modifying the baseDate in the loop
       const date = new Date(baseDate);
       date.setDate(date.getDate() + i);
       const label =
         i === 0
-          ? 'Today'
+          ? t('today')
           : i === 1
-          ? 'Tomorrow'
+          ? t('tomorrow')
           : date.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
       days.push({ label, date });
     }
@@ -45,16 +39,11 @@ const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({
   const dayOptions = generateDays();
 
   const handleDone = () => {
-    // Get the selected base date from the day options
     const baseDate = dayOptions[selectedDayIndex].date;
-
-    // Extract day, month, and year from the selected base date
     let day = baseDate.getDate();
     let month = baseDate.getMonth();
     let year = baseDate.getFullYear();
 
-    // Fix for early morning bug:
-    // If time is between 00:00 and 03:55, adjust the date forward
     if (selectedHour < 4) {
       const correctedDate = new Date(baseDate);
       correctedDate.setDate(correctedDate.getDate() + 1);
@@ -64,11 +53,9 @@ const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({
     }
 
     const selected = new Date(year, month, day, selectedHour, selectedMinute, 0);
-
     onConfirm(selected);
     onClose();
   };
-
 
   return (
     <Modal transparent visible={visible} animationType="slide">
@@ -78,7 +65,7 @@ const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({
             <View className="bg-white rounded-t-3xl px-4 pt-4 pb-8">
               {/* Header */}
               <Text className="text-center text-base font-semibold text-gray-800 font-[Afacad] mb-2">
-                Date and time of ride
+                {t('header')}
               </Text>
 
               {/* Pickers */}
@@ -117,11 +104,7 @@ const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({
                   {Array.from({ length: 12 }, (_, i) => {
                     const val = i * 5;
                     return (
-                      <Picker.Item
-                        key={val}
-                        label={String(val).padStart(2, '0')}
-                        value={val}
-                      />
+                      <Picker.Item key={val} label={String(val).padStart(2, '0')} value={val} />
                     );
                   })}
                 </Picker>
@@ -130,7 +113,7 @@ const DateTimePickerModal: React.FC<DateTimePickerModalProps> = ({
                 onPress={handleDone}
                 className="bg-brand py-3 rounded-xl items-center"
               >
-                <Text className="text-white text-base font-[Afacad]">Done</Text>
+                <Text className="text-white text-base font-[Afacad]">{t('done')}</Text>
               </Pressable>
             </View>
           </TouchableWithoutFeedback>

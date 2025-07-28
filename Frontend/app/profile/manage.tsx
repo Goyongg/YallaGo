@@ -18,6 +18,7 @@ import useHomeUserData from '@/hooks/useHomeUserData';
 import axios from 'axios';
 import { BASE_URL } from '@/config';
 import { validatePhoneNumber, COUNTRY_CODES, formatPhoneWithCountryCode, CountryCode } from '@/utils/validation';
+import { useTranslation } from 'react-i18next';
 
 interface ProfileData {
   name: string;
@@ -28,141 +29,13 @@ interface ProfileData {
   licenseNumber?: string; // Added driving license field (backend field name)
 }
 
-const GENDER_OPTIONS = [
-  { label: 'Male', value: 'male' },
-  { label: 'Female', value: 'female' },
-  { label: 'Prefer not to say', value: 'prefer_not_to_say' }
-];
-
-// Driving License validation function
-const validateDrivingLicense = (license: string): { isValid: boolean; error?: string } => {
-  const cleanLicense = license.trim();
-
-  // Check if empty (optional field)
-  if (!cleanLicense) {
-    return { isValid: true }; // Empty is valid since it's optional
-  }
-
-  // Remove any spaces for validation
-  const normalizedLicense = cleanLicense.replace(/\s/g, '');
-
-  // Check if it contains only digits
-  const licenseRegex = /^\d+$/;
-  if (!licenseRegex.test(normalizedLicense)) {
-    return {
-      isValid: false,
-      error: 'Driving license can only contain numbers'
-    };
-  }
-
-  // Check minimum length (adjust based on your country's license format)
-  if (normalizedLicense.length < 5) {
-    return {
-      isValid: false,
-      error: 'Driving license number is too short'
-    };
-  }
-
-  // Check maximum length (adjust based on your country's license format)
-  if (normalizedLicense.length > 20) {
-    return {
-      isValid: false,
-      error: 'Driving license number is too long'
-    };
-  }
-
-  return { isValid: true };
-};
-
-// Reusable Phone Input Component for Manage Profile
-const PhoneInputForProfile = ({ 
-  phone, 
-  onPhoneChange, 
-  onValidate, 
-  phoneError, 
-  selectedCountryCode, 
-  onCountryChange
-}: {
-  phone: string;
-  onPhoneChange: (value: string) => void;
-  onValidate: () => boolean;
-  phoneError: string;
-  selectedCountryCode: CountryCode;
-  onCountryChange: (country: CountryCode) => void;
-}) => {
-  const [countryDropdownVisible, setCountryDropdownVisible] = useState(false);
-
-  return (
-    <View className="relative">
-      {/* Phone Input Container */}
-      <View className={`flex-row border rounded-xl overflow-hidden ${
-        phoneError ? 'border-red-300' : 'border-gray-200'
-      }`}>
-        {/* Country Code Selector */}
-        <Pressable
-          onPress={() => setCountryDropdownVisible(!countryDropdownVisible)}
-          className="flex-row items-center px-3 py-3 bg-gray-50 border-r border-gray-200"
-        >
-          <Text className="text-base mr-1">{selectedCountryCode.flag}</Text>
-          <Text className="text-sm text-gray-700 mr-1">{selectedCountryCode.dialCode}</Text>
-          <Ionicons name="chevron-down" size={14} color="#6B7280" />
-        </Pressable>
-        
-        {/* Phone Number Input */}
-        <TextInput
-          className="flex-1 px-3 py-3 text-base text-gray-800"
-          placeholder="Enter phone number"
-          value={phone}
-          onChangeText={onPhoneChange}
-          onBlur={onValidate}
-          keyboardType="phone-pad"
-          placeholderTextColor="#A0AEC0"
-          returnKeyType="done"
-        />
-      </View>
-
-      {/* Country Dropdown */}
-      {countryDropdownVisible && (
-        <View className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 z-50">
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {COUNTRY_CODES.map((country) => (
-              <Pressable
-                key={country.code}
-                className="flex-row items-center px-4 py-3 border-b border-gray-100"
-                onPress={() => {
-                  onCountryChange(country);
-                  setCountryDropdownVisible(false);
-                }}
-              >
-                <Text className="text-base mr-3">{country.flag}</Text>
-                <View className="flex-1">
-                  <Text className="text-sm font-medium text-gray-800">{country.country}</Text>
-                  <Text className="text-xs text-gray-500">{country.dialCode}</Text>
-                </View>
-                {selectedCountryCode.code === country.code && (
-                  <Ionicons name="checkmark" size={16} color="#00BD5F" />
-                )}
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Close dropdown when tapping outside */}
-      {countryDropdownVisible && (
-        <Pressable 
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}
-          onPress={() => setCountryDropdownVisible(false)}
-        />
-      )}
-    </View>
-  );
-};
-
 const ManageProfile = () => {
+  const { t } = useTranslation('profile/manage');
+
   const router = useRouter();
   const { userData, loading: userDataLoading, refetch } = useHomeUserData();
   const [isDriver, setIsDriver] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData>({
     name: '',
     email: '',
@@ -186,6 +59,132 @@ const ManageProfile = () => {
 
   // Driving license validation state
   const [licenseError, setLicenseError] = useState('');
+
+  const GENDER_OPTIONS = [
+    { label: t('gender.male'), value: 'male' },
+    { label: t('gender.female'), value: 'female' },
+    { label: t('gender.preferNotToSay'), value: 'prefer_not_to_say' }
+  ];
+
+  // Driving License validation function
+  const validateDrivingLicense = (license: string): { isValid: boolean; error?: string } => {
+    const cleanLicense = license.trim();
+
+    if (!cleanLicense) {
+      return { isValid: true };
+    }
+
+    const normalizedLicense = cleanLicense.replace(/\s/g, '');
+    const licenseRegex = /^\d+$/;
+    
+    if (!licenseRegex.test(normalizedLicense)) {
+      return {
+        isValid: false,
+        error: t('validation.licenseOnlyNumbers')
+      };
+    }
+
+    if (normalizedLicense.length < 5) {
+      return {
+        isValid: false,
+        error: t('validation.licenseTooShort')
+      };
+    }
+
+    if (normalizedLicense.length > 20) {
+      return {
+        isValid: false,
+        error: t('validation.licenseTooLong')
+      };
+    }
+
+    return { isValid: true };
+  };
+
+  // Reusable Phone Input Component for Manage Profile
+  const PhoneInputForProfile = ({ 
+    phone, 
+    onPhoneChange, 
+    onValidate, 
+    phoneError, 
+    selectedCountryCode, 
+    onCountryChange
+  }: {
+    phone: string;
+    onPhoneChange: (value: string) => void;
+    onValidate: () => boolean;
+    phoneError: string;
+    selectedCountryCode: CountryCode;
+    onCountryChange: (country: CountryCode) => void;
+  }) => {
+    const [countryDropdownVisible, setCountryDropdownVisible] = useState(false);
+
+    return (
+      <View className="relative">
+        {/* Phone Input Container */}
+        <View className={`flex-row border rounded-xl overflow-hidden ${
+          phoneError ? 'border-red-300' : 'border-gray-200'
+        }`}>
+          {/* Country Code Selector */}
+          <Pressable
+            onPress={() => setCountryDropdownVisible(!countryDropdownVisible)}
+            className="flex-row items-center px-3 py-3 bg-gray-50 border-r border-gray-200"
+          >
+            <Text className="text-base mr-1">{selectedCountryCode.flag}</Text>
+            <Text className="text-sm text-gray-700 mr-1">{selectedCountryCode.dialCode}</Text>
+            <Ionicons name="chevron-down" size={14} color="#6B7280" />
+          </Pressable>
+          
+          {/* Phone Number Input */}
+          <TextInput
+            className="flex-1 px-3 py-3 text-base text-gray-800"
+            placeholder={t('placeholders.phoneNumber')}
+            value={phone}
+            onChangeText={onPhoneChange}
+            onBlur={onValidate}
+            keyboardType="phone-pad"
+            placeholderTextColor="#A0AEC0"
+            returnKeyType="done"
+          />
+        </View>
+
+        {/* Country Dropdown */}
+        {countryDropdownVisible && (
+          <View className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 z-50">
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {COUNTRY_CODES.map((country) => (
+                <Pressable
+                  key={country.code}
+                  className="flex-row items-center px-4 py-3 border-b border-gray-100"
+                  onPress={() => {
+                    onCountryChange(country);
+                    setCountryDropdownVisible(false);
+                  }}
+                >
+                  <Text className="text-base mr-3">{country.flag}</Text>
+                  <View className="flex-1">
+                    <Text className="text-sm font-medium text-gray-800">{country.country}</Text>
+                    <Text className="text-xs text-gray-500">{country.dialCode}</Text>
+                  </View>
+                  {selectedCountryCode.code === country.code && (
+                    <Ionicons name="checkmark" size={16} color="#00BD5F" />
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Close dropdown when tapping outside */}
+        {countryDropdownVisible && (
+          <Pressable 
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}
+            onPress={() => setCountryDropdownVisible(false)}
+          />
+        )}
+      </View>
+    );
+  };
 
   const hasFetchedRef = useRef(false);
 
@@ -320,18 +319,18 @@ const ManageProfile = () => {
     switch (field) {
       case 'name':
         if (!value.trim()) {
-          Alert.alert('Validation Error', 'Name cannot be empty');
+          Alert.alert(t('status.validationError'), t('validation.nameEmpty'));
           return false;
         }
         break;
       case 'email':
         if (!value.trim()) {
-          Alert.alert('Validation Error', 'Email cannot be empty');
+          Alert.alert(t('status.validationError'), t('validation.emailEmpty'));
           return false;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(value)) {
-          Alert.alert('Validation Error', 'Please enter a valid email address');
+          Alert.alert(t('status.validationError'), t('validation.invalidEmail'));
           return false;
         }
         break;
@@ -395,7 +394,7 @@ const ManageProfile = () => {
       setPhoneError('');
       setLicenseError('');
       
-      Alert.alert('Success', `${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully`);
+      Alert.alert(t('status.success'), `${field.charAt(0).toUpperCase() + field.slice(1)} t('messages.updateSuccess'`);
       
       // Refresh user data
       refetch();
@@ -431,7 +430,7 @@ const ManageProfile = () => {
         errorMessage = error.message;
       }
       
-      Alert.alert('Error', errorMessage);
+      Alert.alert(t('status.error'), errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -484,7 +483,7 @@ const ManageProfile = () => {
         errorMessage = error.message;
       }
       
-      Alert.alert('Error', errorMessage);
+      Alert.alert(t('status.error'), errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -496,36 +495,61 @@ const ManageProfile = () => {
       router.replace('/(auth)/onboarding/greeting');
     } catch (err) {
       console.error('Logout failed:', err);
-      Alert.alert('Error', 'Could not log out. Try again.');
+      Alert.alert(t('status.error'), t('messages.logoutFailed'));
     }
   };
 
   const handleDeleteAccount = async () => {
+    if (isDeletingAccount) return; // Prevent multiple deletion attempts
+    
     Alert.alert(
-      'Delete Account',
-      'Are you sure you want to permanently delete your account? This action cannot be undone.',
+      t('confirmations.deleteAccountTitle'),
+      t('confirmations.deleteAccountMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('confirmations.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('confirmations.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
+              setIsDeletingAccount(true);
+              
               const user = auth().currentUser;
-              if (!user) return;
+              if (!user) {
+                setIsDeletingAccount(false);
+                return;
+              }
 
               const idToken = await user.getIdToken();
+              
+              // Delete user from backend first
               await axios.delete(`${BASE_URL}/users`, {
                 headers: {
                   Authorization: `Bearer ${idToken}`,
                 },
               });
 
-              Alert.alert('Account Deleted', 'Your account has been successfully deleted.');
+              // Immediately sign out to prevent any further API calls with the token
+              await auth().signOut();
+
+              Alert.alert(t('confirmations.deleteAccountTitle'), t('messages.accountDeleted'));
               router.replace('/(auth)/onboarding/greeting');
+              
             } catch (error) {
               console.error('Error deleting account:', error);
+              
+              // Even if backend deletion fails, we should still sign out
+              // to prevent inconsistent state
+              try {
+                await auth().signOut();
+                router.replace('/(auth)/onboarding/greeting');
+              } catch (signOutError) {
+                console.error('Error signing out after failed deletion:', signOutError);
+              }
+              
               Alert.alert('Error', 'Failed to delete account. Please try again.');
+            } finally {
+              setIsDeletingAccount(false);
             }
           },
         },
@@ -545,7 +569,7 @@ const ManageProfile = () => {
     keyboardType: 'default' | 'email-address' | 'phone-pad' | 'numeric' = 'default'
   ) => {
     const isEditing = editingField === field;
-    const displayValue = value || 'Not set';
+    const displayValue = value || t('status.notSet');
 
     if (field === 'phoneNumber') {
       return (
@@ -576,7 +600,7 @@ const ManageProfile = () => {
                         onPress={cancelEditing}
                         disabled={isSaving}
                       >
-                        <Text className="text-sm font-semibold font-[Afacad] text-gray-600">Cancel</Text>
+                        <Text className="text-sm font-semibold font-[Afacad] text-gray-600">{t('actions.cancel')}</Text>
                       </Pressable>
                       <Pressable
                         className={`px-4 py-2 rounded-lg flex-row items-center ${
@@ -588,7 +612,7 @@ const ManageProfile = () => {
                         {isSaving ? (
                           <ActivityIndicator size="small" color="white" />
                         ) : (
-                          <Text className="text-sm font-semibold font-[Afacad] text-white">Save</Text>
+                          <Text className="text-sm font-semibold font-[Afacad] text-white">{t('actions.save')}</Text>
                         )}
                       </Pressable>
                     </View>
@@ -632,7 +656,7 @@ const ManageProfile = () => {
                       value={tempValue}
                       onChangeText={handleLicenseChange}
                       onBlur={validateLicense}
-                      placeholder="Enter driving license number"
+                      placeholder={t('placeholders.drivingLicense')}
                       keyboardType="numeric"
                       autoFocus
                       placeholderTextColor="#A0AEC0"
@@ -646,7 +670,7 @@ const ManageProfile = () => {
                         onPress={cancelEditing}
                         disabled={isSaving}
                       >
-                        <Text className="text-sm font-semibold font-[Afacad] text-gray-600">Cancel</Text>
+                        <Text className="text-sm font-semibold font-[Afacad] text-gray-600">{t('actions.cancel')}</Text>
                       </Pressable>
                       <Pressable
                         className={`px-4 py-2 rounded-lg flex-row items-center ${
@@ -658,7 +682,7 @@ const ManageProfile = () => {
                         {isSaving ? (
                           <ActivityIndicator size="small" color="white" />
                         ) : (
-                          <Text className="text-sm font-semibold font-[Afacad] text-white">Save</Text>
+                          <Text className="text-sm font-semibold font-[Afacad] text-white">{t('actions.save')}</Text>
                         )}
                       </Pressable>
                     </View>
@@ -731,7 +755,7 @@ const ManageProfile = () => {
                         onPress={cancelEditing}
                         disabled={isSaving}
                       >
-                        <Text className="text-sm font-semibold font-[Afacad] text-gray-600">Cancel</Text>
+                        <Text className="text-sm font-semibold font-[Afacad] text-gray-600">{t('actions.cancel')}</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -783,7 +807,7 @@ const ManageProfile = () => {
                       onPress={cancelEditing}
                       disabled={isSaving}
                     >
-                      <Text className="text-sm font-semibold font-[Afacad] text-gray-600">Cancel</Text>
+                      <Text className="text-sm font-semibold font-[Afacad] text-gray-600">{t('actions.cancel')}</Text>
                     </Pressable>
                     <Pressable
                       className="px-4 py-2 bg-green-500 rounded-lg flex-row items-center"
@@ -793,7 +817,7 @@ const ManageProfile = () => {
                       {isSaving ? (
                         <ActivityIndicator size="small" color="white" />
                       ) : (
-                        <Text className="text-sm font-semibold font-[Afacad] text-white">Save</Text>
+                        <Text className="text-sm font-semibold font-[Afacad] text-white">{t('actions.save')}</Text>
                       )}
                     </Pressable>
                   </View>
@@ -824,7 +848,7 @@ const ManageProfile = () => {
     return (
       <View className="flex-1 justify-center items-center bg-white">
         <ActivityIndicator size="large" color="#000" />
-        <Text className="font-[Afacad] mt-2">Loading...</Text>
+        <Text className="font-[Afacad] mt-2">{t('loading')}</Text>
       </View>
     );
   }
@@ -840,7 +864,7 @@ const ManageProfile = () => {
           <Pressable onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
-          <Text className="text-xl ml-4 font-bold font-[Afacad]">Manage Profile</Text>
+          <Text className="text-xl ml-4 font-bold font-[Afacad]">{t('title')}</Text>
         </View>
 
         {/* User Info Display (Original Design) */}
@@ -863,15 +887,15 @@ const ManageProfile = () => {
 
         {/* Editable Profile Fields */}
         <View className="bg-white rounded-2xl p-1 mb-8 shadow-sm border border-gray-100">
-          <Text className="text-lg font-bold font-[Afacad] mb-6 px-5 pt-5 text-gray-800">Profile Information</Text>
+          <Text className="text-lg font-bold font-[Afacad] mb-6 px-5 pt-5 text-gray-800">{t('profileInformation')}</Text>
           
-          {renderField('name', 'Name', profileData.name, 'person-outline')}
-          {renderField('email', 'Email', profileData.email, 'mail-outline', 'email-address')}
-          {renderField('phoneNumber', 'Phone Number', profileData.phoneNumber, 'call-outline', 'phone-pad')}
-          {renderField('gender', 'Gender', profileData.gender, 'people-outline')}
+          {renderField('name', t('fields.name'), profileData.name, 'person-outline')}
+          {renderField('email', t('fields.email'), profileData.email, 'mail-outline', 'email-address')}
+          {renderField('phoneNumber', t('fields.phoneNumber'), profileData.phoneNumber, 'call-outline', 'phone-pad')}
+          {renderField('gender', t('fields.gender'), profileData.gender, 'people-outline')}
           
           {/* Driving License Field - Only show for drivers */}
-          {isDriver && renderField('licenseNumber', 'Driving License', profileData.licenseNumber || '', 'card-outline', 'numeric')}
+          {isDriver && renderField('licenseNumber', t('fields.drivingLicense'), profileData.licenseNumber || '', 'card-outline', 'numeric')}
           
           {/* Verification Section */}
           <View className="mx-5 py-5">
@@ -881,7 +905,7 @@ const ManageProfile = () => {
                   <Ionicons name="shield-checkmark-outline" size={18} color="#6B7280" />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-sm font-semibold font-[Afacad] text-gray-500 mb-1">Verification Status</Text>
+                  <Text className="text-sm font-semibold font-[Afacad] text-gray-500 mb-1">{t('verification.status')}</Text>
                   <View className="flex-row items-center">
                     <View className={`px-3 py-1 rounded-full ${
                       profileData.kycStatus === 'verified' ? 'bg-green-100' : 'bg-yellow-100'
@@ -889,7 +913,7 @@ const ManageProfile = () => {
                       <Text className={`text-sm font-semibold font-[Afacad] capitalize ${
                         profileData.kycStatus === 'verified' ? 'text-green-700' : 'text-yellow-700'
                       }`}>
-                        {profileData.kycStatus === 'verified' ? 'Verified' : 'Pending'}
+                        {profileData.kycStatus === 'verified' ? t('verification.verified') : t('verification.pending')}
                       </Text>
                     </View>
                     {profileData.kycStatus === 'verified' && (
@@ -913,7 +937,7 @@ const ManageProfile = () => {
                     <>
                       <Ionicons name="shield-checkmark" size={14} color="white" />
                       <Text className="text-sm font-semibold font-[Afacad] text-white ml-1">
-                        Request Verification
+                        {t('verification.requestVerification')}
                       </Text>
                     </>
                   )}
@@ -925,7 +949,7 @@ const ManageProfile = () => {
 
         {/* Management Options */}
         <View className="bg-white rounded-2xl p-1 shadow-sm border border-gray-100">
-          <Text className="text-lg font-bold font-[Afacad] mb-6 px-5 pt-5 text-gray-800">Account Management</Text>
+          <Text className="text-lg font-bold font-[Afacad] mb-6 px-5 pt-5 text-gray-800">{t('accountManagement')}</Text>
           
           {/* Driver-specific options */}
           {isDriver && (
@@ -938,7 +962,7 @@ const ManageProfile = () => {
                   <Ionicons name="car-outline" size={18} color="#00BD5F" />
                 </View>
                 <Text className="text-base text-gray-800 font-semibold font-[Afacad] flex-1">
-                  Manage Vehicles
+                  {t('manageVehicles')}
                 </Text>
                 <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
               </Pressable>
@@ -955,7 +979,7 @@ const ManageProfile = () => {
                 <Ionicons name="log-out-outline" size={18} color="#6B7280" />
               </View>
               <Text className="text-base text-gray-800 font-semibold font-[Afacad] flex-1">
-                Log Out
+                {t('actions.logout')}
               </Text>
             </Pressable>
           </View>
@@ -963,13 +987,18 @@ const ManageProfile = () => {
           <View className="mx-5 py-4">
             <Pressable 
               onPress={handleDeleteAccount} 
-              className="flex-row items-center"
+              disabled={isDeletingAccount || isSaving}
+              className={`flex-row items-center ${isDeletingAccount ? 'opacity-50' : ''}`}
             >
               <View className="w-10 h-10 rounded-full bg-red-50 justify-center items-center mr-4">
-                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                {isDeletingAccount ? (
+                  <ActivityIndicator size="small" color="#EF4444" />
+                ) : (
+                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                )}
               </View>
               <Text className="text-base text-red-500 font-semibold font-[Afacad] flex-1">
-                Delete Account
+                {isDeletingAccount ? t('actions.deletingAccount') : t('actions.deleteAccount')}
               </Text>
             </Pressable>
           </View>

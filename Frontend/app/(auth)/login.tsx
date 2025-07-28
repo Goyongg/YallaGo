@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import auth from '@react-native-firebase/auth';
 import { isValidEmail, isValidPassword } from '@/utils/validation';
 import { useAuth } from '@/context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 // Firebase login function
 export const loginUser = async (email: string, password: string) => {
@@ -18,6 +19,8 @@ export const loginUser = async (email: string, password: string) => {
 };
 
 const Login = () => {
+  const { t } = useTranslation('(auth)/login');
+
   const router = useRouter();
   const { user, loading: authLoading } = useAuth(); // ✅ Access current user + auth loading state
   const [email, setEmail] = useState('');
@@ -46,7 +49,7 @@ const Login = () => {
       // Navigate to home tab on successful login
       router.replace("/(tabs)/home");
     } catch (err: any) {
-      Alert.alert("Login Failed", err.message || "Invalid email or password");
+      Alert.alert(t('loginFailedTitle'), t('loginFailedMessage'));
     } finally {
       setLoading(false);
     }
@@ -67,15 +70,15 @@ const Login = () => {
       {/* Title + Inputs */}
       <View>
         <Text className="text-5xl font-bold leading-[60px] tracking-wide mb-6">
-          Log in to your
-          <Text className="text-brand italic"> account</Text>
+          {t('title')}
+          <Text className="text-brand italic"> {t('highlight')}</Text>
         </Text>
 
         <View className="mb-4">
-          <Text className="text-base font-semibold mb-1 text-gray-700">Email</Text>
+          <Text className="text-base font-semibold mb-1 text-gray-700">{t('emailLabel')}</Text>
           <TextInput
             className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-            placeholder="Enter your email"
+            placeholder={t('emailPlaceholder')}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -85,10 +88,10 @@ const Login = () => {
         </View>
 
         <View className="mb-2">
-          <Text className="text-base font-semibold mb-1 text-gray-700">Password</Text>
+          <Text className="text-base font-semibold mb-1 text-gray-700">{t('passwordLabel')}</Text>
           <TextInput
             className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-            placeholder="Enter your password"
+            placeholder={t('passwordPlaceholder')}
             value={password}
             onChangeText={setPassword}
             placeholderTextColor="#A0AEC0"
@@ -114,7 +117,7 @@ const Login = () => {
         {loading ? (
           <ActivityIndicator color="#ffffff" />
         ) : (
-          <Text adjustsFontSizeToFit className="text-white font-semibold text-2xl">Log in</Text>
+          <Text adjustsFontSizeToFit className="text-white font-semibold text-2xl">{t('loginButton')}</Text>
         )}
       </Pressable>
     </KeyboardAvoidingView>

@@ -8,12 +8,12 @@ import {
   TextInput,
   TouchableWithoutFeedback,
   Alert,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import auth from '@react-native-firebase/auth';
 import axios from 'axios';
 import { BASE_URL } from '@/config';
+import { useTranslation } from 'react-i18next';
 
 interface ReviewModalProps {
   visible: boolean;
@@ -32,6 +32,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   userRole,
   mandatory = false, // Default to false for backward compatibility
 }) => {
+  const { t } = useTranslation('components/ReviewModal');
+
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,7 +44,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      Alert.alert('Rating Required', 'Please select a star rating');
+      Alert.alert(t('alerts.rating.title'), t('alerts.rating.body'));
       return;
     }
 
@@ -51,7 +53,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
       const user = auth().currentUser;
       if (!user) {
-        Alert.alert('Error', 'Authentication required');
+        Alert.alert(t('alerts.auth.title'), t('alerts.auth.body'));
         return;
       }
 
@@ -81,8 +83,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       if (mandatory) {
         // For mandatory reviews, show success message and close automatically
         Alert.alert(
-          'Thank You!',
-          'Your review has been submitted successfully.',
+          t('alerts.success.title'), 
+          t('alerts.success.body'),
           [
             {
               text: 'OK',
@@ -93,8 +95,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       } else {
         // For optional reviews, show success and close
         Alert.alert(
-          'Thank You!',
-          'Your review has been submitted successfully.',
+          t('alerts.success.title'), 
+          t('alerts.success.body'),
           [
             {
               text: 'OK',
@@ -111,7 +113,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         errorMessage = error.response.data.message;
       }
       
-      Alert.alert('Error', errorMessage);
+      Alert.alert(t('alerts.error.title'), errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -121,8 +123,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     if (mandatory) {
       // Prevent closing mandatory review without rating
       Alert.alert(
-        'Review Required',
-        'You must provide a star rating to continue. The review is required to complete your ride.',
+        t('alerts.backdrop.title'),
+        t('alerts.backdrop.body'),
         [{ text: 'OK' }]
       );
       return;
@@ -163,7 +165,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               {/* Header */}
               <View className="flex-row items-center justify-between mb-6">
                 <Text className="text-xl font-bold font-[Afacad] text-black">
-                  Rate Your {userRole === 'driver' ? 'Passenger' : 'Driver'}
+                  {t(userRole === 'driver' ? 'title.passenger' : 'title.driver')}
                 </Text>
                 {/* Only show close button for non-mandatory reviews */}
                 {!mandatory && (
@@ -175,7 +177,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                 {mandatory && (
                   <View className="bg-red-100 px-2 py-1 rounded-full">
                     <Text className="text-red-600 text-xs font-[Afacad] font-medium">
-                      Required
+                      {t('required')}
                     </Text>
                   </View>
                 )}
@@ -187,7 +189,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                   <View className="flex-row items-center">
                     <Ionicons name="information-circle" size={20} color="#F59E0B" />
                     <Text className="text-yellow-700 text-sm font-[Afacad] ml-2 flex-1">
-                      This review is required to complete your ride. Please provide a star rating.
+                      {t('mandatoryNotice')}
                     </Text>
                   </View>
                 </View>
@@ -206,7 +208,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               {/* Star Rating */}
               <View className="items-center mb-6">
                 <Text className="text-base font-[Afacad] text-gray-700 mb-4">
-                  How was your experience? <Text className="text-red-500">*</Text>
+                  {t('experiencePrompt')} <Text className="text-red-500">*</Text>
                 </Text>
                 <View className="flex-row">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -225,16 +227,16 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                 </View>
                 {rating > 0 && (
                   <Text className="text-sm font-[Afacad] text-gray-600 mt-2">
-                    {rating === 1 && 'Poor'}
-                    {rating === 2 && 'Fair'}
-                    {rating === 3 && 'Good'}
-                    {rating === 4 && 'Very Good'}
-                    {rating === 5 && 'Excellent'}
+                    {rating === 1 && t('ratings.1')}
+                    {rating === 2 && t('ratings.2')}
+                    {rating === 3 && t('ratings.3')}
+                    {rating === 4 && t('ratings.4')}
+                    {rating === 5 && t('ratings.5')}
                   </Text>
                 )}
                 {rating === 0 && mandatory && (
                   <Text className="text-sm font-[Afacad] text-red-500 mt-2">
-                    Please select a rating to continue
+                    {t('ratingRequired')}
                   </Text>
                 )}
               </View>
@@ -242,13 +244,13 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               {/* Comment Section */}
               <View className="mb-6">
                 <Text className="text-base font-[Afacad] text-gray-700 mb-3">
-                  Leave a comment <Text className="text-gray-500">(optional)</Text>
+                  {t('commentLabel')} <Text className="text-gray-500">{t('optional')}</Text>
                 </Text>
                 <View className="border border-gray-300 rounded-lg px-4 py-3 bg-gray-50">
                   <TextInput
                     value={comment}
                     onChangeText={setComment}
-                    placeholder={`Share your experience with ${targetName}...`}
+                    placeholder={t('commentPlaceholder', { name: targetName })}
                     placeholderTextColor="#999"
                     multiline
                     numberOfLines={4}
@@ -258,7 +260,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                   />
                 </View>
                 <Text className="text-xs text-gray-500 mt-1 font-[Afacad]">
-                  {comment.length}/500 characters
+                  {comment.length}/500 {t('characters')}
                 </Text>
               </View>
 
@@ -272,7 +274,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                     disabled={isSubmitting}
                   >
                     <Text className="text-gray-700 text-base font-[Afacad] font-medium">
-                      Cancel
+                      {t('cancel')}
                     </Text>
                   </Pressable>
                 )}
@@ -291,14 +293,14 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                       ? 'text-gray-500'
                       : 'text-white'
                   }`}>
-                    {isSubmitting ? 'Submitting...' : mandatory ? 'Complete Review' : 'Submit Review'}
+                    {isSubmitting ? t('submitting') : mandatory ? t('completeReview') : t('submitReview')}
                   </Text>
                 </Pressable>
               </View>
 
               {/* Rating Required Notice */}
               <Text className="text-xs text-gray-500 text-center mt-3 font-[Afacad]">
-                * Star rating is required {mandatory ? 'to complete your ride' : 'to submit your review'}
+                * {t(mandatory ? 'footer.mandatory' : 'footer.optional')}
               </Text>
             </View>
           </TouchableWithoutFeedback>

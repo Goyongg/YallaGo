@@ -1,64 +1,35 @@
+// i18n integration for RecentSearches.tsx
 import React, { useState } from 'react';
 import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RecentSearch } from '../../interfaces/interfaces';
 import { useRouter } from 'expo-router';
 import auth from '@react-native-firebase/auth';
-import { Platform } from 'react-native';
 import { BASE_URL } from '@/config';
-
-// Utility function to shorten location names - keeps complete words
-const shortenLocationName = (locationName: string, maxDisplayLength: number = 20): string => {
-  if (locationName.length <= maxDisplayLength) {
-    return locationName;
-  }
-  
-  for (let i = 0; i < locationName.length; i++) {
-    const testString = locationName + (locationName ? ' ' : '') + locationName[i];
-    if (testString.length <= maxDisplayLength) {
-      locationName = testString;
-    } else {
-      break;
-    }
-  }
-  
-  // If we have at least one complete word, use it
-  if (locationName.length > 0 && locationName !== locationName) {
-    return locationName + '...';
-  }
-  
-  // Fallback: if even first word is too long, truncate it
-  return locationName.substring(0, maxDisplayLength - 3) + '...';
-};
+import { useTranslation } from 'react-i18next';
 
 const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSearches }) => {
   const router = useRouter();
+  const { t } = useTranslation('components/RecentSearches');
   const [searchingIndex, setSearchingIndex] = useState<number | null>(null);
 
-  // Limit to last 3 searches
   const limitedRecentSearches = recentSearches.slice(0, 3);
 
   const handleRecentSearchPress = async (recentSearch: RecentSearch, index: number) => {
     try {
       setSearchingIndex(index);
-
-      // Get authentication token
       const token = await auth().currentUser?.getIdToken();
       if (!token) {
-        Alert.alert('Authentication Error', 'Please log in to search for rides');
+        Alert.alert(t('errors.authTitle'), t('errors.authMessage'));
         return;
       }
 
-      // Create current date and time (add 1 hour from now to ensure it's in the future)
       const currentDate = new Date();
       currentDate.setHours(currentDate.getHours() + 1);
-      
-      const dateStr = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-      const timeStr = currentDate.toTimeString().slice(0, 5); // HH:MM format
+      const dateStr = currentDate.toISOString().split('T')[0];
+      const timeStr = currentDate.toTimeString().slice(0, 5);
 
-      // Check if we have coordinates stored (for newer recent searches)
       if (recentSearch.fromCoordinates && recentSearch.toCoordinates) {
-        // We have coordinates, proceed with search using updated backend payload
         const searchPayload = {
           startPoint: {
             lat: recentSearch.fromCoordinates.lat,
@@ -69,14 +40,11 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
             lng: recentSearch.toCoordinates.lng,
           },
           date: dateStr,
-          time: timeStr, // Added time field as required by backend
+          time: timeStr,
           requestedSeats: recentSearch.passengers,
           femaleOnly: recentSearch.femaleOnly || undefined,
         };
 
-        console.log('Searching with recent search payload:', searchPayload);
-
-        // Make API call to search rides using updated endpoint
         const response = await fetch(`${BASE_URL}/rides/search`, {
           method: 'POST',
           headers: {
@@ -88,13 +56,10 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
 
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(errorText || 'Failed to search rides');
+          throw new Error(errorText || t('errors.searchFallback'));
         }
 
         const searchResults = await response.json();
-        console.log('Recent search results:', searchResults);
-
-        // Navigate to search results with enriched data
         router.push({
           pathname: '/SearchResultsScreen',
           params: {
@@ -110,19 +75,15 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
             searchResults: JSON.stringify(searchResults),
           },
         });
-
       } else {
-        // No coordinates stored, need to select locations manually
         Alert.alert(
-          'Location Selection Required',
-          `To search for rides from ${recentSearch.from} to ${recentSearch.to}, you'll need to select the exact locations on the map.`,
+          t('locationRequiredTitle'),
+          t('locationRequiredBody', { from: recentSearch.from, to: recentSearch.to }),
           [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Select Locations', 
+            { text: t('cancel'), style: 'cancel' },
+            {
+              text: t('selectLocations'),
               onPress: () => {
-                // Navigate to home and pre-fill the search form
-                // This is a fallback for older recent searches without coordinates
                 router.push({
                   pathname: '/(tabs)/home',
                   params: {
@@ -130,20 +91,16 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
                     prefillTo: recentSearch.to,
                     prefillPassengers: recentSearch.passengers.toString(),
                     prefillFemaleOnly: recentSearch.femaleOnly ? '1' : '0',
-                  }
+                  },
                 });
-              }
-            }
+              },
+            },
           ]
         );
       }
-
     } catch (error: any) {
       console.error('Error handling recent search:', error);
-      Alert.alert(
-        'Search Failed', 
-        error.message || 'Unable to search for rides. Please try again.'
-      );
+      Alert.alert(t('errors.searchTitle'), error.message || t('errors.searchFallback'));
     } finally {
       setSearchingIndex(null);
     }
@@ -152,11 +109,11 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
   if (limitedRecentSearches.length === 0) {
     return (
       <View className="px-12 mb-8">
-        <Text className="text-2xl font-[Afacad] mb-4">Recent Searches</Text>
+        <Text className="text-2xl font-[Afacad] mb-4">{t('title')}</Text>
         <View className="items-center py-8">
           <Ionicons name="search-outline" size={32} color="#ccc" />
           <Text className="text-gray-500 font-[Afacad] text-center mt-2">
-            No recent searches yet.{'\n'}Start searching to see your history here!
+            {t('emptyMessage')}
           </Text>
         </View>
       </View>
@@ -165,13 +122,12 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
 
   return (
     <View className="px-12 mb-8">
-      <Text className="text-2xl font-[Afacad] mb-4">Recent Searches</Text>
+      <Text className="text-2xl font-[Afacad] mb-4">{t('title')}</Text>
 
       {limitedRecentSearches.map((item, idx) => {
-        // Shorten location names for display
-        const shortFrom = shortenLocationName(item.from);
-        const shortTo = shortenLocationName(item.to);
-        
+        const shortFrom = item.from;
+        const shortTo = item.to;
+
         return (
           <Pressable
             key={idx}
@@ -184,21 +140,17 @@ const RecentSearches: React.FC<{ recentSearches: RecentSearch[] }> = ({ recentSe
             <View className="flex-row items-center flex-1">
               <Ionicons name="refresh" size={26} color="#00BD5F" />
               <View className="ml-2 flex-1">
-                <Text 
-                  className="font-[Afacad] text-black text-xl"
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
+                <Text className="font-[Afacad] text-black text-xl" numberOfLines={1} ellipsizeMode="tail">
                   {shortFrom} → {shortTo}
                 </Text>
                 <Text className="text-md text-gray-500 font-[Afacad] -mt-[2px]">
-                  {item.passengers} passenger{item.passengers > 1 ? 's' : ''}
-                  {item.femaleOnly && ' • Female-only'}
-                  {!item.fromCoordinates && ' • Needs location selection'}
+                  {item.passengers} {t('passenger', { count: item.passengers })}
+                  {item.femaleOnly && ` • ${t('femaleOnly')}`}
+                  {!item.fromCoordinates && ` • ${t('needsLocation')}`}
                 </Text>
               </View>
             </View>
-            
+
             {searchingIndex === idx ? (
               <ActivityIndicator size="small" color="#00BD5F" />
             ) : (

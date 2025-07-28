@@ -4,8 +4,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useRegistration } from '@/context/RegistrationContext';
 import { registerUser } from '@/services/register';
+import { useTranslation } from 'react-i18next';
 
 const DriverLicense = () => {
+  const { t } = useTranslation('(auth)/onboarding/driver-license');
+
   const router = useRouter();
   const { registrationData, setRegistrationData } = useRegistration();
   const [licenseNumber, setLicenseNumber] = useState(registrationData.license);
@@ -22,7 +25,7 @@ const DriverLicense = () => {
 
   const handleSubmit = async () => {
     if (licenseNumber.trim().length < 6) {
-      Alert.alert("Invalid License", "License number must be at least 6 digits");
+      Alert.alert(t('invalidAlertTitle'), t('invalidAlertMessage'));
       return;
     }
 
@@ -38,7 +41,7 @@ const DriverLicense = () => {
       await registerUser(finalData);
       router.replace('/(tabs)/home');
     } catch (err: any) {
-      Alert.alert("Registration Failed", err.message || "Something went wrong");
+      Alert.alert(t('errorAlertTitle'), err.message || t('errorAlertMessage'));
     } finally {
       setLoading(false);
     }
@@ -59,17 +62,17 @@ const DriverLicense = () => {
       {/* Top Section */}
       <View>
         <Text className="text-5xl font-bold leading-[60px] tracking-wide mb-4">
-          Driver
-          <Text className="text-brand italic"> verification</Text>
+          {t('title')}
+          <Text className="text-brand italic"> {t('highlight')}</Text>
         </Text>
 
         <Text className="text-base text-gray-600 mb-6">
-          Please enter your valid UAE driver's license number. Further ID verification may be required later.
+          {t('subtitle')}
         </Text>
 
         <TextInput
           className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-          placeholder="License Number (numbers only)"
+          placeholder={t('placeholder')}
           value={licenseNumber}
           onChangeText={handleLicenseChange}
           keyboardType="numeric"
@@ -80,7 +83,7 @@ const DriverLicense = () => {
         {/* Simple validation hint */}
         {licenseNumber.length > 0 && licenseNumber.length < 6 && (
           <Text className="text-orange-500 text-sm mt-2">
-            License number must be at least 6 digits
+            {t('validationHint')}
           </Text>
         )}
       </View>
@@ -96,7 +99,7 @@ const DriverLicense = () => {
         {loading ? (
           <ActivityIndicator color="#ffffff" />
         ) : (
-          <Text className="text-white font-semibold text-2xl">Submit</Text>
+          <Text className="text-white font-semibold text-2xl">{t('submit')}</Text>
         )}
       </Pressable>
     </KeyboardAvoidingView>

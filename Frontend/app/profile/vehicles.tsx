@@ -4,8 +4,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import useHomeUserData from '@/hooks/useHomeUserData';
 import useVehicles from '@/hooks/useVehicles';
+import { useTranslation } from 'react-i18next';
 
 const VehiclesPage = () => {
+  const { t } = useTranslation('profile/vehicles');
+
   const router = useRouter();
   const { userData, refetch } = useHomeUserData();
   const { vehicles, loading, error, hasVehicle, addVehicle, updateVehicle, deleteVehicle } = useVehicles();
@@ -48,13 +51,13 @@ const VehiclesPage = () => {
 
   const handleAddVehicle = async () => {
     if (!formData.make || !formData.model || !formData.plateNumber || !formData.seats) {
-      Alert.alert('Error', 'Please fill in all required fields (make, model, plate number, and seats)');
+      Alert.alert(t('error'), t('make') + ', ' + t('model') + ', ' + t('plate') + ', ' + t('seatsLabel') + ' are required');
       return;
     }
 
     const seatsNum = parseInt(formData.seats);
     if (isNaN(seatsNum) || seatsNum < 1 || seatsNum > 8) {
-      Alert.alert('Error', 'Seats must be a number between 1 and 8');
+      Alert.alert(t('error'), t('seatsNote'));
       return;
     }
 
@@ -73,7 +76,7 @@ const VehiclesPage = () => {
       
       setShowAddModal(false);
       resetForm();
-      Alert.alert('Success', response.message || 'Vehicle added successfully!');
+      Alert.alert(t('success'), response.message || t('addVehicle'));
       
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to add vehicle');
@@ -94,7 +97,7 @@ const VehiclesPage = () => {
       
       setShowEditModal(false);
       resetForm();
-      Alert.alert('Success', response.message || 'Vehicle updated successfully!');
+      Alert.alert(t('success'), response.message || t('editVehicle'));
       
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to update vehicle');
@@ -105,18 +108,18 @@ const VehiclesPage = () => {
 
   const handleDeleteVehicle = () => {
     Alert.alert(
-      'Delete Vehicle',
-      'Are you sure you want to delete your vehicle? You will not be able to create rides until you add a new vehicle.',
+      t('deleteConfirmTitle'),
+      t('deleteConfirmText'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('delete'),
           style: 'destructive',
           onPress: async () => {
             setIsSubmitting(true);
             try {
               const response = await deleteVehicle();
-              Alert.alert('Success', response.message || 'Vehicle deleted successfully');
+              Alert.alert(t('success'), response.message || t('deleteVehicle'));
             } catch (error: any) {
               Alert.alert('Error', error.message || 'Failed to delete vehicle');
             } finally {
@@ -150,7 +153,7 @@ const VehiclesPage = () => {
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
-        <Text className="text-lg font-[Afacad]">Loading...</Text>
+        <Text className="text-lg font-[Afacad]">{t('loading')}</Text>
       </View>
     );
   }
@@ -165,14 +168,14 @@ const VehiclesPage = () => {
           <Pressable onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="black" />
           </Pressable>
-          <Text className="text-xl ml-4 font-bold font-[Afacad]">My Vehicle</Text>
+          <Text className="text-xl ml-4 font-bold font-[Afacad]">{t('title')}</Text>
         </View>
       </View>
 
       {/* Error Message */}
       {error && (
         <View className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          <Text className="font-[Afacad] text-red-700">{error}</Text>
+          <Text className="font-[Afacad] text-red-700">{t('error')}: {error}</Text>
         </View>
       )}
 
@@ -181,9 +184,9 @@ const VehiclesPage = () => {
           // No vehicle - show add vehicle UI
           <View className="flex-1 justify-center items-center py-20">
             <Ionicons name="car" size={80} color="#ccc" />
-            <Text className="text-xl text-gray-600 mt-6 font-bold font-[Afacad]">No Vehicle Added</Text>
+            <Text className="text-xl text-gray-600 mt-6 font-bold font-[Afacad]">{t('noVehicleTitle')}</Text>
             <Text className="text-sm text-gray-400 text-center mt-2 mb-8 px-4 font-[Afacad]">
-              You need to add a vehicle to create and offer rides to passengers
+              {t('noVehicleText')}
             </Text>
             <Pressable 
               onPress={openAddModal} 
@@ -191,7 +194,7 @@ const VehiclesPage = () => {
               disabled={isSubmitting}
             >
               <Text className="text-white font-[Afacad] font-semibold text-lg">
-                {isSubmitting ? 'Adding...' : 'Add My Vehicle'}
+                {isSubmitting ? t('addingVehicle') : t('addVehicle')}
               </Text>
             </Pressable>
           </View>
@@ -201,33 +204,33 @@ const VehiclesPage = () => {
             <View className="bg-white rounded-lg p-6 mb-6 border border-gray-200 shadow-sm">
               <View className="flex-row items-center mb-4">
                 <Ionicons name="car" size={24} color="#00BD5F" />
-                <Text className="text-lg font-bold font-[Afacad] ml-2">Your Vehicle</Text>
+                <Text className="text-lg font-bold font-[Afacad] ml-2">{t('yourVehicle')}</Text>
               </View>
               
               <View className="space-y-3">
                 <View className="flex-row justify-between py-2 border-b border-gray-100">
-                  <Text className="text-gray-600 font-[Afacad]">Make & Model</Text>
+                  <Text className="text-gray-600 font-[Afacad]">{t('makeModel')}</Text>
                   <Text className="font-semibold font-[Afacad]">
                     {vehicleData?.make} {vehicleData?.model}
                   </Text>
                 </View>
                 
                 <View className="flex-row justify-between py-2 border-b border-gray-100">
-                  <Text className="text-gray-600 font-[Afacad]">Plate Number</Text>
+                  <Text className="text-gray-600 font-[Afacad]">{t('plateNumber')}</Text>
                   <Text className="font-semibold font-[Afacad] font-mono">
                     {vehicleData?.plateNumber}
                   </Text>
                 </View>
                 
                 <View className="flex-row justify-between py-2 border-b border-gray-100">
-                  <Text className="text-gray-600 font-[Afacad]">Color</Text>
+                  <Text className="text-gray-600 font-[Afacad]">{t('color')}</Text>
                   <Text className="font-semibold font-[Afacad]">
-                    {vehicleData?.color || 'Not specified'}
+                    {vehicleData?.color || t('notSpecified')}
                   </Text>
                 </View>
                 
                 <View className="flex-row justify-between py-2">
-                  <Text className="text-gray-600 font-[Afacad]">Seats</Text>
+                  <Text className="text-gray-600 font-[Afacad]">{t('seats')}</Text>
                   <Text className="font-semibold font-[Afacad]">
                     {vehicleData?.seats} seats
                   </Text>
@@ -244,7 +247,7 @@ const VehiclesPage = () => {
               >
                 <Ionicons name="pencil" size={20} color="white" />
                 <Text className="text-white font-[Afacad] font-semibold text-lg ml-2">
-                  {isSubmitting ? 'Updating...' : 'Edit Vehicle'}
+                  {isSubmitting ? t('updatingVehicle') : t('editVehicle')}
                 </Text>
               </Pressable>
 
@@ -255,7 +258,7 @@ const VehiclesPage = () => {
               >
                 <Ionicons name="trash" size={20} color="white" />
                 <Text className="text-white font-[Afacad] font-semibold text-lg ml-2">
-                  {isSubmitting ? 'Deleting...' : 'Delete Vehicle'}
+                  {isSubmitting ? t('deletingVehicle') : t('deleteVehicle')}
                 </Text>
               </Pressable>
             </View>
@@ -267,7 +270,7 @@ const VehiclesPage = () => {
       <Modal visible={showAddModal} animationType="slide" presentationStyle="pageSheet">
         <View className="flex-1 bg-white pt-[70px] px-6">
           <View className="flex-row items-center justify-between mb-6">
-            <Text className="text-xl font-bold font-[Afacad]">Add Vehicle</Text>
+            <Text className="text-xl font-bold font-[Afacad]">{t('modalAddTitle')}</Text>
             <Pressable onPress={() => setShowAddModal(false)} disabled={isSubmitting}>
               <Ionicons name="close" size={24} color="black" />
             </Pressable>
@@ -276,7 +279,7 @@ const VehiclesPage = () => {
           <ScrollView className="flex-1">
             <View className="mb-4">
               <Text className="text-sm font-semibold text-gray-700 mb-2 font-[Afacad]">
-                Make <Text className="text-red-500">*</Text>
+                {t('make')} <Text className="text-red-500">*</Text>
               </Text>
               <TextInput
                 value={formData.make}
@@ -289,7 +292,7 @@ const VehiclesPage = () => {
 
             <View className="mb-4">
               <Text className="text-sm font-semibold text-gray-700 mb-2 font-[Afacad]">
-                Model <Text className="text-red-500">*</Text>
+                {t('model')} <Text className="text-red-500">*</Text>
               </Text>
               <TextInput
                 value={formData.model}
@@ -302,20 +305,20 @@ const VehiclesPage = () => {
 
             <View className="mb-4">
               <Text className="text-sm font-semibold text-gray-700 mb-2 font-[Afacad]">
-                Plate Number <Text className="text-red-500">*</Text>
+                {t('plate')} <Text className="text-red-500">*</Text>
               </Text>
               <TextInput
                 value={formData.plateNumber}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, plateNumber: text }))}
                 className="border border-gray-300 rounded-lg px-4 py-3 font-[Afacad]"
-                placeholder="e.g., ABC-123"
+                placeholder="e.g., A1234"
                 autoCapitalize="characters"
                 editable={!isSubmitting}
               />
             </View>
 
             <View className="mb-4">
-              <Text className="text-sm font-semibold text-gray-700 mb-2 font-[Afacad]">Color</Text>
+              <Text className="text-sm font-semibold text-gray-700 mb-2 font-[Afacad]">{t('color')}</Text>
               <TextInput
                 value={formData.color}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, color: text }))}
@@ -327,7 +330,7 @@ const VehiclesPage = () => {
 
             <View className="mb-6">
               <Text className="text-sm font-semibold text-gray-700 mb-2 font-[Afacad]">
-                Number of Seats <Text className="text-red-500">*</Text>
+                {t('seatsLabel')} <Text className="text-red-500">*</Text>
               </Text>
               <TextInput
                 value={formData.seats}
@@ -338,7 +341,7 @@ const VehiclesPage = () => {
                 editable={!isSubmitting}
               />
               <Text className="text-xs text-gray-500 mt-1 font-[Afacad]">
-                Enter a number between 1 and 8
+                {t('seatsNote')}
               </Text>
             </View>
 
@@ -348,7 +351,7 @@ const VehiclesPage = () => {
               disabled={isSubmitting}
             >
               <Text className="text-white text-center font-semibold text-lg font-[Afacad]">
-                {isSubmitting ? 'Adding Vehicle...' : 'Add Vehicle'}
+                {isSubmitting ? t('addingVehicle') : t('submitAdd')}
               </Text>
             </Pressable>
           </ScrollView>
@@ -359,7 +362,7 @@ const VehiclesPage = () => {
       <Modal visible={showEditModal} animationType="slide" presentationStyle="pageSheet">
         <View className="flex-1 bg-white pt-[70px] px-6">
           <View className="flex-row items-center justify-between mb-6">
-            <Text className="text-xl font-bold font-[Afacad]">Edit Vehicle</Text>
+            <Text className="text-xl font-bold font-[Afacad]">{t('modalEditTitle')}</Text>
             <Pressable onPress={() => setShowEditModal(false)} disabled={isSubmitting}>
               <Ionicons name="close" size={24} color="black" />
             </Pressable>
@@ -371,16 +374,16 @@ const VehiclesPage = () => {
                 {vehicleData?.make} {vehicleData?.model}
               </Text>
               <Text className="text-gray-600 font-[Afacad]">
-                Plate: {vehicleData?.plateNumber}
+                {t('plateNumber')}: {vehicleData?.plateNumber}
               </Text>
               <Text className="text-gray-600 font-[Afacad]">
-                Seats: {vehicleData?.seats}
+                {t('seats')}: {vehicleData?.seats}
               </Text>
             </View>
 
             <View className="mb-6">
               <Text className="text-sm font-semibold text-gray-700 mb-2 font-[Afacad]">
-                Color
+                {t('color')}
               </Text>
               <TextInput
                 value={formData.color}
@@ -390,7 +393,7 @@ const VehiclesPage = () => {
                 editable={!isSubmitting}
               />
               <Text className="text-xs text-gray-500 mt-1 font-[Afacad]">
-                Currently only the color can be updated
+                {t('currentOnlyColor')}
               </Text>
             </View>
 
@@ -400,7 +403,7 @@ const VehiclesPage = () => {
               disabled={isSubmitting}
             >
               <Text className="text-white text-center font-semibold text-lg font-[Afacad]">
-                {isSubmitting ? 'Updating Vehicle...' : 'Update Vehicle'}
+                {isSubmitting ? t('updatingVehicle') : t('submitEdit')}
               </Text>
             </Pressable>
           </ScrollView>

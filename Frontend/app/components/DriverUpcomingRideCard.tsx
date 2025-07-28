@@ -1,9 +1,11 @@
+// components/DriverUpcomingRideCard.tsx - i18n integrated with preserved comments
 import React, { useState } from 'react';
 import { View, Text, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { DriverUpcomingRideCardProps } from '../../interfaces/interfaces';
 import useRideActions from '../../hooks/useRideActions';
+import { useTranslation } from 'react-i18next';
 
 interface EnhancedDriverUpcomingRideCardProps extends DriverUpcomingRideCardProps {
   bookedSeats?: number;
@@ -28,9 +30,10 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
   const router = useRouter();
   const { startRide, endRide, deleteRide, loading } = useRideActions();
   const [actionLoading, setActionLoading] = useState<'start' | 'end' | 'delete' | null>(null);
+  const { t } = useTranslation('components/DriverUpcomingRideCard');
 
   const truncateText = (text: string | any, maxLength: number = 12) => {
-    if (text === null || text === undefined) return 'Unknown';
+    if (text === null || text === undefined) return t('unknown');
     const safeText = String(text);
     if (safeText.length <= maxLength) return safeText;
     return safeText.substring(0, maxLength) + '...';
@@ -38,34 +41,24 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
 
   const handleCardPress = () => {
     // Navigate to the new driver-specific ride details page
-    router.push({
-      pathname: '/(tabs)/driver-ride-details',
-      params: {
-        rideId: String(id),
-      },
-    });
+    router.push({ pathname: '/(tabs)/driver-ride-details', params: { rideId: String(id) } });
   };
 
   const handleStartRide = async () => {
     Alert.alert(
-      'Start Ride',
-      'Are you sure you want to start this ride? This will notify all passengers.',
+      t('alerts.start.title'),
+      t('alerts.start.message'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('alerts.cancel'), style: 'cancel' },
         {
-          text: 'Start Ride',
+          text: t('alerts.start.confirm'),
           style: 'default',
           onPress: async () => {
             setActionLoading('start');
             const result = await startRide(String(id));
             setActionLoading(null);
-            
-            if (result.success) {
-              Alert.alert('Success', result.message);
-              onRideUpdated?.();
-            } else {
-              Alert.alert('Error', result.message);
-            }
+            Alert.alert(result.success ? t('alerts.success') : t('alerts.error'), result.message);
+            if (result.success) onRideUpdated?.();
           },
         },
       ]
@@ -74,24 +67,19 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
 
   const handleEndRide = async () => {
     Alert.alert(
-      'End Ride',
-      'Are you sure you want to end this ride? This action cannot be undone.',
+      t('alerts.end.title'),
+      t('alerts.end.message'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('alerts.cancel'), style: 'cancel' },
         {
-          text: 'End Ride',
+          text: t('alerts.end.confirm'),
           style: 'destructive',
           onPress: async () => {
             setActionLoading('end');
             const result = await endRide(String(id));
             setActionLoading(null);
-            
-            if (result.success) {
-              Alert.alert('Success', result.message);
-              onRideUpdated?.();
-            } else {
-              Alert.alert('Error', result.message);
-            }
+            Alert.alert(result.success ? t('alerts.success') : t('alerts.error'), result.message);
+            if (result.success) onRideUpdated?.();
           },
         },
       ]
@@ -100,33 +88,24 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
 
   const handleDeleteRide = async () => {
     if (hasBookings || bookedSeats > 0) {
-      Alert.alert(
-        'Cannot Delete',
-        'This ride has passenger bookings and cannot be deleted. You can only delete rides with no bookings.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert(t('alerts.delete.titleBlocked'), t('alerts.delete.messageBlocked'), [{ text: 'OK' }]);
       return;
     }
 
     Alert.alert(
-      'Delete Ride',
-      'Are you sure you want to delete this ride? This action cannot be undone.',
+      t('alerts.delete.title'),
+      t('alerts.delete.message'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('alerts.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('alerts.delete.confirm'),
           style: 'destructive',
           onPress: async () => {
             setActionLoading('delete');
             const result = await deleteRide(String(id));
             setActionLoading(null);
-            
-            if (result.success) {
-              Alert.alert('Success', result.message);
-              onRideUpdated?.();
-            } else {
-              Alert.alert('Error', result.message);
-            }
+            Alert.alert(result.success ? t('alerts.success') : t('alerts.error'), result.message);
+            if (result.success) onRideUpdated?.();
           },
         },
       ]
@@ -135,33 +114,28 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
 
   const getStatusColor = (status: string | undefined) => {
     switch (String(status || '').toLowerCase()) {
-      case 'upcoming':
-        return 'bg-[#00BD5F]';
-      case 'departed':
-        return 'bg-orange-500';
-      default:
-        return 'bg-[#00BD5F]';
+      case 'upcoming': return 'bg-[#00BD5F]';
+      case 'departed': return 'bg-orange-500';
+      default: return 'bg-[#00BD5F]';
     }
   };
 
-  // Safe value conversion with explicit null/undefined checks
-  const safeId = id !== null && id !== undefined ? String(id) : 'unknown';
-  const safeDepartureTime = departureTime !== null && departureTime !== undefined ? String(departureTime) : '00:00';
-  const safeArrivalTime = arrivalTime !== null && arrivalTime !== undefined ? String(arrivalTime) : '00:00';
-  const safeDuration = duration !== null && duration !== undefined ? String(duration) : '0m';
-  const safeFrom = from !== null && from !== undefined ? String(from) : 'Unknown';
-  const safeTo = to !== null && to !== undefined ? String(to) : 'Unknown';
-  const safePrice = price !== null && price !== undefined ? String(price) : '0';
+  const safeId = id ?? 'unknown';
+  const safeDepartureTime = departureTime ?? '00:00';
+  const safeArrivalTime = arrivalTime ?? '00:00';
+  const safeDuration = duration ?? '0m';
+  const safeFrom = from ?? t('unknown');
+  const safeTo = to ?? t('unknown');
+  const safePrice = price ?? '0';
   const safeAvailableSeats = typeof availableSeats === 'number' ? availableSeats : 0;
   const safeBookedSeats = typeof bookedSeats === 'number' ? bookedSeats : 0;
-  const safeStatus = status !== null && status !== undefined ? String(status) : 'unknown';
+  const safeStatus = status ?? 'unknown';
 
-  // 🔧 FIXED LOGIC: Show delete button for upcoming rides with no bookings
-  // Show end button for departed rides
-  const shouldShowEndButton = safeStatus.toLowerCase() === 'departed';
-  const shouldShowDeleteButton = safeStatus.toLowerCase() === 'upcoming' && !hasBookings && safeBookedSeats === 0;
-  
-  // Show action buttons if there are any actions available OR if there are passengers
+  console.log('Status value:', status, typeof status);
+
+  const normalizedStatus = safeStatus.toLowerCase();
+  const shouldShowEndButton = normalizedStatus === 'departed';
+  const shouldShowDeleteButton = normalizedStatus === 'upcoming' && !hasBookings && safeBookedSeats === 0;
   const shouldShowActionSection = shouldShowEndButton || shouldShowDeleteButton || safeBookedSeats > 0;
 
   return (
@@ -214,11 +188,11 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
         <View className="flex-row justify-between items-center pb-3">
           <View className="flex-row items-center flex-wrap">
             <Text className="text-sm text-gray-600 font-[Afacad]">
-              🧍 {String(safeAvailableSeats)} seats available
+              🧍 {t('seats.available', { count: safeAvailableSeats })}
             </Text>
             {safeBookedSeats > 0 && (
               <Text className="text-sm text-blue-600 font-[Afacad] ml-2">
-                • {String(safeBookedSeats)} booked
+                • {t('seats.booked', { count: safeBookedSeats })}
               </Text>
             )}
           </View>
@@ -228,7 +202,7 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
                 className={`text-center text-sm text-white px-3 py-1 rounded-full font-semibold ${getStatusColor(safeStatus)}`}
                 style={{ minWidth: 85 }}
               >
-                {String(safeStatus)}
+                {t(`status.${normalizedStatus}`)}
               </Text>
             </View>
           )}
@@ -238,10 +212,8 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
         {shouldShowActionSection && (
           <View className="pt-2 border-t border-gray-200 flex-row justify-between items-center">
             <Text className="text-xs text-gray-500 font-[Afacad] flex-1 text-center">
-              Tap to view ride details
+              {t('tapToView')}
             </Text>
-            
-            {/* Action buttons container */}
             <View className="flex-row items-center" style={{ gap: 8 }}>
               {shouldShowDeleteButton && (
                 <Pressable
@@ -251,9 +223,7 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
                   }}
                   disabled={loading || actionLoading !== null}
                   className={`px-2 py-1 rounded-lg flex-row items-center ${
-                    loading || actionLoading !== null 
-                      ? 'bg-gray-300' 
-                      : 'bg-red-500'
+                    loading || actionLoading !== null ? 'bg-gray-300' : 'bg-red-500'
                   }`}
                 >
                   {actionLoading === 'delete' ? (
@@ -272,9 +242,7 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
                   }}
                   disabled={loading || actionLoading !== null}
                   className={`px-4 py-2 rounded-lg flex-row items-center ${
-                    loading || actionLoading !== null 
-                      ? 'bg-gray-300' 
-                      : 'bg-blue-500'
+                    loading || actionLoading !== null ? 'bg-gray-300' : 'bg-blue-500'
                   }`}
                 >
                   {actionLoading === 'end' ? (
@@ -283,7 +251,7 @@ const DriverUpcomingRideCard: React.FC<EnhancedDriverUpcomingRideCardProps> = ({
                     <>
                       <Ionicons name="stop" size={14} color="white" />
                       <Text className="text-white text-xs font-bold ml-1 font-[Afacad]">
-                        End Ride
+                        {t('actions.endRide')}
                       </Text>
                     </>
                   )}
