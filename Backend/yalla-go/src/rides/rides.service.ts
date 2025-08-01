@@ -361,7 +361,7 @@ export class RidesService {
         // Step 2: filter rides by endpoint, seats, date
         const filtered = candidates.filter(ride => {
             // Don't show driver's own ride on search
-            //if (ride.driverId === firebaseUid) return false;
+            if (ride.driverId === firebaseUid) return false;
 
             // Exclude rides that are not in-progress or booked
             if (![RideStatus.IN_PROGRESS, RideStatus.BOOKED].includes(ride.status)) {
